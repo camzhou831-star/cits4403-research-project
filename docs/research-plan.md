@@ -1,87 +1,58 @@
-# Initial research plan
+# Research Plan Index and Decision Register
 
-## Model scope
+本文件是非代码阶段的入口。规范性内容分布在：
 
-The first implementation should remain deliberately small:
+- `research-proposal.md` - why and what we study；
+- `model-specification.md` - exact model behaviour；
+- `assumptions.md` - numbered assumptions；
+- `experiment-plan.md` - primary experiment and analysis；
+- `validation-plan.md` - future tests and verification；
+- `timeline.md` and `risk-register.md` - delivery control。
 
-- 20 tanks;
-- 200 synthetic turtles;
-- S, I, R, and Q states;
-- daily discrete-time updates;
-- within-tank transmission;
-- probabilistic cross-tank transfers;
-- probabilistic recovery;
-- delayed quarantine after detection.
+## Fixed decisions
 
-No real customer or farm data is required for the minimum viable model.
+- Project title: **Bridge Transfers and Quarantine in a Captive Turtle Farm**。
+- Model framing: **a stylised explanatory model**。
+- 200 synthetic agents；20 tanks；4 regions × 5 tanks。
+- Agent disease states: `S / I / R`。
+- Tank management states: `open / quarantined`。
+- No individual `Q` state in MVP。
+- Quarantine blocks movement into/out of a tank but not internal transmission。
+- Modular, non-uniform transfer network；bridge tanks may have high betweenness。
+- Targeted policy uses only pre-outbreak network information。
+- Strategies: no intervention、random quarantine、highest-betweenness quarantine。
+- Primary experiment factors: transfer rate、response delay、strategy only。
+- Primary metrics: final attack rate、affected tanks、peak infected、time to extinction。
+- All population, network and experiment data are synthetic。
 
-## Candidate update rules
+## Decision pending facilitator confirmation
 
-At each simulated day:
+| ID | Decision | Working proposal | Alternatives / impact |
+|---|---|---|---|
+| D001 | Response-delay origin | From outbreak introduction at `t=0` | First detection requires observation model and larger scope |
+| D002 | Tank capacity | 12 for all tanks | Higher value reduces blocking；heterogeneous value adds confounding |
+| D003 | Quarantined tank count `k` | 2 | Larger budget may remove much of a 20-node network |
+| D004 | Quarantine duration `D` | Select after pilot | Too short has little effect；too long approximates permanent removal |
+| D005 | Network `p_in/p_out` | Select after structural pilot | Must be modular, connected and non-symmetric |
+| D006 | `max_days` | 365 | Too short causes censoring；too long wastes runtime |
+| D007 | No-intervention reporting | Shared baseline per transfer/network/epidemic block | Repeated delay labels give balanced table but duplicate identical runs |
+| D008 | Headline outcome | Treat attack rate and affected tanks as co-primary | Facilitator may prefer one for presentation emphasis |
 
-1. Apply scheduled or probabilistic transfers between tanks.
-2. Calculate new infections from infectious turtles in each tank.
-3. Detect eligible infectious turtles and apply the configured quarantine delay.
-4. Recover infectious turtles according to the recovery probability.
-5. Record individual, tank-level, and farm-level metrics.
+## Decision process
 
-The exact update order is a modelling assumption. A later experiment may compare synchronous and asynchronous updates.
+1. Ask facilitator using `facilitator-questions.md`。
+2. Record answer and date in the relevant issue。
+3. Update specification、assumptions、experiment plan and checkpoint material together。
+4. Obtain approval from both members。
+5. Freeze decisions before implementation。
 
-## Initial independent variables
+## Non-code stage exit criteria
 
-- transfer probability;
-- transmission probability;
-- recovery probability;
-- quarantine delay;
-- tank capacity or occupancy;
-- intervention strategy and intervention budget.
-
-## Initial dependent variables
-
-- final outbreak size;
-- peak infected population;
-- time to peak;
-- number of affected tanks;
-- outbreak duration;
-- number of quarantined turtles;
-- intervention cost or resource use.
-
-## Baselines and interventions
-
-- Structural baseline: static tanks with no cross-tank transfers.
-- Intervention baseline: random quarantine under a fixed budget.
-- Proposed intervention: quarantine based on bridge-tank or cross-tank connectivity.
-
-## Minimum experiment matrix
-
-- Four transfer rates.
-- Three quarantine delays.
-- Three intervention conditions: none, random, and bridge-based.
-- At least 30 random seeds per condition.
-
-The initial analysis should report distributions and confidence intervals, not only one representative run.
-
-## Validation and tests
-
-- Population count is conserved except where a model rule explicitly changes it.
-- A turtle belongs to exactly one location at a time.
-- Quarantined turtles do not participate in normal tank transmission.
-- The same seed and configuration reproduce the same result.
-- Zero transmission probability produces no secondary infections.
-- With no cross-tank transfers, an outbreak cannot enter an initially uninfected disconnected tank.
-
-## Main risks
-
-- Disease parameters may not be empirically calibrated.
-- The model must be described as explanatory rather than a real farm prediction.
-- Too much interface or infrastructure work could distract from experiments.
-- Results may depend on update order, so sensitivity to this assumption should be checked.
-
-## Possible extensions
-
-- Static versus dynamic contact networks.
-- Synchronous versus asynchronous updates.
-- Heterogeneous tank capacity.
-- Degree-based, betweenness-based, and random interventions.
-- Synthetic differences in susceptibility.
-- Global sensitivity analysis.
+- [x] Canonical questions and hypothesis documented。
+- [x] Model states, interactions and update order documented。
+- [x] Experiment, validation, collaboration, timeline and risks documented。
+- [x] Checkpoint brief and speaking notes prepared。
+- [ ] Facilitator resolves or accepts pending decisions。
+- [ ] Both members confirm the final specification。
+- [ ] Collaborator access and first cross-review evidence verified。
+- [ ] Official rubric/submission details checked when released。

@@ -2,76 +2,100 @@
 
 ## Bridge Transfers and Quarantine in a Captive Turtle Farm
 
-This is the shared repository for our CITS4403 Research Project.
+本仓库用于 CITS4403 Research Project 的研究设计、模型实现、计算实验、分析和最终展示。项目使用完全合成的数据，研究模块化养殖缸系统中的疾病传播和移动限制。它是一个 **stylised explanatory model（风格化解释性模型）**，不预测真实龟类疾病，也不使用真实龟场客户数据。
 
-- Course: CITS4403 Computational Modelling
-- Team: Cam Zhou (`camzhou831-star`) and Wenhao Zhang (`Winston-2hang`)
-- Due: 9 October 2026, 11:59 pm
-- Repository status: Checkpoint 1 planning
+## Team
+
+| Role | Name | GitHub | Contact |
+|---|---|---|---|
+| Member A | Cam Zhou | `camzhou831-star` | 待组内确认 |
+| Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
+
+- 截止时间：2026 年 10 月 9 日星期五 23:59。
+- 当前阶段：**非代码研究准备阶段**。
+- 当前实现状态：**尚未实现模型，没有仿真代码、prototype 数据或实验结果。**
+- 共享 GitHub repository 已建立；本阶段的文档改动只在本地提交，不自动 push。
 
 ## Proposed system
 
-We study disease transmission among captive turtles housed in multiple tanks. Turtles mainly interact within a tank, while occasional transfers create connections between otherwise separate groups.
+- 200 个合成 turtle agents 分布在 20 个 tanks 中。
+- 20 个 tanks 构成一个包含 4 个区域的模块化转移网络（modular transfer network）。
+- 个体疾病状态只有 `S / I / R`。
+- 缸的管理状态只有 `open / quarantined`。
+- 缸级 quarantine 在固定时间内禁止该缸的个体转入和转出，但缸内传播继续发生。
+- 少数连接不同区域的 tanks 可能具有较高 betweenness centrality，并形成 bridge tanks。
 
-## Motivation
+## Research questions
 
-A disease outbreak may remain local when tanks are isolated. However, even a small number of transfers may act as network shortcuts and allow the outbreak to spread across the farm. Quarantine resources are limited, so the choice of intervention strategy matters.
+**Primary research question**
 
-## Research question
+> How do cross-tank transfer rate and response delay affect the final outbreak size and the number of affected tanks in a modular captive-turtle housing system?
 
-How do cross-tank transfer rate and quarantine delay affect outbreak size, and does targeted quarantine of bridge tanks perform better than random quarantine under the same intervention budget?
+**Secondary research question**
+
+> Under the same intervention budget, does quarantining high-betweenness tanks reduce disease spread more effectively than quarantining randomly selected tanks?
 
 ## Hypothesis
 
-A low but non-zero transfer rate will greatly increase the number of affected tanks. Targeted quarantine will reduce outbreak size more than random quarantine, especially when detection is delayed.
+> A low but non-zero cross-tank transfer rate may allow a local outbreak to spread between otherwise separated tank groups, increasing the final attack rate and the number of affected tanks. Longer response delays are expected to reduce the effectiveness of quarantine because more cross-group transmission can occur before movement restrictions begin. Under the same intervention budget, quarantining high-betweenness tanks is expected to reduce cross-group transmission, final attack rate, and the number of affected tanks more effectively than random tank quarantine.
 
 ## Modelling approach
 
-We plan to build an agent-based SIR-Q model with a dynamic contact network:
+项目计划使用离散时间的 agent-based model（ABM）和固定的 tank-transfer network：
 
-- Each turtle is an agent in one of four states: susceptible, infected, recovered, or quarantined.
-- Tanks are local contact groups.
-- Infection occurs through contact within a tank.
-- Turtles may move between tanks with a configurable transfer probability.
-- Detected infections are quarantined after a configurable delay.
-- Random and bridge-based quarantine strategies will be compared using the same intervention budget.
+- agent 层描述 SIR 疾病状态、所在 tank、同缸传播、恢复和个体转移；
+- network 层描述允许转移的 tank pairs 和模块化区域结构；
+- management 层比较 `No intervention`、`Random tank quarantine` 和 `Highest-betweenness tank quarantine`；
+- 主实验只改变 cross-tank transfer rate、response delay 和 intervention strategy；
+- 每个随机条件使用可追踪的 network seed、epidemic seed 和 random-policy seed。
 
-## Planned experiments
+完整规格见 [docs/model-specification.md](docs/model-specification.md)。
 
-We will vary:
+## Current stage and gates
 
-- cross-tank transfer rate;
-- infection and recovery probabilities;
-- quarantine delay;
-- tank capacity and occupancy;
-- intervention strategy.
+本阶段只完成研究设计和文档。进入代码阶段前必须：
 
-Main outputs will include final outbreak size, peak prevalence, time to peak, affected tanks, outbreak duration, and quarantine cost. Each experimental condition will be repeated with multiple random seeds, and both qualitative and quantitative results will be reported.
+1. 完成 Checkpoint 1 并获得 facilitator 对关键待确认事项的反馈；
+2. 冻结 response delay、quarantine duration、quarantined tank count 和网络生成参数的工作定义；
+3. 两名成员共同签署模型规格和假设清单；
+4. 确认 GitHub collaborator 已接受邀请并能进行 issue、branch、pull request 和 review；
+5. 明确记录正式 rubric、报告格式和提交要求的发布状态。
 
-## Independent investigation
+## Documentation map
 
-The project will compare static and dynamic contact assumptions and evaluate random quarantine against bridge-based targeted quarantine under an equal intervention budget.
+| File | Purpose |
+|---|---|
+| `docs/research-proposal.md` | 系统、动机、研究问题、贡献和范围 |
+| `docs/model-specification.md` | 可独立实现的一致模型规格 |
+| `docs/assumptions.md` | 编号假设、影响和敏感性需求 |
+| `docs/experiment-plan.md` | 主实验、配对设计、重复、分析和图表计划 |
+| `docs/validation-plan.md` | 不变量、极端情况和验证证据计划 |
+| `docs/checkpoint-1-brief.md` | 10 分钟 facilitator meeting 简报 |
+| `docs/checkpoint-1-speaking-notes.md` | 两名成员 3-4 分钟英文讲稿 |
+| `docs/collaboration-plan.md` | 沟通、GitHub workflow、review 和贡献记录 |
+| `docs/timeline.md` | 截止日前 must/should/optional 时间表 |
+| `docs/risk-register.md` | 风险、trigger、owner 和 mitigation |
+| `docs/facilitator-questions.md` | Checkpoint 需要确认的问题 |
+| `docs/literature-plan.md` | 文献检索方向和纳入标准 |
+| `docs/consistency-review.md` | 跨文档一致性审查和待确认决定 |
 
-## Planned repository structure
+## Future repository structure
+
+以下目录将在获得确认并进入代码阶段后创建；当前不存在模型代码：
 
 ```text
-docs/          Research plan, checkpoint material, assumptions and decisions
-src/           Model and simulation implementation
-experiments/   Parameter configurations and repeatable experiment runners
-tests/         Unit tests, invariants and reproducibility checks
-results/       Generated summaries and selected figures
+src/           model implementation
+experiments/   parameter configurations and runners
+tests/         model invariants and reproducibility tests
+results/       raw run records, summaries and selected figures
 ```
 
-## Reproducibility rules
+## Experiment and result records
 
-- Every stochastic run must record its random seed.
-- Raw parameters and model assumptions must be stored with each experiment.
-- Baseline and intervention conditions must use comparable settings.
-- Failed or anomalous runs must not be silently removed.
-- Generated data and figures must be reproducible from committed code and configuration.
+未来每次运行至少记录 model version / commit hash、complete configuration、network seed、epidemic seed、policy seed、network instance、strategy、response delay、quarantine budget、run status、stop reason、错误信息和全部预先定义的输出指标。
 
-## Academic integrity
+异常或失败运行不得静默删除。原始结果与清理后的分析表必须分开保存，并能从配置、seed 和代码版本重新生成。
 
-This repository is a new CITS4403 project. Previous projects and course notebooks may inform general engineering practices and modelling concepts, but assessed code, reports, results, and third-party restricted code will not be copied into this repository. The model, research question, experiments, analysis, and written discussion will be produced specifically for this project.
+## Academic integrity boundary
 
-See [docs/checkpoint-1.md](docs/checkpoint-1.md) and [docs/research-plan.md](docs/research-plan.md) for the initial plan.
+旧 `turtle-farm` 项目只提供领域启发。项目不会复制旧项目、CITS4403 Lab Notebook、CITS4012、CITS1401、CITS5501 assessed work 或受限制第三方代码。模型、合成数据、规则、实验、分析和文字均需要为本项目重新设计。
