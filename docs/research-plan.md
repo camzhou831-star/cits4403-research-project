@@ -41,7 +41,7 @@
 ## Decision process
 
 1. Ask facilitator using `facilitator-questions.md`。
-2. Record answer and date in the relevant issue。
+2. Record answer and date in `decision-log.md` and the relevant issue。
 3. Update specification、assumptions、experiment plan and checkpoint material together。
 4. Obtain approval from both members。
 5. Freeze decisions before implementation。

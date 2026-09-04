@@ -78,6 +78,9 @@
 | `docs/facilitator-questions.md` | Checkpoint 需要确认的问题 |
 | `docs/literature-plan.md` | 文献检索方向和纳入标准 |
 | `docs/consistency-review.md` | 跨文档一致性审查和待确认决定 |
+| `docs/decision-log.md` | D001-D008 最终决定、facilitator 反馈记录和规格签署 |
+| `docs/week-plan-2026-09-05.md` | 5-11 September baseline model 周执行清单 |
+| `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
 ## Future repository structure
 
