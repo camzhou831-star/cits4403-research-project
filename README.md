@@ -61,6 +61,19 @@
 4. 确认 GitHub collaborator 已接受邀请并能进行 issue、branch、pull request 和 review；
 5. 明确记录正式 rubric、报告格式和提交要求的发布状态。
 
+## Environment
+
+Python 3.12，依赖固定在 `requirements.txt`。两名成员使用相同版本，保证 same-seed 结果可比。
+
+```bash
+uv venv --python 3.12 .venv          # 或 python3.12 -m venv .venv
+source .venv/bin/activate
+uv pip install -r requirements.txt   # 或 pip install -r requirements.txt
+python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
+```
+
+`.venv/` 已在 `.gitignore` 中，不提交。
+
 ## Documentation map
 
 | File | Purpose |
