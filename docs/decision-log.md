@@ -25,14 +25,14 @@
 
 ## Provisional-start decision
 
-- [ ] 两名成员确认：baseline SIR（无 movement、无 intervention）可在 D001-D008 冻结前开始，config 中 provisional 值已标注。
-  - Member A 确认日期：
-  - Member B 确认日期：
+- [x] 两名成员确认：baseline SIR（无 movement、无 intervention）可在 D001-D008 冻结前开始，config 中 provisional 值已标注。
+  - Member A 确认日期：2026-09-07（issue #10 评论）
+  - Member B 确认日期：2026-09-06（issue #10 评论，"D001-D008 remain provisional pending confirmation"）
 
 ## Specification sign-off
 
-- [ ] Member A 已通读 `model-specification.md` 并确认可独立实现。日期：
-- [ ] Member B 已通读 `model-specification.md` 并确认可独立实现。日期：
+- [x] Member A 已通读 `model-specification.md` 并确认可独立实现。日期：2026-09-07（issue #10）
+- [x] Member B 已通读 `model-specification.md` 并确认可独立实现。日期：2026-09-06（issue #10）
 
 ## Change history
 
