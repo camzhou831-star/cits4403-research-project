@@ -530,5 +530,5 @@ Complete the following actions on the same day:
 1. Record the facilitator's confirmed guidance in the decision log and Issue #9.
 2. Add each decision to the corresponding D001-D008 Issue.
 3. Revise the model documentation if any definitions or assumptions change.
-4. Complete the final sign-off for Issue #10 once both members understand and accept the updated specification.
+4. If any definition changes, both members re-confirm the updated specification in `docs/decision-log.md` (the original sign-off, Issue #10, is already closed).
 5. Do not close a decision Issue unless the meeting produces an explicit resolution.
