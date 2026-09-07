@@ -17,6 +17,58 @@ Speaker A begins once both team members are ready.
 
 ---
 
+## Three-Minute Priority Version
+
+Use this version if the facilitator limits the meeting to approximately five minutes. It presents the essential project information in three minutes and raises the highest-priority question before open discussion.
+
+### 0:00-0:40 — System and Research Focus
+
+**Speaker A:**
+
+> Our project is titled *Bridge Transfers and Quarantine in a Captive Turtle Farm*. It uses a fully synthetic system of 200 turtle agents in 20 tanks arranged as four network regions.
+>
+> Disease spreads through contact within a tank, while turtle movements across permitted links can connect otherwise separated regions. We study how these local processes generate system-level outbreak patterns.
+
+### 0:40-1:15 — Canonical Research Questions
+
+**Speaker A:**
+
+> Our primary research question is: How do cross-tank transfer rate and response delay affect the final outbreak size and the number of affected tanks in a modular captive-turtle housing system?
+
+**Speaker B:**
+
+> Our secondary research question is: Under the same intervention budget, does quarantining high-betweenness tanks reduce disease spread more effectively than quarantining randomly selected tanks?
+
+### 1:15-1:55 — Model and Current Progress
+
+**Speaker A:**
+
+> We use a discrete-time stochastic agent-based model with susceptible, infected, and recovered turtle states. Each simulated day applies management, movement, transmission, recovery, synchronous state updates, output recording, and a stopping check in a fixed order.
+>
+> The baseline SIR model has been implemented in PR #19, and all smoke tests pass. The formal V-series validation suite is now in progress. We have not yet generated formal experimental results.
+
+### 1:55-2:30 — Strategies and Experimental Design
+
+**Speaker B:**
+
+> We compare no intervention, random tank quarantine, and targeted quarantine of high-betweenness tanks. The main experiment varies transfer rate, response delay, and intervention strategy under paired random conditions and an equal quarantine budget.
+>
+> We will evaluate final attack rate, affected tanks, peak infection, and time to extinction across repeated stochastic runs.
+
+### 2:30-3:00 — Priority Question
+
+**Speaker B:**
+
+> Our highest-priority question concerns response delay. Should it be measured from outbreak introduction at time zero or from the first detected infection? Our current minimum viable model measures it from time zero as a combined detection and management delay. Measuring it from first detection would require an additional observation mechanism.
+
+**If time remains:**
+
+> We would also appreciate confirmation that the equal-budget comparison between random and betweenness-based quarantine is an appropriate scope for the independent investigation.
+
+---
+
+## Full Discussion Version
+
 ## 0:00-0:30 — Opening
 
 **Possible facilitator opening:**
@@ -67,13 +119,13 @@ Speaker A begins once both team members are ready.
 
 > Our primary research question is:
 >
-> How do the cross-tank transfer rate and intervention response delay affect the final outbreak size and the number of affected tanks in a modular captive-turtle housing system?
+> How do cross-tank transfer rate and response delay affect the final outbreak size and the number of affected tanks in a modular captive-turtle housing system?
 
 **Speaker B:**
 
 > Our secondary research question is:
 >
-> Under an equal intervention budget, does quarantining tanks with high betweenness centrality reduce disease spread more effectively than quarantining randomly selected tanks?
+> Under the same intervention budget, does quarantining high-betweenness tanks reduce disease spread more effectively than quarantining randomly selected tanks?
 >
 > We hypothesise that a low but non-zero transfer rate may be sufficient for disease to move between regions, that a longer response delay will reduce the effectiveness of quarantine, and that targeting high-betweenness tanks may outperform random quarantine under the same intervention budget.
 
@@ -109,7 +161,7 @@ Speaker A begins once both team members are ready.
 
 ## 2:30-4:00 — Model Structure and Daily Rules
 
-**Speaker B:**
+**Speaker A:**
 
 > We propose a discrete-time stochastic agent-based model in which one time step represents one day.
 >
@@ -125,7 +177,7 @@ Speaker A begins once both team members are ready.
 
 > Why do turtles have only S, I, and R states? Why is quarantine not represented by a Q state?
 
-**Speaker B:**
+**Speaker A:**
 
 > Quarantine is modelled as a tank-level management intervention rather than an epidemiological state of an individual turtle.
 >
@@ -137,7 +189,7 @@ Speaker A begins once both team members are ready.
 
 > Why can infection continue to spread within a quarantined tank?
 
-**Speaker B:**
+**Speaker A:**
 
 > In our model, quarantine blocks movement into and out of a tank but does not isolate turtles from one another within that tank.
 >
@@ -149,7 +201,7 @@ Speaker A begins once both team members are ready.
 
 > Can a turtle that becomes infected during a time step infect another turtle in that same time step?
 
-**Speaker B:**
+**Speaker A:**
 
 > No. Infection and recovery events are calculated from a single daily snapshot, and all epidemiological state changes are applied simultaneously.
 >
@@ -197,7 +249,7 @@ Speaker A begins once both team members are ready.
 
 ## 5:20-6:40 — Experimental Design
 
-**Speaker A:**
+**Speaker B:**
 
 > The main experiment varies three factors: cross-tank transfer rate, intervention response delay, and intervention strategy.
 >
@@ -213,7 +265,7 @@ Speaker A begins once both team members are ready.
 
 > Why not simulate each experimental condition only once?
 
-**Speaker A:**
+**Speaker B:**
 
 > The model contains stochastic network generation, movement, transmission, and recovery. A single run may therefore be unrepresentative because of random variation.
 >
@@ -225,7 +277,7 @@ Speaker A begins once both team members are ready.
 
 > How many times will you repeat each condition?
 
-**Speaker A:**
+**Speaker B:**
 
 > Our provisional plan is to conduct 30 to 50 epidemic replicates per main condition across several independently generated network instances.
 >
@@ -253,7 +305,9 @@ Speaker A begins once both team members are ready.
 >
 > We have established a shared GitHub repository containing Issues, milestones, and assigned responsibilities. Both team members have also reproduced the same Python 3.12 environment from the shared requirements file.
 >
-> We have not yet implemented the simulation or generated experimental results. Our next development task is a minimal SIR baseline model, followed by validation tests, movement, quarantine, and the experiment runner.
+> The baseline SIR model has now been implemented in PR #19, and all 11 smoke tests pass locally. The formal V-series tests are being developed under Issue #13.
+>
+> Cross-tank movement, network generation, quarantine policies, and the experiment runner remain to be implemented. We have not yet generated formal experimental results.
 
 ### Possible Interruption: Do You Have a Prototype or Preliminary Results?
 
@@ -263,9 +317,9 @@ Speaker A begins once both team members are ready.
 
 **Speaker B:**
 
-> Not yet. Our initial priority was to specify the model precisely enough that both team members could implement and test the same system without ambiguity.
+> We now have a working M1 baseline for within-tank SIR transmission and recovery. It implements the specified daily order, synchronous disease updates, stopping rules, run records, and deterministic random-number substreams.
 >
-> The shared development environment is now operational, and the baseline model is the next scheduled task. We have also specified invariant tests and extreme-case tests that will be completed before formal experimentation.
+> Its smoke tests pass, and the formal invariant and extreme-case tests are currently in progress. Movement and quarantine are not yet included, so we do not claim any experimental findings at this stage.
 
 ### Possible Interruption: How Is the Work Divided?
 
@@ -275,11 +329,11 @@ Speaker A begins once both team members are ready.
 
 **Speaker A:**
 
-> I am leading the implementation of the baseline epidemiological model and the transfer network.
+> I am leading model implementation and will present the model structure and daily update rules.
 
 **Speaker B:**
 
-> I am leading validation testing, the hand-traced example, the result schema, and the checkpoint materials.
+> I am leading validation testing, the hand-traced example, the result schema, and the checkpoint materials. I will present the intervention strategies and experimental design.
 >
 > We will review each other's pull requests, and both team members will maintain a complete understanding of the model and final analysis.
 
@@ -289,11 +343,25 @@ Speaker A begins once both team members are ready.
 
 **Speaker B:**
 
-> Before implementation begins, we would like to confirm three points.
+> Before proceeding to the next implementation stage, we would like to confirm three points.
 
-### Question 1: Project Scope
+### Question 1: Definition of Response Delay
 
-> First, is a synthetic explanatory system of this kind appropriate for the project?
+> First, should response delay be measured from outbreak introduction at time zero or from the first detected infection?
+>
+> Our current minimum viable model measures it from time zero. Measuring from first detection would require an additional detection mechanism.
+
+**If the facilitator accepts time zero:**
+
+> Thank you. We will document this definition explicitly and describe it as a combined detection and management delay.
+
+**If the facilitator requires first detection:**
+
+> Understood. Would a fixed detection delay be sufficient, or should detection itself be modelled as a stochastic process?
+
+### Question 2: Project Scope
+
+> Second, is a synthetic explanatory system of this kind appropriate for the project?
 >
 > In particular, is an equal-budget comparison between random quarantine and betweenness-based quarantine sufficiently substantial for the independent investigation?
 
@@ -309,20 +377,6 @@ Speaker A begins once both team members are ready.
 
 > Would you recommend treating transfer rate and response delay as the main investigation and presenting the intervention comparison as an extension?
 
-### Question 2: Definition of Response Delay
-
-> Second, should response delay be measured from outbreak introduction at time zero or from the first detected infection?
->
-> Our current minimum viable model measures it from time zero. Measuring from first detection would require an additional detection mechanism.
-
-**If the facilitator accepts time zero:**
-
-> Thank you. We will document this definition explicitly and describe it as a combined detection and management delay.
-
-**If the facilitator requires first detection:**
-
-> Understood. Would a fixed detection delay be sufficient, or should detection itself be modelled as a stochastic process?
-
 ### Question 3: Assessment Requirements
 
 > Finally, are the complete marking rubric, report format, page limit, and specific GitHub requirements currently available?
@@ -337,7 +391,7 @@ Speaker A begins once both team members are ready.
 
 **Possible facilitator closing:**
 
-> The proposal appears reasonable. Please record the decisions made today and demonstrate progress on the model at the next checkpoint.
+> The proposal appears reasonable. Please record the decisions made today and use them to guide the remaining implementation and final submission.
 
 **Speaker A:**
 
@@ -404,6 +458,38 @@ Speaker A begins once both team members are ready.
 > A recovered turtle remains recovered for the rest of the run. It can neither transmit the disease nor become infected again under the current SIR assumptions.
 >
 > It may still move between open tanks and continues to count towards tank capacity.
+
+### Where Did the Project Topic Come From, and How Do You Maintain Academic Integrity?
+
+> The general domain was inspired by an earlier turtle-farm project involving multiple tanks, animal movement, disease, and quarantine. However, that project is used only as broad domain inspiration.
+>
+> We have not reused its code, data, database records, business logic, results, or report text. The synthetic population, network generator, SIR rules, intervention design, experiments, analysis, and written material for this project are being developed independently.
+>
+> Course materials are used to understand concepts such as random graphs, network measures, stochastic simulation, and reproducibility. We do not copy assessed code or claim course examples as our own implementation.
+
+### How Is Your Network Generator Related to the ER, WS, and BA Models Discussed in the Course?
+
+> Our proposed network is a modular random graph. Edges are sampled independently, but within-region pairs use a higher probability than between-region pairs. This resembles a simple stochastic block model and extends the independent-edge idea used in an Erdős-Rényi graph.
+>
+> It is not a Watts-Strogatz network because it does not begin with a regular ring and rewire edges. It is not a Barabási-Albert network because it does not use preferential attachment or aim to produce a scale-free degree distribution.
+>
+> We selected a modular generator because the research question requires four known regions with dense internal connections and relatively rare bridge links. ER, WS, and BA remain useful conceptual references, but they are not the three intervention conditions in our experiment.
+
+### Why Do You Target Betweenness Centrality Rather Than Degree Centrality?
+
+> Degree centrality measures how many direct neighbours a tank has. A tank may have high degree because it has many connections within its own region, without being important for movement between regions.
+>
+> Betweenness centrality measures how often a tank lies on shortest paths between other tanks. It is therefore more closely aligned with our aim of identifying bridge tanks that may connect otherwise separated regions.
+>
+> Betweenness is calculated once from the pre-outbreak network and does not use future epidemic information. Degree-based targeting could be included later as a sensitivity comparison if time permits.
+
+### How Many Simulation Runs Will Be Required, and Is the Plan Feasible?
+
+> The provisional factorial design contains four transfer-rate levels, three response-delay levels, and three strategies, giving 36 experimental conditions.
+>
+> With 30 to 50 epidemic replicates per condition, the main design requires approximately 1,080 to 1,800 runs, distributed across several network seeds. The exact allocation will be finalised after pilot timing and stability checks.
+>
+> Each run contains only 200 agents and 20 tanks, so the model is expected to be computationally lightweight. We will benchmark the implementation, execute runs in batches, and reuse the no-intervention baseline across response-delay labels where appropriate because response delay has no effect when no intervention occurs.
 
 ---
 
