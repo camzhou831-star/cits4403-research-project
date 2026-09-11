@@ -11,12 +11,15 @@ activates a quarantine (strategy == "none"). Both stages exist so that M2 slots 
 from __future__ import annotations
 
 import subprocess
+import traceback
 from dataclasses import dataclass, field
 from typing import Any
 
-from turtlefarm.config import SimulationConfig
-from turtlefarm.entities import Agent, Tank, S, I, R, OPEN
-from turtlefarm.rng import epidemic_streams
+from turtlefarm.config import ConfigError, SimulationConfig
+from turtlefarm.entities import Agent, Tank, S, I, R, OPEN, DISEASE_STATES
+from turtlefarm.network import TransferNetwork, generate_network
+from turtlefarm.rng import DrawSource, EventKeyedDraws, initialisation_stream
+from turtlefarm.scenario import Layout
 
 STATUS_COMPLETED = "completed"
 STATUS_CENSORED = "censored_max_days"
@@ -58,6 +61,7 @@ class RunRecord:
     daily: list[DailyRecord]
     metrics: dict[str, Any]
     code_commit: str | None
+    network: dict[str, Any] | None = None  # spec 15.2: attempt index, adjacency, centralities, hash
     transitions: list[tuple[int, int, str, str]] = field(default_factory=list)  # (day, agent, from, to)
 
 
@@ -72,9 +76,33 @@ def _git_commit() -> str | None:
 
 
 class Simulation:
-    def __init__(self, config: SimulationConfig, record_transitions: bool = False) -> None:
+    """One run. Construct, then call ``run()``; initialisation happens inside ``run()`` so that a failure
+    at any point yields a ``failed`` RunRecord instead of an exception (model-specification section 14).
+
+    ``layout`` builds an explicit small scenario (config ``design="scenario"``) and ``draws`` replaces the
+    seed-derived event-keyed draws, e.g. with a ``TableDraws`` hand-trace table. Both are validation-only.
+    """
+
+    def __init__(
+        self,
+        config: SimulationConfig,
+        record_transitions: bool = False,
+        *,
+        layout: Layout | None = None,
+        draws: DrawSource | None = None,
+    ) -> None:
+        if (config.design == "scenario") != (layout is not None):
+            raise ConfigError('design="scenario" requires a Layout, and a Layout requires design="scenario"')
+        if layout is not None and (layout.n_agents != config.n_agents or layout.n_tanks != config.n_tanks):
+            raise ConfigError(
+                f"layout has {layout.n_agents} agents / {layout.n_tanks} tanks but config says "
+                f"{config.n_agents} / {config.n_tanks}"
+            )
         self.cfg = config
-        self.streams = epidemic_streams(config.epidemic_seed)
+        self.layout = layout
+        self.n_agents = config.n_agents
+        self.n_tanks = config.n_tanks
+        self.draws: DrawSource = draws if draws is not None else EventKeyedDraws(config.epidemic_seed, self.n_agents)
         self.record_transitions = record_transitions
         self.day = 0
         self.agents: list[Agent] = []
@@ -83,23 +111,47 @@ class Simulation:
         self.daily: list[DailyRecord] = []
         self.transitions: list[tuple[int, int, str, str]] = []
         self.initial_infected_agents: list[int] = []
-        self._initialise()
+        self.network: TransferNetwork | None = None
+        self.initialised = False
 
     # ------------------------------------------------------------------ initialisation (section 6)
     def _initialise(self) -> None:
+        if self.initialised:
+            return
         cfg = self.cfg
-        per_region = cfg.tanks_per_region
-        self.tanks = [
-            Tank(tank_id=t, region_id=t // per_region, capacity=cfg.capacity) for t in range(cfg.n_tanks)
-        ]
-        # Fixed initial placement: agent a starts in tank a // initial_per_tank (10 per tank).
-        self.agents = [Agent(agent_id=a, tank_id=a // cfg.initial_per_tank) for a in range(cfg.n_agents)]
+        if self.layout is None:
+            # Pre-outbreak transfer network (spec section 3). Generated before any epidemic draw and never
+            # modified afterwards; M1 does not move agents but records it for provenance (section 15.2).
+            self.network = generate_network(
+                network_seed=cfg.network_seed,
+                p_in=cfg.p_in,
+                p_out=cfg.p_out,
+                n_tanks=cfg.n_tanks,
+                n_regions=cfg.n_regions,
+                max_attempts=cfg.network_max_attempts,
+            )
+            per_region = cfg.tanks_per_region
+            self.tanks = [
+                Tank(tank_id=t, region_id=t // per_region, capacity=cfg.capacity) for t in range(cfg.n_tanks)
+            ]
+            # Fixed initial placement: agent a starts in tank a // initial_per_tank (10 per tank).
+            self.agents = [Agent(agent_id=a, tank_id=a // cfg.initial_per_tank) for a in range(cfg.n_agents)]
+            # Initial infected chosen uniformly from all agents with the initialisation stream.
+            chosen = initialisation_stream(cfg.epidemic_seed).choice(
+                cfg.n_agents, size=cfg.initial_infected, replace=False
+            )
+            self.initial_infected_agents = sorted(int(x) for x in chosen)
+        else:
+            self.tanks = [Tank(tank_id=t.tank_id, region_id=t.region_id, capacity=t.capacity) for t in self.layout.tanks]
+            self.agents = [Agent(agent_id=a.agent_id, tank_id=a.tank_id) for a in self.layout.agents]
+            for spec, ag in zip(self.layout.agents, self.agents):
+                if spec.disease_state == R:
+                    ag.disease_state = R
+                    ag.ever_infected = True
+            self.initial_infected_agents = [a.agent_id for a in self.layout.agents if a.disease_state == I]
+
         for ag in self.agents:
             self.tanks[ag.tank_id].members.add(ag.agent_id)
-
-        # Initial infected chosen uniformly from all agents with the initialisation stream.
-        chosen = self.streams.initialisation.choice(cfg.n_agents, size=cfg.initial_infected, replace=False)
-        self.initial_infected_agents = sorted(int(x) for x in chosen)
         for a in self.initial_infected_agents:
             ag = self.agents[a]
             ag.disease_state = I
@@ -107,6 +159,7 @@ class Simulation:
             ag.state_entered_day = 0
             self.ever_affected.add(ag.tank_id)
 
+        self.initialised = True
         self._check_invariants()
         self._record(new_infections=0, recoveries=0, attempted=0, accepted=0, blocked=0)
 
@@ -127,7 +180,7 @@ class Simulation:
         """Stages 3-5. Draws are made against a frozen snapshot; nothing is committed here."""
         cfg = self.cfg
         # Stage 3: snapshot of infectious counts per tank and the set of agents infectious today.
-        infectious_by_tank = [0] * cfg.n_tanks
+        infectious_by_tank = [0] * self.n_tanks
         infectious_today: list[int] = []
         for ag in self.agents:
             if ag.disease_state == I:
@@ -143,13 +196,14 @@ class Simulation:
             if i_j == 0:
                 continue
             p = 1.0 - (1.0 - cfg.beta) ** i_j
-            if self.streams.transmission.random() < p:
+            if self.draws.uniform("transmission", self.day, ag.agent_id) < p:
                 pending_infections.append(ag.agent_id)
 
-        # Stage 5: recovery only for agents already infectious at the snapshot.
+        # Stage 5: recovery only for agents already infectious at the snapshot. Agents infected today are
+        # not in ``infectious_today``, so no recovery draw is consulted for them.
         pending_recoveries: list[int] = []
         for a in infectious_today:
-            if self.streams.recovery.random() < cfg.gamma:
+            if self.draws.uniform("recovery", self.day, a) < cfg.gamma:
                 pending_recoveries.append(a)
 
         return pending_infections, pending_recoveries
@@ -169,7 +223,14 @@ class Simulation:
             ag.ever_infected = True
             self.ever_affected.add(ag.tank_id)
 
+    _ALLOWED_TRANSITIONS = frozenset({(S, I), (I, R)})
+
     def _transition(self, ag: Agent, new_state: str) -> None:
+        """Only S -> I and I -> R exist (spec section 5). In particular R -> I is impossible (V005)."""
+        if (ag.disease_state, new_state) not in self._ALLOWED_TRANSITIONS:
+            raise InvariantError(
+                f"day {self.day}: illegal transition {ag.disease_state} -> {new_state} for agent {ag.agent_id}"
+            )
         if self.record_transitions:
             self.transitions.append((self.day, ag.agent_id, ag.disease_state, new_state))
         ag.disease_state = new_state
@@ -179,12 +240,15 @@ class Simulation:
     def _counts(self) -> tuple[int, int, int]:
         s = i = r = 0
         for ag in self.agents:
-            if ag.disease_state == S:
+            st = ag.disease_state
+            if st == S:
                 s += 1
-            elif ag.disease_state == I:
+            elif st == I:
                 i += 1
-            else:
+            elif st == R:
                 r += 1
+            else:  # V003: never fold an unknown state into R
+                raise InvariantError(f"agent {ag.agent_id} has disease_state {st!r}, expected one of {DISEASE_STATES}")
         return s, i, r
 
     def _record(self, *, new_infections: int, recoveries: int, attempted: int, accepted: int, blocked: int) -> None:
@@ -232,9 +296,14 @@ class Simulation:
         )
 
     def _check_invariants(self) -> None:
-        cfg = self.cfg
-        if len(self.agents) != cfg.n_agents:  # V001
-            raise InvariantError(f"agent count {len(self.agents)} != {cfg.n_agents}")
+        n = self.n_agents
+        if len(self.agents) != n:  # V001
+            raise InvariantError(f"agent count {len(self.agents)} != {n}")
+        for ag in self.agents:  # V003 / V005 per-agent domain checks
+            if ag.disease_state not in DISEASE_STATES:
+                raise InvariantError(f"agent {ag.agent_id} has disease_state {ag.disease_state!r}")
+            if ag.disease_state != S and not ag.ever_infected:
+                raise InvariantError(f"agent {ag.agent_id} is {ag.disease_state} but ever_infected is False")
         seen: set[int] = set()
         for tank in self.tanks:
             if tank.occupancy > tank.capacity:  # V006
@@ -245,11 +314,11 @@ class Simulation:
                 seen.add(a)
                 if self.agents[a].tank_id != tank.tank_id:
                     raise InvariantError(f"agent {a} tank_id mismatch")
-        if len(seen) != cfg.n_agents:
+        if len(seen) != n:
             raise InvariantError("some agents are not in any tank")
-        s, i, r = self._counts()
-        if s + i + r != cfg.n_agents:  # V004 (V003 is enforced by _transition/_commit)
-            raise InvariantError(f"S+I+R = {s + i + r} != {cfg.n_agents}")
+        s, i, r = self._counts()  # raises on unknown state (V003)
+        if s + i + r != n:  # V004
+            raise InvariantError(f"S+I+R = {s + i + r} != {n}")
 
     # ------------------------------------------------------------------ run loop
     def step(self) -> None:
@@ -269,9 +338,13 @@ class Simulation:
         )
 
     def run(self) -> RunRecord:
+        """Run to extinction, horizon or failure. Every run ends with an explicit status and stop reason
+        (V012). Any exception other than KeyboardInterrupt/SystemExit becomes a ``failed`` record that
+        keeps the configuration, seeds, error type and traceback (spec section 14/15)."""
         cfg = self.cfg
         status, stop_reason, error = STATUS_COMPLETED, "", None
         try:
+            self._initialise()
             if self.daily[-1].I == 0:
                 stop_reason = "no infectious agents at t=0"
             else:
@@ -284,8 +357,12 @@ class Simulation:
                         status, stop_reason = STATUS_CENSORED, f"infection present at max_days={cfg.max_days}"
                         break
         except InvariantError as exc:
-            status, stop_reason, error = STATUS_FAILED, "invariant failure", str(exc)
+            status, stop_reason, error = STATUS_FAILED, "invariant failure", f"InvariantError: {exc}"
+        except Exception as exc:  # noqa: BLE001 - deliberate: runs must not die without a record
+            status, stop_reason = STATUS_FAILED, "runtime error"
+            error = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
 
+        metrics = compute_metrics(self.agents, self.daily, status) if self.daily else {}
         return RunRecord(
             config=cfg.to_dict(),
             status=status,
@@ -302,13 +379,14 @@ class Simulation:
             intervention_start_day=None,
             intervention_cost=0,
             daily=list(self.daily),
-            metrics=compute_metrics(self.agents, self.daily, status, cfg),
+            metrics=metrics,
             code_commit=_git_commit(),
             transitions=list(self.transitions),
+            network=self.network.to_dict() if self.network is not None else None,
         )
 
 
-def compute_metrics(agents: list[Agent], daily: list[DailyRecord], status: str, cfg: SimulationConfig) -> dict[str, Any]:
+def compute_metrics(agents: list[Agent], daily: list[DailyRecord], status: str) -> dict[str, Any]:
     """Metrics of model-specification section 15.3. Censored runs get time_to_extinction = None."""
     ever = sum(1 for ag in agents if ag.ever_infected)
     peak = max(d.I for d in daily)
@@ -317,16 +395,22 @@ def compute_metrics(agents: list[Agent], daily: list[DailyRecord], status: str, 
     if status != STATUS_COMPLETED:
         extinction = None
     return {
-        "final_attack_rate": ever / cfg.n_agents,
+        "final_attack_rate": ever / len(agents),
         "ever_infected": ever,
         "affected_tanks": daily[-1].affected_tanks_ever,
         "peak_infected": peak,
         "time_to_peak": time_to_peak,
         "time_to_extinction": extinction,
         "days_simulated": daily[-1].day,
-        "intervention_cost": 0 if cfg.strategy == "none" else cfg.k * cfg.quarantine_duration,
+        "intervention_cost": 0,  # M1: strategy is always "none"
     }
 
 
-def run_baseline(config: SimulationConfig, record_transitions: bool = False) -> RunRecord:
-    return Simulation(config, record_transitions=record_transitions).run()
+def run_baseline(
+    config: SimulationConfig,
+    record_transitions: bool = False,
+    *,
+    layout: Layout | None = None,
+    draws: DrawSource | None = None,
+) -> RunRecord:
+    return Simulation(config, record_transitions=record_transitions, layout=layout, draws=draws).run()

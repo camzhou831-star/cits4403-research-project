@@ -13,7 +13,7 @@
 
 - 截止时间：2026 年 10 月 9 日星期五 23:59。
 - 当前阶段：**代码阶段（M1 baseline 已合入，进入 movement / intervention / experiment runner）**。
-- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline（无 movement、无 intervention，PR #19）；尚无 network generator、movement、quarantine、experiment runner 或任何实验结果。**
+- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline（无 movement、无 intervention，PR #19）；网络生成器已实现并通过结构审计；尚无 movement、quarantine、experiment runner 或任何实验结果。**
 - Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
 - 共享 GitHub repository 已建立；所有改动经 feature branch 和 PR review 合入 `main`。
 
@@ -66,7 +66,7 @@
 
 - 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13）；
 - 手工 trace 与 event log 一致并由两名成员签署（issue #14）；
-- paired randomness 方案（event-keyed draws）已写入规格并实现；
+- paired randomness 方案（event-keyed draws）已写入规格 §16 并实现（`turtlefarm/rng.py`）；
 - run metadata / failure record schema 冻结（issue #15）。
 
 **进入正式实验前必须满足**
@@ -107,13 +107,16 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/decision-log.md` | D001-D008 最终决定、facilitator 反馈记录和规格签署 |
 | `docs/week-plan-2026-09-05.md` | 5-11 September baseline model 周执行清单 |
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
+| `docs/hand-trace-3tank.md` | M1 手工 trace fixture：3 tanks / 6 agents / 3 days，与 `tests/test_hand_trace.py` 对照 |
+| `docs/network-audit-2026-09-11.md` | 模块化网络生成器结构审计（16 个 p_in/p_out 组合 × 10 seeds），D005 候选值 |
+| `scripts/audit_network.py` | 重跑网络结构审计 |
 | `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (M1 baseline SIR merged; M2 movement/intervention pending)
-tests/         model invariants and reproducibility tests
+turtlefarm/    model implementation (M1 baseline SIR; event-keyed draws; scenario layouts; modular transfer network)
+tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
 scripts/       repository bootstrap helpers
 experiments/   parameter configurations and runners (to be created in M2)
 results/       raw run records, summaries and selected figures (to be created after pilot)

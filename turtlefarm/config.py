@@ -11,6 +11,14 @@ from dataclasses import dataclass, asdict
 from typing import Any, ClassVar
 
 STRATEGIES = ("none", "random", "betweenness")
+DESIGNS = ("main", "scenario")
+
+# Fixed by the research design (model-specification section 6.1); only design="scenario" may differ.
+MAIN_N_AGENTS = 200
+MAIN_N_TANKS = 20
+MAIN_N_REGIONS = 4
+MAIN_INITIAL_PER_TANK = 10
+MAIN_INITIAL_INFECTED = 1
 
 # Frozen decisions D002 / D003 / D006 (docs/decision-log.md, 2026-09-11).
 DEFAULT_CAPACITY = 12
@@ -24,16 +32,25 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class SimulationConfig:
-    # Structure (fixed decisions)
-    n_agents: int = 200
-    n_tanks: int = 20
-    n_regions: int = 4
-    initial_per_tank: int = 10
-    initial_infected: int = 1
+    # "main" is the research design and is structurally locked below. "scenario" is for hand-traceable
+    # validation layouts (turtlefarm.scenario) and is refused by the experiment runner.
+    design: str = "main"
+
+    # Structure (fixed by the design; under "scenario" the Layout defines n_agents / n_tanks)
+    n_agents: int = MAIN_N_AGENTS
+    n_tanks: int = MAIN_N_TANKS
+    n_regions: int = MAIN_N_REGIONS
+    initial_per_tank: int = MAIN_INITIAL_PER_TANK
+    initial_infected: int = MAIN_INITIAL_INFECTED
 
     # Disease (fixed in the main experiment; values chosen by pilot, not yet frozen)
     beta: float = 0.1  # PROVISIONAL: frozen after pilot
     gamma: float = 0.1  # PROVISIONAL: frozen after pilot
+
+    # Transfer network (spec section 3). p_in / p_out are D005 candidates until the structural pilot.
+    p_in: float = 0.6  # PROVISIONAL D005
+    p_out: float = 0.05  # PROVISIONAL D005
+    network_max_attempts: int = 100
 
     # Movement (M2). The baseline only accepts transfer_rate == 0.
     transfer_rate: float = 0.0
@@ -58,7 +75,7 @@ class SimulationConfig:
 
     # Fields whose numeric value is still a candidate (model-specification section 18, layer 2).
     # Derived from the decision log, not settable by callers; copied into run metadata.
-    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration")
+    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration", "p_in", "p_out")
 
     @property
     def provisional_fields(self) -> tuple[str, ...]:
@@ -86,9 +103,9 @@ class SimulationConfig:
             if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
                 errs.append(f"{name} must be a positive integer, got {v!r}")
 
-        for p in ("beta", "gamma", "transfer_rate"):
+        for p in ("beta", "gamma", "transfer_rate", "p_in", "p_out"):
             prob(p)
-        for p in ("n_agents", "n_tanks", "n_regions", "initial_per_tank", "capacity", "max_days"):
+        for p in ("n_agents", "n_tanks", "n_regions", "initial_per_tank", "capacity", "max_days", "network_max_attempts"):
             pos_int(p)
         for p in ("initial_infected", "response_delay", "quarantine_duration", "k"):
             nonneg_int(p)
@@ -102,16 +119,32 @@ class SimulationConfig:
         if self.strategy not in STRATEGIES:
             errs.append(f"strategy must be one of {STRATEGIES}, got {self.strategy!r}")
 
-        # Structural facts fixed by the research design (validation-plan section 4).
-        if self.n_tanks != 20 or self.n_regions != 4:
-            errs.append("design fixes exactly 20 tanks in 4 regions")
-        elif self.n_tanks % self.n_regions != 0:
+        if self.design not in DESIGNS:
+            errs.append(f"design must be one of {DESIGNS}, got {self.design!r}")
+
+        # Type / domain errors make the relational checks below meaningless (and some would raise
+        # TypeError or ZeroDivisionError), so report them first.
+        if errs:
+            raise ConfigError("; ".join(errs))
+
+        if not (0.0 < self.p_out < self.p_in <= 1.0):
+            errs.append(f"require 0 < p_out < p_in <= 1 (spec 3.1), got p_in={self.p_in}, p_out={self.p_out}")
+
+        # Structural facts fixed by the research design (spec section 6.1; validation-plan V001).
+        if self.design == "main":
+            fixed = {
+                "n_agents": MAIN_N_AGENTS,
+                "n_tanks": MAIN_N_TANKS,
+                "n_regions": MAIN_N_REGIONS,
+                "initial_per_tank": MAIN_INITIAL_PER_TANK,
+                "initial_infected": MAIN_INITIAL_INFECTED,
+            }
+            for name, want in fixed.items():
+                got = getattr(self, name)
+                if got != want:
+                    errs.append(f"main design fixes {name} = {want}, got {got}")
+        if self.n_tanks % self.n_regions != 0:
             errs.append("n_tanks must divide evenly into n_regions")
-        if self.n_agents != self.n_tanks * self.initial_per_tank:
-            errs.append(
-                f"n_agents ({self.n_agents}) must equal n_tanks * initial_per_tank "
-                f"({self.n_tanks} * {self.initial_per_tank})"
-            )
         if self.initial_per_tank > self.capacity:
             errs.append(f"initial occupancy {self.initial_per_tank} exceeds capacity {self.capacity}")
         if self.initial_infected > self.n_agents:
