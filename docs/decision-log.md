@@ -44,4 +44,5 @@
 
 | Date | Decision changed | Documents updated | PR |
 |---|---|---|---|
-| 2026-09-11 | 无（D001-D003、D006-D008 采纳 working proposal 为最终值） | `decision-log.md`、`README.md`、`checkpoint-1.md`、`turtlefarm/config.py`（移除 provisional 标注） | docs/checkpoint-1-feedback |
+| 2026-09-11 | 无（D001-D003、D006-D008 采纳 working proposal 为最终值） | `decision-log.md`、`README.md`、`checkpoint-1.md`、`turtlefarm/config.py`（移除 provisional 标注） | docs/checkpoint-1-feedback（PR #21） |
+| 2026-09-11 | 语义补充：spec §16 randomness 由"独立 substreams"改为 event-keyed draws（保证跨策略配对）；§18 增加两层冻结规则 | `model-specification.md` §16/§18、`validation-plan.md` §9、`hand-trace-3tank.md` | model/validation-and-paired-rng |

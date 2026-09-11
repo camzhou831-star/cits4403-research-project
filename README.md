@@ -66,7 +66,7 @@
 
 - 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13）；
 - 手工 trace 与 event log 一致并由两名成员签署（issue #14）；
-- paired randomness 方案（event-keyed draws）已写入规格并实现；
+- paired randomness 方案（event-keyed draws）已写入规格 §16 并实现（`turtlefarm/rng.py`）；
 - run metadata / failure record schema 冻结（issue #15）。
 
 **进入正式实验前必须满足**
@@ -107,13 +107,14 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/decision-log.md` | D001-D008 最终决定、facilitator 反馈记录和规格签署 |
 | `docs/week-plan-2026-09-05.md` | 5-11 September baseline model 周执行清单 |
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
+| `docs/hand-trace-3tank.md` | M1 手工 trace fixture：3 tanks / 6 agents / 3 days，与 `tests/test_hand_trace.py` 对照 |
 | `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (M1 baseline SIR merged; M2 movement/intervention pending)
-tests/         model invariants and reproducibility tests
+turtlefarm/    model implementation (M1 baseline SIR; event-keyed draws; scenario layouts)
+tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
 scripts/       repository bootstrap helpers
 experiments/   parameter configurations and runners (to be created in M2)
 results/       raw run records, summaries and selected figures (to be created after pilot)

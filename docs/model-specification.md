@@ -261,10 +261,17 @@ total infected population I(t) = 0
 | Seed | Controls |
 |---|---|
 | `network_seed` | topology and regeneration attempts |
-| `epidemic_seed` | initial case、movement、transmission、recovery |
+| `epidemic_seed` | initial case、movement、transmission、recovery（event-keyed，见下） |
 | `policy_seed` | random quarantine selection only |
 
-为保持 paired comparison，epidemic randomness 应使用独立 substreams 或 event-keyed random draws，避免某策略少发生一次 draw 后使后续随机序列整体错位。至少分别建立 initialisation、movement、transmission 和 recovery streams，并从 epidemic seed 确定性派生。
+为保持 paired comparison，epidemic randomness 使用 **event-keyed draws**（2026-09-11 决定，取代"独立 substreams"方案；实现见 `turtlefarm/rng.py`）：
+
+- 对每个 process ∈ {movement, movement_destination, transmission, recovery}，每天 `t` 由 `SeedSequence(epidemic_seed, spawn_key=(process, t))` 派生一个 generator，生成长度为 `n_agents` 的 uniform 数组；agent `a` 在该 process、该天消耗的 draw 固定是数组第 `a` 位。
+- 因此 `(process, day, agent)` 的 draw 只依赖 epidemic seed，不依赖当天有多少 agent 被暴露、也不依赖之前的历史。某策略避免了一次暴露，不会使其他 agent 或之后任何一天的 draw 错位。
+- 独立 substreams（每个 process 一个顺序流）不满足这一性质：暴露集合改变会使同一流的 draw index 漂移，random 与 targeted 策略名义配对、实际不配对。
+- Initialisation 使用单独的 `spawn_key=(0,)` generator，只在选 initial case 时消耗一次；policy seed 单独成流，只用于 random tank selection。
+- 暴露判断本身不消耗 draw：`S` agent 在同缸 `I_j = 0` 时不读取 transmission draw；当天新感染者不读取 recovery draw。
+- Draw source 是可替换接口：hand trace 用显式 draw 表（`TableDraws`）替代 seed 派生，表中缺失的 draw 一旦被读取即失败，用于证明"未被消耗"的规则。
 
 相同 configuration 和 seeds 必须得到相同结果。
 

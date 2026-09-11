@@ -145,6 +145,8 @@
 
 该 fixture 只用于验证，不作为正式实验或结果。
 
+M1 fixture：`docs/hand-trace-3tank.md`（3 tanks、6 agents、3 days、8 个固定 draws），自动对照在 `tests/test_hand_trace.py`。小场景通过 `turtlefarm.scenario.Layout` 和 config `design="scenario"` 构造，正式 `design="main"` 配置仍锁定 200 agents / 20 tanks；experiment runner 必须拒绝 `design != "main"`。M2 合入后需扩展 fixture 加入 movement 和 quarantine。
+
 ## 10. Failure and completion criteria
 
 模型进入正式实验前必须：

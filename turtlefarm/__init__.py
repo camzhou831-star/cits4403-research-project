@@ -6,6 +6,11 @@ Cross-tank movement, the transfer network and quarantine strategies are M2 work.
 """
 
 from turtlefarm.config import SimulationConfig
-from turtlefarm.model import Simulation, RunRecord
+from turtlefarm.model import Simulation, RunRecord, run_baseline
+from turtlefarm.rng import EventKeyedDraws, TableDraws
+from turtlefarm.scenario import Layout, TankSpec, AgentSpec
 
-__all__ = ["SimulationConfig", "Simulation", "RunRecord"]
+__all__ = [
+    "SimulationConfig", "Simulation", "RunRecord", "run_baseline",
+    "EventKeyedDraws", "TableDraws", "Layout", "TankSpec", "AgentSpec",
+]
