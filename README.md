@@ -12,9 +12,10 @@
 | Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
 
 - 截止时间：2026 年 10 月 9 日星期五 23:59。
-- 当前阶段：**非代码研究准备阶段**。
-- 当前实现状态：**尚未实现模型，没有仿真代码、prototype 数据或实验结果。**
-- 共享 GitHub repository 已建立；本阶段的文档改动只在本地提交，不自动 push。
+- 当前阶段：**代码阶段（M1 baseline 已合入，进入 movement / intervention / experiment runner）**。
+- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline（无 movement、无 intervention，PR #19）；尚无 network generator、movement、quarantine、experiment runner 或任何实验结果。**
+- Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
+- 共享 GitHub repository 已建立；所有改动经 feature branch 和 PR review 合入 `main`。
 
 ## Proposed system
 
@@ -53,13 +54,25 @@
 
 ## Current stage and gates
 
-本阶段只完成研究设计和文档。进入代码阶段前必须：
+**已满足的 gate（进入代码阶段，2026-09-11）**
 
-1. 完成 Checkpoint 1 并获得 facilitator 对关键待确认事项的反馈；
-2. 冻结 response delay、quarantine duration、quarantined tank count 和网络生成参数的工作定义；
-3. 两名成员共同签署模型规格和假设清单；
-4. 确认 GitHub collaborator 已接受邀请并能进行 issue、branch、pull request 和 review；
-5. 明确记录正式 rubric、报告格式和提交要求的发布状态。
+1. Checkpoint 1 已完成，facilitator 无修改要求；
+2. D001-D003、D006-D008 已冻结，D004/D005 的语义已冻结、数值待 pilot（`docs/model-specification.md` §18 两层冻结规则）；
+3. 两名成员已签署模型规格（issue #10）；
+4. GitHub collaborator 已接受邀请，PR #19 有跨成员 review；
+5. 正式 rubric / 提交格式尚未发布，已记录在 `docs/decision-log.md`，3-8 October 再次核对。
+
+**进入 M2（movement / intervention / experiment runner）合并前必须满足**
+
+- 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13）；
+- 手工 trace 与 event log 一致并由两名成员签署（issue #14）；
+- paired randomness 方案（event-keyed draws）已写入规格并实现；
+- run metadata / failure record schema 冻结（issue #15）。
+
+**进入正式实验前必须满足**
+
+- pilot 完成，`beta`、`gamma`、`D`、`p_in`/`p_out`、levels 和 seed lists 冻结并记录；
+- V001-V012、V101-V110、fairness audit 全部通过（`docs/validation-plan.md` §10）。
 
 ## Environment
 
@@ -96,15 +109,14 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
 | `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
-## Future repository structure
-
-以下目录将在获得确认并进入代码阶段后创建；当前不存在模型代码：
+## Repository structure
 
 ```text
-src/           model implementation
-experiments/   parameter configurations and runners
+turtlefarm/    model implementation (M1 baseline SIR merged; M2 movement/intervention pending)
 tests/         model invariants and reproducibility tests
-results/       raw run records, summaries and selected figures
+scripts/       repository bootstrap helpers
+experiments/   parameter configurations and runners (to be created in M2)
+results/       raw run records, summaries and selected figures (to be created after pilot)
 ```
 
 ## Experiment and result records

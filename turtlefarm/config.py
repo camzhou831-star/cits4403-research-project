@@ -1,20 +1,21 @@
 """Simulation configuration and validation (model-specification section 18; validation-plan section 4).
 
-Values marked PROVISIONAL are working proposals awaiting facilitator confirmation (D001-D008 in
-docs/decision-log.md). They are plain configuration numbers; changing them does not change model logic.
+D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (docs/decision-log.md). Numeric values
+listed in ``PROVISIONAL_FIELDS`` (beta, gamma, quarantine_duration; network p_in/p_out arrive in M2) are
+candidates until the pilot (model-specification section 18, layer 2) and are recorded in run metadata.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any
+from dataclasses import dataclass, asdict
+from typing import Any, ClassVar
 
 STRATEGIES = ("none", "random", "betweenness")
 
-# Provisional working proposals (docs/research-plan.md, D002 / D003 / D006).
-PROVISIONAL_CAPACITY = 12
-PROVISIONAL_K = 2
-PROVISIONAL_MAX_DAYS = 365
+# Frozen decisions D002 / D003 / D006 (docs/decision-log.md, 2026-09-11).
+DEFAULT_CAPACITY = 12
+DEFAULT_K = 2
+DEFAULT_MAX_DAYS = 365
 
 
 class ConfigError(ValueError):
@@ -31,21 +32,21 @@ class SimulationConfig:
     initial_infected: int = 1
 
     # Disease (fixed in the main experiment; values chosen by pilot, not yet frozen)
-    beta: float = 0.1
-    gamma: float = 0.1
+    beta: float = 0.1  # PROVISIONAL: frozen after pilot
+    gamma: float = 0.1  # PROVISIONAL: frozen after pilot
 
     # Movement (M2). The baseline only accepts transfer_rate == 0.
     transfer_rate: float = 0.0
-    capacity: int = PROVISIONAL_CAPACITY  # PROVISIONAL D002
+    capacity: int = DEFAULT_CAPACITY  # D002 frozen
 
     # Intervention (M2). The baseline only accepts strategy == "none".
     strategy: str = "none"
-    response_delay: int = 0  # PROVISIONAL D001: measured from introduction at t = 0
-    quarantine_duration: int = 0  # D004: select after pilot
-    k: int = PROVISIONAL_K  # PROVISIONAL D003
+    response_delay: int = 0  # D001 frozen: measured from introduction at t = 0
+    quarantine_duration: int = 0  # PROVISIONAL D004: select after pilot
+    k: int = DEFAULT_K  # D003 frozen
 
     # Horizon
-    max_days: int = PROVISIONAL_MAX_DAYS  # PROVISIONAL D006
+    max_days: int = DEFAULT_MAX_DAYS  # D006 frozen
 
     # Seeds (model-specification section 16)
     network_seed: int = 0
@@ -54,9 +55,14 @@ class SimulationConfig:
 
     # Free-text provenance, copied into run metadata
     label: str = ""
-    provisional_fields: tuple[str, ...] = field(
-        default=("capacity", "k", "max_days", "response_delay"), repr=False
-    )
+
+    # Fields whose numeric value is still a candidate (model-specification section 18, layer 2).
+    # Derived from the decision log, not settable by callers; copied into run metadata.
+    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration")
+
+    @property
+    def provisional_fields(self) -> tuple[str, ...]:
+        return self.PROVISIONAL_FIELDS
 
     def __post_init__(self) -> None:
         self.validate()

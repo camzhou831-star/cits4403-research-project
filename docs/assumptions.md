@@ -37,13 +37,10 @@
 cost = k × D tank-days
 ```
 
-具体 `k`、`D` 尚未冻结。
+`k = 2` 已于 2026-09-11 冻结（D003）；`D` 的语义已冻结，数值在 pilot 后确定（D004）。
 
-## Pending assumption decisions
+## Assumption decision status
 
-- response delay 起点；
-- fixed capacity；
-- quarantine duration；
-- number of quarantined tanks；
-- network generation parameters；
-- maximum simulation horizon。
+已冻结（2026-09-11，`decision-log.md`）：response delay 起点（introduction）、fixed capacity（12）、number of quarantined tanks（2）、maximum simulation horizon（365）。
+
+数值待 pilot 后冻结：quarantine duration `D`、network generation parameters `p_in` / `p_out`。

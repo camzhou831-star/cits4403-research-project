@@ -1,6 +1,6 @@
 # Model Specification
 
-本文档是非代码阶段的规范性模型。除标注 `Decision pending facilitator confirmation` 的项目外，两名成员应能依据本文件独立实现出相同行为。
+本文档是规范性模型。D001-D003、D006-D008 已于 2026-09-11 冻结（见 `decision-log.md`）；仍标注 `Candidate value, frozen after pilot` 的项目（D004 quarantine duration、D005 network parameters、`beta`、`gamma`）按 §18 的两层冻结规则处理。两名成员应能依据本文件独立实现出相同行为。
 
 ## 1. Model type, purpose and time
 
@@ -57,7 +57,7 @@ Quarantined tank 内部传播和恢复继续发生；只禁止跨缸转入和转
 4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。
 5. 保存 adjacency list、region assignment、network seed、平均度、density、clustering coefficient 和 node betweenness。
 
-`p_in`、`p_out` 和结构接受阈值：**Decision pending facilitator confirmation**。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
+`p_in`、`p_out` 和结构接受阈值：**Candidate value, frozen after structural pilot（D005，issue #5）**。生成算法和接受规则（本节 1-5 条）已冻结，只有数值待定。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
 
 ## 4. Betweenness centrality
 
@@ -93,9 +93,9 @@ Weighted 或 dynamic betweenness 不属于 MVP。
 
 ### 6.2 Capacity
 
-主实验中所有 tanks 使用同一 fixed capacity。确切值：**Decision pending facilitator confirmation**。
+主实验中所有 tanks 使用同一 fixed capacity。确切值：**capacity = 12，**Frozen 2026-09-11（D002，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）****。
 
-- Working proposal：capacity = 12，使 initial occupancy = 10 时有有限移动空间。
+- 理由：initial occupancy = 10 时有有限移动空间。
 - 更高 capacity 会减少 blocked transfers；异质 capacity 会引入混杂，只适合作 sensitivity analysis。
 
 ## 7. Within-tank transmission
@@ -158,9 +158,9 @@ response delay d = intervention activation day measured from outbreak introducti
 - `d > 0`：day `d` 的 movement stage 前激活。
 - intervention 只触发一次。
 
-**Decision pending facilitator confirmation：** delay 从 outbreak introduction 还是 first observed infection 计算。后者需要 observation model 或额外 detection assumption，会扩大范围。MVP 建议使用前者，把 delay 解释为 detection plus administrative response 的合并抽象。
+**Delay 起点：从 outbreak introduction（`t = 0`）计算，**Frozen 2026-09-11（D001，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）**。** 替代方案 first observed infection 需要 observation model 或额外 detection assumption，会扩大范围；本项目把 delay 解释为 detection plus administrative response 的合并抽象。
 
-被选 tanks 在 `[start_day, start_day + D)` 为 `quarantined`，day `start_day + D` 恢复 `open`。Duration `D` 在主实验固定，具体值为 **Decision pending facilitator confirmation**。
+被选 tanks 在 `[start_day, start_day + D)` 为 `quarantined`，day `start_day + D` 恢复 `open`。Duration `D` 在主实验固定，具体值为 **Candidate value, frozen after pilot（D004，issue #4）**。语义（half-open interval、只触发一次、按 tank-days 计 cost）已冻结；实现时 `D` 是普通配置数值，在 config 中标注 provisional。
 
 ## 12. Intervention strategies
 
@@ -193,7 +193,7 @@ intervention cost = number of quarantined tanks × quarantine duration
                   = k × D tank-days
 ```
 
-`k`：**Decision pending facilitator confirmation**。Working proposal 是 2 个 tanks，避免 intervention 覆盖大部分网络。
+`k`：**2 个 tanks，Frozen 2026-09-11（D003，见 `decision-log.md`）**。理由：避免 intervention 覆盖大部分 20-node 网络。
 
 ## 13. Daily update order
 
@@ -216,7 +216,7 @@ intervention cost = number of quarantined tanks × quarantine duration
 total infected population I(t) = 0
 ```
 
-安全 horizon `max_days`：**Decision pending facilitator confirmation**，working proposal 为 365 days。达到 horizon 仍有 infection 时：
+安全 horizon `max_days`：**365 days，**Frozen 2026-09-11（D006，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）****。达到 horizon 仍有 infection 时：
 
 - 标记 `censored_max_days`；
 - 不伪造 extinction time；
@@ -272,14 +272,22 @@ total infected population I(t) = 0
 
 Intervention selection 禁止使用 future infection states、future transfers、future affected tanks、final metrics 或 run 中重算的 disease-informed centrality。Targeted selection 只使用 pre-outbreak fixed network；random selection 只使用 policy seed。
 
-## 18. Pending decisions
+## 18. Decision status and two-layer freeze rule
 
-1. `p_in`、`p_out` 和 network acceptance thresholds；
-2. fixed capacity（working proposal 12）；
-3. response delay 从 introduction 还是 detection 计算；
-4. quarantine duration `D`；
-5. quarantined tank count `k`（working proposal 2）；
-6. `max_days`（working proposal 365）；
-7. no-intervention baseline 在 reporting matrix 中按 delay 重复显示还是作为 shared baseline。
+| ID | Item | Status | Value / rule |
+|---|---|---|---|
+| D001 | Response-delay origin | Frozen 2026-09-11 | From introduction at `t = 0`（§11） |
+| D002 | Fixed capacity | Frozen 2026-09-11 | 12（§6.2） |
+| D003 | Quarantined tank count `k` | Frozen 2026-09-11 | 2（§12） |
+| D004 | Quarantine duration `D` | Semantics frozen；value after pilot | §11；issue #4 |
+| D005 | `p_in` / `p_out` / acceptance thresholds | Algorithm frozen；values after structural pilot | §3；issue #5 |
+| D006 | `max_days` | Frozen 2026-09-11 | 365（§14） |
+| D007 | No-intervention reporting | Frozen 2026-09-11 | Shared baseline per block（experiment-plan §3） |
+| D008 | Headline outcome | Frozen 2026-09-11 | Attack rate + affected tanks co-primary（§15.3） |
 
-这些决定必须在代码实现前由 facilitator feedback 和组内 decision log 冻结。
+**两层冻结规则（2026-09-11 起生效，取代原"所有决定必须在代码实现前冻结"）：**
+
+1. **语义冻结（实现前）**：状态定义、更新顺序、传播/恢复/移动/隔离规则、seed 派生方式、输出字段。以上全部已冻结。M2 实现只能依据本文件，不得在实现中另作语义选择。
+2. **数值冻结（正式实验前）**：`beta`、`gamma`、`D`、`p_in`/`p_out`、transfer-rate levels、delay levels、replication counts 在 19-25 Sep pilot 后冻结，记录在 `decision-log.md` 和 experiment config。在此之前这些字段是普通配置数值，由代码自动标注为 provisional 并写入 run metadata；pilot 结果不作为假设证据。
+
+任何语义变更仍按 `consistency-review.md` §6 触发跨文档更新。

@@ -46,7 +46,7 @@ per transfer level:
   + 3 response delays × 2 quarantine strategies
 ```
 
-是否为了表格平衡而重复显示 baseline：**Decision pending facilitator confirmation**。
+是否为了表格平衡而重复显示 baseline：**不重复。每个 transfer/network/epidemic block 只运行一次 no-intervention baseline，作为 shared baseline 报告（D007，frozen 2026-09-11）**。
 
 ## 4. Dependent variables
 
@@ -233,11 +233,14 @@ experiments/config/ frozen machine-readable configurations
 - 若 failure rate 超过预设阈值（working trigger 1%）或出现不变量失败，暂停整个 batch、调查原因并记录决定。
 - 若 runtime 超出 timeline，优先减少 optional policy-seed replicates，不删除核心 transfer/delay/strategy cells。
 
-## 17. Decisions still pending
+## 17. Decision status
+
+已冻结（2026-09-11，见 `decision-log.md`）：capacity = 12、`k` = 2、`max_days` = 365、delay 从 introduction 起算、shared baseline reporting、attack rate 与 affected tanks co-primary。
+
+数值待 19-25 Sep pilot 后冻结（`model-specification.md` §18 第二层）：
 
 - 数值 transfer-rate levels；
 - 数值 response-delay levels；
-- `beta`、`gamma`、capacity、`k`、`D`、`max_days`；
-- network generation parameters；
-- final network/epidemic/policy replication counts；
-- no-intervention baseline 的 reporting layout。
+- `beta`、`gamma`、`D`；
+- network generation parameters `p_in` / `p_out`；
+- final network/epidemic/policy replication counts。

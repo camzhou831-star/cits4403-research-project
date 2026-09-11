@@ -6,22 +6,28 @@
 
 | ID | Decision | Working proposal | Final value | Source | Date | Notes |
 |---|---|---|---|---|---|---|
-| D001 | Response-delay origin | From introduction at `t=0` | | | | |
-| D002 | Tank capacity | 12 | | | | |
-| D003 | Quarantined tank count `k` | 2 | | | | |
-| D004 | Quarantine duration `D` | Select after pilot | | | | |
-| D005 | Network `p_in` / `p_out` | Select after structural pilot | | | | |
-| D006 | `max_days` | 365 | | | | |
-| D007 | No-intervention reporting | Shared baseline per block | | | | |
-| D008 | Headline outcome | Attack rate + affected tanks co-primary | | | | |
+| D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | 组内（facilitator 未提出异议） | 2026-09-11 | Checkpoint 1（2026-09-07）未对 delay 起点提出修改要求，采用 working proposal（spec §11） |
+| D002 | Tank capacity | 12 | 12 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
+| D003 | Quarantined tank count `k` | 2 | 2 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
+| D004 | Quarantine duration `D` | Select after pilot | （待 pilot） | — | — | 按 experiment-plan 在 19-25 Sep pilot 后确定，issue #4 保持 open |
+| D005 | Network `p_in` / `p_out` | Select after structural pilot | （待 structural pilot） | — | — | 在 issue #16 网络结构审计后确定，issue #5 保持 open |
+| D006 | `max_days` | 365 | 365 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal；仍记录 `censored_max_days` 状态 |
+| D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
+| D008 | Headline outcome | Attack rate + affected tanks co-primary | Attack rate + affected tanks co-primary | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 
 ## Facilitator meeting record
 
-- Date：
-- Attendees：
-- Questions asked（按 `facilitator-questions.md` 编号）：
-- Answers：
-- Newly released rubric / submission requirements：
+- Date：2026-09-07（Checkpoint 1 facilitator meeting）
+- Attendees：Cam Zhou、Wenhao Zhang、facilitator
+- Questions asked（按 `facilitator-questions.md` 编号）：按 `checkpoint-1-brief.md` 介绍系统、研究问题、建模方法和 GitHub 进展
+- Answers：facilitator 对项目整体表示满意，未对系统范围、研究问题、模型定义或实验设计提出修改要求，也未对 D001-D008 的 working proposal 提出异议
+- Newly released rubric / submission requirements：会上未获得新的 rubric 或提交格式信息；按 `timeline.md` 在 3-8 October 阶段再次核对官方发布
+
+### 记录结论
+
+- D001、D002、D003、D006、D007、D008：facilitator 无异议，组内于 2026-09-11 采纳 working proposal 为最终值，代码 config 中移除 `provisional` 标注。
+- D004、D005：本来就计划在 pilot 后确定，不受 Checkpoint 影响，继续 open。
+- 无任何决策改变，因此不触发 `consistency-review.md` §6 的跨文档更新。
 
 ## Provisional-start decision
 
@@ -38,4 +44,4 @@
 
 | Date | Decision changed | Documents updated | PR |
 |---|---|---|---|
-| | | | |
+| 2026-09-11 | 无（D001-D003、D006-D008 采纳 working proposal 为最终值） | `decision-log.md`、`README.md`、`checkpoint-1.md`、`turtlefarm/config.py`（移除 provisional 标注） | docs/checkpoint-1-feedback |
