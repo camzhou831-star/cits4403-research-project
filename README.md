@@ -12,8 +12,9 @@
 | Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
 
 - 截止时间：2026 年 10 月 9 日星期五 23:59。
-- 当前阶段：**非代码研究准备阶段**。
-- 当前实现状态：**尚未实现模型，没有仿真代码、prototype 数据或实验结果。**
+- 当前阶段：**代码阶段（M1 baseline 已合入，进入 movement / intervention / experiment runner）**。
+- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline（无 movement、无 intervention，PR #19）；尚无 network generator、movement、quarantine、experiment runner 或任何实验结果。**
+- Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
 - 共享 GitHub repository 已建立；本阶段的文档改动只在本地提交，不自动 push。
 
 ## Proposed system
@@ -96,15 +97,14 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
 | `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
-## Future repository structure
-
-以下目录将在获得确认并进入代码阶段后创建；当前不存在模型代码：
+## Repository structure
 
 ```text
-src/           model implementation
-experiments/   parameter configurations and runners
+turtlefarm/    model implementation (M1 baseline SIR merged; M2 movement/intervention pending)
 tests/         model invariants and reproducibility tests
-results/       raw run records, summaries and selected figures
+scripts/       repository bootstrap helpers
+experiments/   parameter configurations and runners (to be created in M2)
+results/       raw run records, summaries and selected figures (to be created after pilot)
 ```
 
 ## Experiment and result records
