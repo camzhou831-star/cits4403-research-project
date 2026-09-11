@@ -54,10 +54,10 @@ Quarantined tank 内部传播和恢复继续发生；只禁止跨缸转入和转
 1. 按固定 tank IDs 建立 4 个 regions。
 2. 对同区域 node pairs，以 `p_in` 独立生成 edges。
 3. 对不同区域 node pairs，以较低的 `p_out` 独立生成 edges。
-4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。
-5. 保存 adjacency list、region assignment、network seed、平均度、density、clustering coefficient 和 node betweenness。
+4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。预先定义的结构检查（2026-09-11 具体化，`turtlefarm/network.py`）：(a) connected；(b) 至少一条跨区域 edge；(c) 不是完全图；(d) 所有 node 的 betweenness 不全相等。每次 attempt 由 `SeedSequence(network_seed, spawn_key=(attempt,))` 派生，按固定 node-pair 顺序独立抽样；被拒绝的原因逐条记录。
+5. 保存 adjacency list、region assignment、network seed、attempt index、network hash、平均度、density、clustering coefficient、modularity、diameter 和 node betweenness。
 
-`p_in`、`p_out` 和结构接受阈值：**Candidate value, frozen after structural pilot（D005，issue #5）**。生成算法和接受规则（本节 1-5 条）已冻结，只有数值待定。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
+`p_in`、`p_out` 和结构接受阈值：**Candidate value, frozen after structural pilot（D005，issue #5）**。生成算法和接受规则（本节 1-5 条）已冻结，只有数值待定。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。Structural audit（`docs/network-audit-2026-09-11.md`）给出的候选值为 `p_in = 0.6`、`p_out = 0.05`。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
 
 ## 4. Betweenness centrality
 

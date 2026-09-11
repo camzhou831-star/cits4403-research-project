@@ -47,6 +47,11 @@ class SimulationConfig:
     beta: float = 0.1  # PROVISIONAL: frozen after pilot
     gamma: float = 0.1  # PROVISIONAL: frozen after pilot
 
+    # Transfer network (spec section 3). p_in / p_out are D005 candidates until the structural pilot.
+    p_in: float = 0.6  # PROVISIONAL D005
+    p_out: float = 0.05  # PROVISIONAL D005
+    network_max_attempts: int = 100
+
     # Movement (M2). The baseline only accepts transfer_rate == 0.
     transfer_rate: float = 0.0
     capacity: int = DEFAULT_CAPACITY  # D002 frozen
@@ -70,7 +75,7 @@ class SimulationConfig:
 
     # Fields whose numeric value is still a candidate (model-specification section 18, layer 2).
     # Derived from the decision log, not settable by callers; copied into run metadata.
-    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration")
+    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration", "p_in", "p_out")
 
     @property
     def provisional_fields(self) -> tuple[str, ...]:
@@ -98,9 +103,11 @@ class SimulationConfig:
             if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
                 errs.append(f"{name} must be a positive integer, got {v!r}")
 
-        for p in ("beta", "gamma", "transfer_rate"):
+        for p in ("beta", "gamma", "transfer_rate", "p_in", "p_out"):
             prob(p)
-        for p in ("n_agents", "n_tanks", "n_regions", "initial_per_tank", "capacity", "max_days"):
+        if not (0.0 < self.p_out < self.p_in <= 1.0):
+            errs.append(f"require 0 < p_out < p_in <= 1 (spec 3.1), got p_in={self.p_in}, p_out={self.p_out}")
+        for p in ("n_agents", "n_tanks", "n_regions", "initial_per_tank", "capacity", "max_days", "network_max_attempts"):
             pos_int(p)
         for p in ("initial_infected", "response_delay", "quarantine_duration", "k"):
             nonneg_int(p)

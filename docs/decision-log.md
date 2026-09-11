@@ -10,7 +10,7 @@
 | D002 | Tank capacity | 12 | 12 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D003 | Quarantined tank count `k` | 2 | 2 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D004 | Quarantine duration `D` | Select after pilot | （待 pilot） | — | — | 按 experiment-plan 在 19-25 Sep pilot 后确定，issue #4 保持 open |
-| D005 | Network `p_in` / `p_out` | Select after structural pilot | （待 structural pilot） | — | — | 在 issue #16 网络结构审计后确定，issue #5 保持 open |
+| D005 | Network `p_in` / `p_out` | Select after structural pilot | （candidate 0.6 / 0.05，待 M2 pilot 冻结） | — | — | Structural audit 2026-09-11（`network-audit-2026-09-11.md`）给出候选值；数值在 movement pilot 后冻结，issue #5 保持 open |
 | D006 | `max_days` | 365 | 365 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal；仍记录 `censored_max_days` 状态 |
 | D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D008 | Headline outcome | Attack rate + affected tanks co-primary | Attack rate + affected tanks co-primary | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
@@ -45,4 +45,5 @@
 | Date | Decision changed | Documents updated | PR |
 |---|---|---|---|
 | 2026-09-11 | 无（D001-D003、D006-D008 采纳 working proposal 为最终值） | `decision-log.md`、`README.md`、`checkpoint-1.md`、`turtlefarm/config.py`（移除 provisional 标注） | docs/checkpoint-1-feedback（PR #21） |
-| 2026-09-11 | 语义补充：spec §16 randomness 由"独立 substreams"改为 event-keyed draws（保证跨策略配对）；§18 增加两层冻结规则 | `model-specification.md` §16/§18、`validation-plan.md` §9、`hand-trace-3tank.md` | model/validation-and-paired-rng |
+| 2026-09-11 | 语义补充：spec §16 randomness 由"独立 substreams"改为 event-keyed draws（保证跨策略配对）；§18 增加两层冻结规则 | `model-specification.md` §16/§18、`validation-plan.md` §9、`hand-trace-3tank.md` | model/validation-and-paired-rng（PR #22） |
+| 2026-09-11 | spec §3.2 step 4 的结构检查具体化为 4 条；D005 候选值 0.6 / 0.05 | `model-specification.md` §3.2、`network-audit-2026-09-11.md`、`turtlefarm/network.py` | model/modular-network |

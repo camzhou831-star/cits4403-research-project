@@ -9,8 +9,10 @@ from turtlefarm.config import SimulationConfig
 from turtlefarm.model import Simulation, RunRecord, run_baseline
 from turtlefarm.rng import EventKeyedDraws, TableDraws
 from turtlefarm.scenario import Layout, TankSpec, AgentSpec
+from turtlefarm.network import TransferNetwork, generate_network
 
 __all__ = [
     "SimulationConfig", "Simulation", "RunRecord", "run_baseline",
     "EventKeyedDraws", "TableDraws", "Layout", "TankSpec", "AgentSpec",
+    "TransferNetwork", "generate_network",
 ]

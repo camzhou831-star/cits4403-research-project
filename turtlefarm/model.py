@@ -17,6 +17,7 @@ from typing import Any
 
 from turtlefarm.config import ConfigError, SimulationConfig
 from turtlefarm.entities import Agent, Tank, S, I, R, OPEN, DISEASE_STATES
+from turtlefarm.network import TransferNetwork, generate_network
 from turtlefarm.rng import DrawSource, EventKeyedDraws, initialisation_stream
 from turtlefarm.scenario import Layout
 
@@ -60,6 +61,7 @@ class RunRecord:
     daily: list[DailyRecord]
     metrics: dict[str, Any]
     code_commit: str | None
+    network: dict[str, Any] | None = None  # spec 15.2: attempt index, adjacency, centralities, hash
     transitions: list[tuple[int, int, str, str]] = field(default_factory=list)  # (day, agent, from, to)
 
 
@@ -109,6 +111,7 @@ class Simulation:
         self.daily: list[DailyRecord] = []
         self.transitions: list[tuple[int, int, str, str]] = []
         self.initial_infected_agents: list[int] = []
+        self.network: TransferNetwork | None = None
         self.initialised = False
 
     # ------------------------------------------------------------------ initialisation (section 6)
@@ -117,6 +120,16 @@ class Simulation:
             return
         cfg = self.cfg
         if self.layout is None:
+            # Pre-outbreak transfer network (spec section 3). Generated before any epidemic draw and never
+            # modified afterwards; M1 does not move agents but records it for provenance (section 15.2).
+            self.network = generate_network(
+                network_seed=cfg.network_seed,
+                p_in=cfg.p_in,
+                p_out=cfg.p_out,
+                n_tanks=cfg.n_tanks,
+                n_regions=cfg.n_regions,
+                max_attempts=cfg.network_max_attempts,
+            )
             per_region = cfg.tanks_per_region
             self.tanks = [
                 Tank(tank_id=t, region_id=t // per_region, capacity=cfg.capacity) for t in range(cfg.n_tanks)
@@ -369,6 +382,7 @@ class Simulation:
             metrics=metrics,
             code_commit=_git_commit(),
             transitions=list(self.transitions),
+            network=self.network.to_dict() if self.network is not None else None,
         )
 
 
