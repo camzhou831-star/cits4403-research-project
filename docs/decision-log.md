@@ -6,7 +6,7 @@
 
 | ID | Decision | Working proposal | Final value | Source | Date | Notes |
 |---|---|---|---|---|---|---|
-| D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | 组内（facilitator 未提出异议） | 2026-09-11 | Checkpoint 1 未对 delay 起点提出修改要求，采用 working proposal（spec §11） |
+| D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | 组内（facilitator 未提出异议） | 2026-09-11 | Checkpoint 1（2026-09-07）未对 delay 起点提出修改要求，采用 working proposal（spec §11） |
 | D002 | Tank capacity | 12 | 12 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D003 | Quarantined tank count `k` | 2 | 2 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D004 | Quarantine duration `D` | Select after pilot | （待 pilot） | — | — | 按 experiment-plan 在 19-25 Sep pilot 后确定，issue #4 保持 open |
@@ -17,7 +17,7 @@
 
 ## Facilitator meeting record
 
-- Date：Checkpoint 1 已于 2026-09-11 前举行（具体日期由参会成员补充）
+- Date：2026-09-07（Checkpoint 1 facilitator meeting）
 - Attendees：Cam Zhou、Wenhao Zhang、facilitator
 - Questions asked（按 `facilitator-questions.md` 编号）：按 `checkpoint-1-brief.md` 介绍系统、研究问题、建模方法和 GitHub 进展
 - Answers：facilitator 对项目整体表示满意，未对系统范围、研究问题、模型定义或实验设计提出修改要求，也未对 D001-D008 的 working proposal 提出异议

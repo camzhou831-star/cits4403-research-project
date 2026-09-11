@@ -27,7 +27,7 @@
 
 ## Decision status
 
-Checkpoint 1（2026-09-11 前举行）facilitator 无异议；组内于 2026-09-11 采纳 working proposals 为最终值。完整记录见 `decision-log.md`，两层冻结规则见 `model-specification.md` §18。
+Checkpoint 1（2026-09-07）facilitator 无异议；组内于 2026-09-11 采纳 working proposals 为最终值。完整记录见 `decision-log.md`，两层冻结规则见 `model-specification.md` §18。
 
 | ID | Decision | Final value | Status | Alternatives considered |
 |---|---|---|---|---|
