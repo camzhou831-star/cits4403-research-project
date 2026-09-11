@@ -1,14 +1,14 @@
 """Simulation configuration and validation (model-specification section 18; validation-plan section 4).
 
-D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (docs/decision-log.md). D004
-(quarantine_duration) and D005 (network p_in/p_out) are still chosen after the pilot; fields marked
-PROVISIONAL remain listed in ``provisional_fields`` and copied into run metadata.
+D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (docs/decision-log.md). Numeric values
+listed in ``PROVISIONAL_FIELDS`` (beta, gamma, quarantine_duration; network p_in/p_out arrive in M2) are
+candidates until the pilot (model-specification section 18, layer 2) and are recorded in run metadata.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any
+from dataclasses import dataclass, asdict
+from typing import Any, ClassVar
 
 STRATEGIES = ("none", "random", "betweenness")
 
@@ -32,8 +32,8 @@ class SimulationConfig:
     initial_infected: int = 1
 
     # Disease (fixed in the main experiment; values chosen by pilot, not yet frozen)
-    beta: float = 0.1
-    gamma: float = 0.1
+    beta: float = 0.1  # PROVISIONAL: frozen after pilot
+    gamma: float = 0.1  # PROVISIONAL: frozen after pilot
 
     # Movement (M2). The baseline only accepts transfer_rate == 0.
     transfer_rate: float = 0.0
@@ -55,9 +55,14 @@ class SimulationConfig:
 
     # Free-text provenance, copied into run metadata
     label: str = ""
-    provisional_fields: tuple[str, ...] = field(
-        default=("quarantine_duration",), repr=False
-    )
+
+    # Fields whose numeric value is still a candidate (model-specification section 18, layer 2).
+    # Derived from the decision log, not settable by callers; copied into run metadata.
+    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ("beta", "gamma", "quarantine_duration")
+
+    @property
+    def provisional_fields(self) -> tuple[str, ...]:
+        return self.PROVISIONAL_FIELDS
 
     def __post_init__(self) -> None:
         self.validate()

@@ -25,18 +25,20 @@
 - Primary metrics: final attack rate、affected tanks、peak infected、time to extinction。
 - All population, network and experiment data are synthetic。
 
-## Decision pending facilitator confirmation
+## Decision status
 
-| ID | Decision | Working proposal | Alternatives / impact |
-|---|---|---|---|
-| D001 | Response-delay origin | From outbreak introduction at `t=0` | First detection requires observation model and larger scope |
-| D002 | Tank capacity | 12 for all tanks | Higher value reduces blocking；heterogeneous value adds confounding |
-| D003 | Quarantined tank count `k` | 2 | Larger budget may remove much of a 20-node network |
-| D004 | Quarantine duration `D` | Select after pilot | Too short has little effect；too long approximates permanent removal |
-| D005 | Network `p_in/p_out` | Select after structural pilot | Must be modular, connected and non-symmetric |
-| D006 | `max_days` | 365 | Too short causes censoring；too long wastes runtime |
-| D007 | No-intervention reporting | Shared baseline per transfer/network/epidemic block | Repeated delay labels give balanced table but duplicate identical runs |
-| D008 | Headline outcome | Treat attack rate and affected tanks as co-primary | Facilitator may prefer one for presentation emphasis |
+Checkpoint 1（2026-09-11 前举行）facilitator 无异议；组内于 2026-09-11 采纳 working proposals 为最终值。完整记录见 `decision-log.md`，两层冻结规则见 `model-specification.md` §18。
+
+| ID | Decision | Final value | Status | Alternatives considered |
+|---|---|---|---|---|
+| D001 | Response-delay origin | From outbreak introduction at `t=0` | Frozen 2026-09-11 | First detection requires observation model and larger scope |
+| D002 | Tank capacity | 12 for all tanks | Frozen 2026-09-11 | Higher value reduces blocking；heterogeneous value adds confounding |
+| D003 | Quarantined tank count `k` | 2 | Frozen 2026-09-11 | Larger budget may remove much of a 20-node network |
+| D004 | Quarantine duration `D` | Candidate after pilot | Value pending pilot（issue #4） | Too short has little effect；too long approximates permanent removal |
+| D005 | Network `p_in/p_out` | Candidate after structural pilot | Value pending pilot（issue #5） | Must be modular, connected and non-symmetric |
+| D006 | `max_days` | 365 | Frozen 2026-09-11 | Too short causes censoring；too long wastes runtime |
+| D007 | No-intervention reporting | Shared baseline per transfer/network/epidemic block | Frozen 2026-09-11 | Repeated delay labels give balanced table but duplicate identical runs |
+| D008 | Headline outcome | Attack rate and affected tanks co-primary | Frozen 2026-09-11 | Facilitator may prefer one for presentation emphasis |
 
 ## Decision process
 
@@ -52,7 +54,7 @@
 - [x] Model states, interactions and update order documented。
 - [x] Experiment, validation, collaboration, timeline and risks documented。
 - [x] Checkpoint brief and speaking notes prepared。
-- [ ] Facilitator resolves or accepts pending decisions。
-- [ ] Both members confirm the final specification。
-- [ ] Collaborator access and first cross-review evidence verified。
+- [x] Facilitator resolves or accepts pending decisions（Checkpoint 1，无异议；2026-09-11 记录）。
+- [x] Both members confirm the final specification（issue #10，2026-09-06/07）。
+- [x] Collaborator access and first cross-review evidence verified（PR #19 由 Member B approve，2026-09-06）。
 - [ ] Official rubric/submission details checked when released。
