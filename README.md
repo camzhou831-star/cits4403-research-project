@@ -107,6 +107,7 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/decision-log.md` | D001-D008 最终决定、facilitator 反馈记录和规格签署 |
 | `docs/week-plan-2026-09-05.md` | 5-11 September baseline model 周执行清单 |
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
+| `docs/checkpoint-1-rehearsal-member-b.md` | Member B 的 Checkpoint 1 会前排练稿（中英对照，2026-09-07） |
 | `docs/hand-trace-3tank.md` | M1 手工 trace fixture：3 tanks / 6 agents / 3 days，与 `tests/test_hand_trace.py` 对照 |
 | `docs/network-audit-2026-09-11.md` | 模块化网络生成器结构审计（16 个 p_in/p_out 组合 × 10 seeds），D005 候选值 |
 | `scripts/audit_network.py` | 重跑网络结构审计 |

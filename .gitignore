@@ -34,3 +34,8 @@ dist/
 results/raw/
 results/tmp/
 *.log
+
+# audio recordings never belong in the repo
+*.m4a
+*.mp3
+*.wav
