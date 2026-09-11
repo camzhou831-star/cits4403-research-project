@@ -105,8 +105,6 @@ class SimulationConfig:
 
         for p in ("beta", "gamma", "transfer_rate", "p_in", "p_out"):
             prob(p)
-        if not (0.0 < self.p_out < self.p_in <= 1.0):
-            errs.append(f"require 0 < p_out < p_in <= 1 (spec 3.1), got p_in={self.p_in}, p_out={self.p_out}")
         for p in ("n_agents", "n_tanks", "n_regions", "initial_per_tank", "capacity", "max_days", "network_max_attempts"):
             pos_int(p)
         for p in ("initial_infected", "response_delay", "quarantine_duration", "k"):
@@ -123,6 +121,14 @@ class SimulationConfig:
 
         if self.design not in DESIGNS:
             errs.append(f"design must be one of {DESIGNS}, got {self.design!r}")
+
+        # Type / domain errors make the relational checks below meaningless (and some would raise
+        # TypeError or ZeroDivisionError), so report them first.
+        if errs:
+            raise ConfigError("; ".join(errs))
+
+        if not (0.0 < self.p_out < self.p_in <= 1.0):
+            errs.append(f"require 0 < p_out < p_in <= 1 (spec 3.1), got p_in={self.p_in}, p_out={self.p_out}")
 
         # Structural facts fixed by the research design (spec section 6.1; validation-plan V001).
         if self.design == "main":

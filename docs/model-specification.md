@@ -54,7 +54,7 @@ Quarantined tank 内部传播和恢复继续发生；只禁止跨缸转入和转
 1. 按固定 tank IDs 建立 4 个 regions。
 2. 对同区域 node pairs，以 `p_in` 独立生成 edges。
 3. 对不同区域 node pairs，以较低的 `p_out` 独立生成 edges。
-4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。预先定义的结构检查（2026-09-11 具体化，`turtlefarm/network.py`）：(a) connected；(b) 至少一条跨区域 edge；(c) 不是完全图；(d) 所有 node 的 betweenness 不全相等。每次 attempt 由 `SeedSequence(network_seed, spawn_key=(attempt,))` 派生，按固定 node-pair 顺序独立抽样；被拒绝的原因逐条记录。
+4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。预先定义的结构检查（2026-09-11 具体化，`turtlefarm/network.py`）：(a) connected；(b) 至少一条跨区域 edge；(c) 不是完全图；(d) 所有 node 的 betweenness 不全相等。确定性约定（2026-09-11 冻结）：每次 attempt 由 `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))` 派生，按 `itertools.combinations(range(20), 2)` 字典序对全部 190 个 node pair 各抽一个 uniform；被拒绝的原因逐条记录；100 次内无 attempt 通过则 run 记为 `failed` 并保留全部拒绝原因。
 5. 保存 adjacency list、region assignment、network seed、attempt index、network hash、平均度、density、clustering coefficient、modularity、diameter 和 node betweenness。
 
 `p_in`、`p_out` 和结构接受阈值：**Candidate value, frozen after structural pilot（D005，issue #5）**。生成算法和接受规则（本节 1-5 条）已冻结，只有数值待定。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。Structural audit（`docs/network-audit-2026-09-11.md`）给出的候选值为 `p_in = 0.6`、`p_out = 0.05`。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
@@ -65,7 +65,8 @@ Quarantined tank 内部传播和恢复继续发生；只禁止跨缸转入和转
 - MVP 使用 unweighted normalized node betweenness centrality。
 - 对 node `v`，计算所有其他 source-target pairs 的 shortest paths 中经过 `v` 的比例。
 - centrality 在 outbreak 前计算一次，run 中不更新。
-- ranking ties 使用较小 `tank_id` 优先，保证 deterministic selection。
+- ranking ties 定义为计算出的 normalised betweenness **精确相等**（不使用容差），使用较小 `tank_id` 优先，保证 deterministic selection；tie 的 tank 集合写入 run metadata。
+- 网络对象在生成后不可变（tuple / read-only mapping），selector 只能读取 network、`k` 和 policy seed，不得接收 simulation 状态。
 - 不允许使用未来 infection、future movements、future affected tanks 或结果选择 targeted tanks。
 
 Weighted 或 dynamic betweenness 不属于 MVP。

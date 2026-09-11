@@ -43,6 +43,11 @@ def test_movement_free_baseline_never_leaves_initial_tank():
         dict(initial_per_tank=20, n_agents=400),
         dict(initial_infected=0),
         dict(design="pilot"),
+        dict(n_regions=0),
+        dict(p_out="x"),
+        dict(n_tanks="20"),
+        dict(p_in=0.5, p_out=0.5),
+        dict(network_max_attempts=0),
     ],
 )
 def test_invalid_config_rejected(kwargs):
