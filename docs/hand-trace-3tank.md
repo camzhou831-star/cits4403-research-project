@@ -82,4 +82,4 @@ Metrics：ever_infected 3、final_attack_rate 0.5、affected_tanks 1、peak_infe
 Differences found：无。
 
 - [ ] Member A 已独立重算并确认（日期：）
-- [ ] Member B 已独立重算并确认（日期：）
+- [x] Member B 已独立重算并确认（日期：2026-09-16）
