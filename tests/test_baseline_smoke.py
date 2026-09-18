@@ -37,7 +37,7 @@ def test_movement_free_baseline_never_leaves_initial_tank():
         dict(capacity=9),
         dict(n_agents=150),
         dict(k=21),
-        dict(transfer_rate=0.1),
+        dict(transfer_rate=1.1),
         dict(strategy="random", policy_seed=1),
         dict(max_days=0),
         dict(initial_per_tank=20, n_agents=400),
