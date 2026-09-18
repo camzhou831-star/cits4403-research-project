@@ -1,8 +1,8 @@
 """Stylised explanatory agent-based model of disease spread in a modular captive-turtle housing system.
 
-Implementation follows docs/model-specification.md. This package is the M1 baseline:
-S/I/R agents in fixed tanks with within-tank transmission, recovery and stopping rules.
-Cross-tank movement, the transfer network and quarantine strategies are M2 work.
+Implementation follows docs/model-specification.md. The package currently provides S/I/R agents,
+within-tank transmission, recovery, a fixed modular transfer network, network-constrained movement and
+stopping rules. Quarantine strategies and the experiment runner remain M2 work.
 """
 
 from turtlefarm.config import SimulationConfig

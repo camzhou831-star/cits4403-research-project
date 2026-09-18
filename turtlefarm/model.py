@@ -1,11 +1,11 @@
-"""Discrete-time stochastic ABM: M1 baseline.
+"""Discrete-time stochastic ABM with network-constrained movement.
 
 Daily order (model-specification section 13):
   1 management update  2 movement  3 transmission snapshot  4 transmission draws
   5 recovery draws     6 synchronous commit  7 record  8 stopping check
 
-In the M1 baseline the movement stage is a no-op (transfer_rate == 0) and the management stage never
-activates a quarantine (strategy == "none"). Both stages exist so that M2 slots in without reordering.
+The management stage does not yet activate quarantine (strategy == "none"). It remains a separate stage
+so that intervention logic can be added without changing the frozen daily update order.
 """
 
 from __future__ import annotations
@@ -111,6 +111,7 @@ class Simulation:
         self.daily: list[DailyRecord] = []
         self.transitions: list[tuple[int, int, str, str]] = []
         self.initial_infected_agents: list[int] = []
+        self.initial_infected_tanks: list[int] = []
         self.network: TransferNetwork | None = None
         self.initialised = False
 
@@ -158,6 +159,7 @@ class Simulation:
             ag.ever_infected = True
             ag.state_entered_day = 0
             self.ever_affected.add(ag.tank_id)
+        self.initial_infected_tanks = sorted(self.ever_affected)
 
         self.initialised = True
         self._check_invariants()
@@ -173,8 +175,57 @@ class Simulation:
                 tank.quarantine_end_day = None
 
     def _movement_stage(self) -> tuple[int, int, int]:
-        """Stage 2. Baseline: transfer_rate == 0, so no agent attempts to move."""
-        return 0, 0, 0  # attempted, accepted, blocked
+        """Stage 2: randomized asynchronous movement over the fixed transfer network.
+
+        The event-keyed ``movement`` draw serves as both the per-agent random priority and the
+        probability draw for attempting movement. Reusing that keyed value avoids an additional random
+        stream while keeping every agent-day stable across paired strategies. A successful move updates
+        both tank memberships immediately, so later agents observe current capacity.
+        """
+        if self.cfg.transfer_rate == 0.0:
+            return 0, 0, 0
+        if self.network is None:
+            raise InvariantError("non-zero transfer_rate requires a transfer network")
+
+        movement_draws = {
+            ag.agent_id: self.draws.uniform("movement", self.day, ag.agent_id) for ag in self.agents
+        }
+        processing_order = sorted(movement_draws, key=lambda agent_id: (movement_draws[agent_id], agent_id))
+
+        attempted = accepted = blocked = 0
+        for agent_id in processing_order:
+            if movement_draws[agent_id] >= self.cfg.transfer_rate:
+                continue
+
+            attempted += 1
+            agent = self.agents[agent_id]
+            origin = self.tanks[agent.tank_id]
+            if origin.management_state != OPEN:
+                blocked += 1
+                continue
+
+            destinations = [
+                tank_id
+                for tank_id in self.network.neighbours(origin.tank_id)
+                if self.tanks[tank_id].management_state == OPEN
+                and self.tanks[tank_id].occupancy < self.tanks[tank_id].capacity
+            ]
+            if not destinations:
+                blocked += 1
+                continue
+
+            destination_draw = self.draws.uniform("movement_destination", self.day, agent_id)
+            destination_id = destinations[int(destination_draw * len(destinations))]
+            destination = self.tanks[destination_id]
+
+            origin.members.remove(agent_id)
+            destination.members.add(agent_id)
+            agent.tank_id = destination_id
+            if agent.disease_state == I:
+                self.ever_affected.add(destination_id)
+            accepted += 1
+
+        return attempted, accepted, blocked
 
     def _transmission_and_recovery(self) -> tuple[list[int], list[int]]:
         """Stages 3-5. Draws are made against a frozen snapshot; nothing is committed here."""
@@ -374,7 +425,7 @@ class Simulation:
                 "policy_seed": cfg.policy_seed,
             },
             initial_infected_agents=list(self.initial_infected_agents),
-            initial_infected_tanks=sorted({self.agents[a].tank_id for a in self.initial_infected_agents}),
+            initial_infected_tanks=list(self.initial_infected_tanks),
             selected_tanks=[],
             intervention_start_day=None,
             intervention_cost=0,
