@@ -52,7 +52,7 @@ class SimulationConfig:
     p_out: float = 0.05  # PROVISIONAL D005
     network_max_attempts: int = 100
 
-    # Movement (M2). The baseline only accepts transfer_rate == 0.
+    # Movement (M2). Main-design agents may move along the generated transfer network.
     transfer_rate: float = 0.0
     capacity: int = DEFAULT_CAPACITY  # D002 frozen
 
@@ -152,11 +152,13 @@ class SimulationConfig:
         if self.k > self.n_tanks:
             errs.append(f"k ({self.k}) exceeds n_tanks ({self.n_tanks})")
 
-        # Baseline scope guard (M1). Movement and quarantine arrive in M2; refuse rather than silently ignore.
-        if self.transfer_rate != 0.0:
-            errs.append("transfer_rate > 0 requires cross-tank movement, which is not implemented in the M1 baseline")
+        # Explicit layouts currently have no transfer-network field. Refuse non-zero movement instead of
+        # silently ignoring it; movement validation uses the generated main-design network for now.
+        if self.design == "scenario" and self.transfer_rate != 0.0:
+            errs.append("scenario design requires transfer_rate = 0 because Layout has no transfer network")
+        # Quarantine is still M2 follow-up work; refuse rather than silently ignore a requested strategy.
         if self.strategy != "none":
-            errs.append(f"strategy {self.strategy!r} requires quarantine logic, which is not implemented in the M1 baseline")
+            errs.append(f"strategy {self.strategy!r} requires quarantine logic, which is not implemented yet")
         if self.strategy == "random" and self.policy_seed is None:
             errs.append("random strategy requires policy_seed")
 

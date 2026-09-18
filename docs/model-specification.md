@@ -130,12 +130,12 @@ P(S -> I) = 1 - (1 - beta) ^ I_j(t)
 
 ### 9.2 Eligibility and update
 
-agent 只有在 origin tank 为 `open`，且至少一个相邻 tank 为 `open` 并有 spare capacity 时才 eligible。
+agent 只有在 origin tank 为 `open`，且至少一个相邻 tank 为 `open` 并有 spare capacity 时才能完成移动。
 
-- 当日开始时，用 movement random stream 打乱 agents 的处理顺序。
-- 按 randomized asynchronous order 处理；每个 agent 每天最多一次 attempt。
-- eligible agent 以概率 `mu` 尝试移动。
-- 尝试时均匀选择一个当前 open 且有 capacity 的 neighbouring tank。
+- 当日开始时，每个 agent 取得 event-keyed movement draw；按 draw 升序（精确相同时按 `agent_id` 升序）形成 randomized asynchronous processing order。
+- 同一个 movement draw 小于 `mu` 时记为一次 attempt；每个 agent 每天最多一次 attempt。
+- 处理 attempt 时即时检查 origin、相邻 tank 的 management state 和 capacity；origin 被隔离或没有合格 destination 时记为 blocked。
+- 将合格 neighbouring tank 按 `tank_id` 升序排列，并使用该 agent 当日的 `movement_destination` draw 均匀选择一个 destination。
 - 接受后立即更新 location 和两个 tanks 的 occupancy。
 - 无合格 destination 时留在原 tank，并记录 blocked/no-destination event。
 - disease state 不影响 movement probability；这是明确的模型简化。
@@ -268,6 +268,7 @@ total infected population I(t) = 0
 为保持 paired comparison，epidemic randomness 使用 **event-keyed draws**（2026-09-11 决定，取代"独立 substreams"方案；实现见 `turtlefarm/rng.py`）：
 
 - 对每个 process ∈ {movement, movement_destination, transmission, recovery}，每天 `t` 由 `SeedSequence(epidemic_seed, spawn_key=(process, t))` 派生一个 generator，生成长度为 `n_agents` 的 uniform 数组；agent `a` 在该 process、该天消耗的 draw 固定是数组第 `a` 位。
+- movement draw 同时作为 agent 当日的 processing priority 和 attempt draw；`movement_destination` draw 通过 `floor(u × m)` 映射到按 `tank_id` 排序的 `m` 个当前合格 destinations。此约定避免增加第三条随机流，并完全规定 asynchronous movement 的 replay 行为。
 - 因此 `(process, day, agent)` 的 draw 只依赖 epidemic seed，不依赖当天有多少 agent 被暴露、也不依赖之前的历史。某策略避免了一次暴露，不会使其他 agent 或之后任何一天的 draw 错位。
 - 独立 substreams（每个 process 一个顺序流）不满足这一性质：暴露集合改变会使同一流的 draw index 漂移，random 与 targeted 策略名义配对、实际不配对。
 - Initialisation 使用单独的 `spawn_key=(0,)` generator，只在选 initial case 时消耗一次；policy seed 单独成流，只用于 random tank selection。
