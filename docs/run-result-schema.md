@@ -1,6 +1,6 @@
 # Run Metadata and Raw-Result Schema
 
-Status: draft for issue #15. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
+Status: draft for issue #15, aligned with the movement implementation merged in PR #27. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
 
 ## 1. Storage contract
 
@@ -88,9 +88,9 @@ Each item in `daily` has the following fields:
 | `S`, `I`, `R` | integer | End-of-day population counts. |
 | `new_infections` | integer | `S -> I` transitions committed that day. |
 | `recoveries` | integer | `I -> R` transitions committed that day. |
-| `attempted_transfers` | integer | Eligible movement attempts. |
+| `attempted_transfers` | integer | Movement attempts generated when an agent's event-keyed movement draw is below `transfer_rate`; every attempt is subsequently accepted or blocked. |
 | `accepted_transfers` | integer | Successful cross-tank movements. |
-| `blocked_transfers` | integer | Attempts blocked by quarantine, capacity, or no destination under the final M2 event definition. |
+| `blocked_transfers` | integer | Attempts blocked because the origin is quarantined or no open neighbouring destination has spare capacity. |
 | `affected_tanks_now` | integer | Tanks containing at least one infectious agent at the end of the day. |
 | `affected_tanks_ever` | integer | Distinct tanks that have contained an infectious agent up to that day. |
 | `tanks` | array of object | Per-tank `tank_id`, `region_id`, `occupancy`, `S`, `I`, `R`, and `management_state`. |
@@ -135,19 +135,19 @@ The runner must serialise dataclasses and tuples into ordinary JSON objects and 
 
 ## 9. Current implementation coverage
 
-| Requirement | Current source | Status before M2 |
+| Requirement | Current source | Current status |
 |---|---|---|
 | Complete configuration and three seeds | `RunRecord.config`, `RunRecord.seeds` | available |
 | Commit provenance | `RunRecord.code_commit` | available |
 | Network ID, adjacency, centrality, attempt and diagnostics | `RunRecord.network` | available |
 | Initial case provenance | `initial_infected_agents`, `initial_infected_tanks` | available |
-| Daily S/I/R, tank states and transfer counters | `RunRecord.daily` | structure available; movement counters remain zero in M1 |
+| Daily S/I/R, tank states and transfer counters | `RunRecord.daily` | available; network-constrained movement populates attempted, accepted, and blocked counters |
 | Status, stop reason, errors and censoring | `status`, `stop_reason`, `error`, `metrics` | available |
-| Selected tanks, intervention timing and cost | existing `RunRecord` fields plus `config` | structure available; values remain baseline placeholders in M1 |
+| Selected tanks, intervention timing and cost | existing `RunRecord` fields plus `config` | structure available; values remain placeholders until quarantine is implemented |
 | Schema version, run ID, timestamp and configuration hash | none | runner must add in M2 |
 | JSONL persistence | none | runner must add in M2 |
 
-The baseline therefore supplies all model-owned information required by this schema. The M2 runner must add the execution envelope and persistence layer, while movement and intervention implementation must replace the existing baseline placeholder values.
+The model therefore supplies the configuration, network, movement, disease, status, and metric information required by this schema. The M2 runner must add the execution envelope and persistence layer, while quarantine implementation must replace the remaining intervention placeholder values.
 
 ## 10. Review checklist for issue #15
 
