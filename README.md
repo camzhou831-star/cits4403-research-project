@@ -12,8 +12,8 @@
 | Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
 
 - 截止时间：2026 年 10 月 9 日星期五 23:59。
-- 当前阶段：**代码阶段（M1 baseline 已合入，正在实现 M2 movement / intervention / experiment runner）**。
-- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline、模块化网络和 network-constrained movement；quarantine、experiment runner 和正式实验结果尚未实现。**
+- 当前阶段：**代码阶段（M1 baseline 已合入，正在实现 M2 intervention / experiment runner）**。
+- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline、模块化网络、network-constrained movement 和 tank quarantine strategies；experiment runner 和正式实验结果尚未实现。**
 - Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
 - 共享 GitHub repository 已建立；所有改动经 feature branch 和 PR review 合入 `main`。
 
@@ -116,7 +116,7 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (SIR; event-keyed draws; modular transfer network; agent movement)
+turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine)
 tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
 scripts/       repository bootstrap helpers
 experiments/   parameter configurations and runners (to be created in M2)

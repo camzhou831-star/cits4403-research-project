@@ -56,7 +56,7 @@ class SimulationConfig:
     transfer_rate: float = 0.0
     capacity: int = DEFAULT_CAPACITY  # D002 frozen
 
-    # Intervention (M2). The baseline only accepts strategy == "none".
+    # Intervention (M2). Non-none strategies require a positive duration and at least one selected tank.
     strategy: str = "none"
     response_delay: int = 0  # D001 frozen: measured from introduction at t = 0
     quarantine_duration: int = 0  # PROVISIONAL D004: select after pilot
@@ -156,11 +156,16 @@ class SimulationConfig:
         # silently ignoring it; movement validation uses the generated main-design network for now.
         if self.design == "scenario" and self.transfer_rate != 0.0:
             errs.append("scenario design requires transfer_rate = 0 because Layout has no transfer network")
-        # Quarantine is still M2 follow-up work; refuse rather than silently ignore a requested strategy.
-        if self.strategy != "none":
-            errs.append(f"strategy {self.strategy!r} requires quarantine logic, which is not implemented yet")
+        if self.design == "scenario" and self.strategy != "none":
+            errs.append("scenario design requires strategy = 'none' because Layout has no transfer network")
+        if self.strategy != "none" and self.quarantine_duration == 0:
+            errs.append("quarantine_duration must be positive for an intervention strategy")
+        if self.strategy != "none" and self.k == 0:
+            errs.append("k must be positive for an intervention strategy")
         if self.strategy == "random" and self.policy_seed is None:
             errs.append("random strategy requires policy_seed")
+        if self.strategy != "random" and self.policy_seed is not None:
+            errs.append("policy_seed is only valid for the random strategy")
 
         if errs:
             raise ConfigError("; ".join(errs))

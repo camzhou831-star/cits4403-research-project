@@ -1,11 +1,11 @@
-"""Discrete-time stochastic ABM with network-constrained movement.
+"""Discrete-time stochastic ABM with network-constrained movement and tank quarantine.
 
 Daily order (model-specification section 13):
   1 management update  2 movement  3 transmission snapshot  4 transmission draws
   5 recovery draws     6 synchronous commit  7 record  8 stopping check
 
-The management stage does not yet activate quarantine (strategy == "none"). It remains a separate stage
-so that intervention logic can be added without changing the frozen daily update order.
+The management stage selects no tanks for ``strategy="none"``; random and betweenness strategies use
+the fixed pre-outbreak network and activate before the scheduled day's movement stage.
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from turtlefarm.config import ConfigError, SimulationConfig
-from turtlefarm.entities import Agent, Tank, S, I, R, OPEN, DISEASE_STATES
+from turtlefarm.entities import Agent, Tank, S, I, R, OPEN, QUARANTINED, DISEASE_STATES, MANAGEMENT_STATES
 from turtlefarm.network import TransferNetwork, generate_network
-from turtlefarm.rng import DrawSource, EventKeyedDraws, initialisation_stream
+from turtlefarm.rng import DrawSource, EventKeyedDraws, initialisation_stream, policy_stream
 from turtlefarm.scenario import Layout
 
 STATUS_COMPLETED = "completed"
@@ -112,6 +112,9 @@ class Simulation:
         self.transitions: list[tuple[int, int, str, str]] = []
         self.initial_infected_agents: list[int] = []
         self.initial_infected_tanks: list[int] = []
+        self.selected_tanks: list[int] = []
+        self.intervention_start_day: int | None = None
+        self.intervention_activated = False
         self.network: TransferNetwork | None = None
         self.initialised = False
 
@@ -122,7 +125,7 @@ class Simulation:
         cfg = self.cfg
         if self.layout is None:
             # Pre-outbreak transfer network (spec section 3). Generated before any epidemic draw and never
-            # modified afterwards; M1 does not move agents but records it for provenance (section 15.2).
+            # modified afterwards; movement and policy selection only read it (sections 9, 12 and 17).
             self.network = generate_network(
                 network_seed=cfg.network_seed,
                 p_in=cfg.p_in,
@@ -131,6 +134,7 @@ class Simulation:
                 n_regions=cfg.n_regions,
                 max_attempts=cfg.network_max_attempts,
             )
+            self._select_intervention_tanks()
             per_region = cfg.tanks_per_region
             self.tanks = [
                 Tank(tank_id=t, region_id=t // per_region, capacity=cfg.capacity) for t in range(cfg.n_tanks)
@@ -166,13 +170,56 @@ class Simulation:
         self._record(new_infections=0, recoveries=0, attempted=0, accepted=0, blocked=0)
 
     # ------------------------------------------------------------------ daily stages
+    def _select_intervention_tanks(self) -> None:
+        """Select targets from the fixed pre-outbreak network without reading epidemic state."""
+        cfg = self.cfg
+        if cfg.strategy == "none":
+            self.selected_tanks = []
+            return
+        if self.network is None:
+            raise InvariantError("quarantine selection requires a transfer network")
+        if cfg.strategy == "random":
+            if cfg.policy_seed is None:  # guarded by config validation; retained as a local invariant
+                raise InvariantError("random quarantine requires policy_seed")
+            chosen = policy_stream(cfg.policy_seed).choice(self.n_tanks, size=cfg.k, replace=False)
+            self.selected_tanks = sorted(int(tank_id) for tank_id in chosen)
+        else:
+            self.selected_tanks = self.network.top_k(cfg.k)
+
+    @property
+    def _scheduled_intervention_day(self) -> int:
+        """Actual stage day. Day 0 is the initial snapshot; the first movement stage is day 1."""
+        return max(1, self.cfg.response_delay)
+
     def _management_update(self) -> None:
-        """Stage 1. Baseline: strategy 'none' never selects tanks. Releases are generic."""
+        """Stage 1: release expired quarantines, then activate a pending intervention once."""
         for tank in self.tanks:
             if tank.quarantine_end_day is not None and self.day >= tank.quarantine_end_day:
                 tank.management_state = OPEN
                 tank.quarantine_start_day = None
                 tank.quarantine_end_day = None
+
+        if (
+            self.cfg.strategy == "none"
+            or self.intervention_activated
+            or self.day < self._scheduled_intervention_day
+        ):
+            return
+
+        self.intervention_start_day = self.day
+        end_day = self.day + self.cfg.quarantine_duration
+        for tank_id in self.selected_tanks:
+            tank = self.tanks[tank_id]
+            tank.management_state = QUARANTINED
+            tank.quarantine_start_day = self.day
+            tank.quarantine_end_day = end_day
+        self.intervention_activated = True
+
+    def _intervention_cost(self) -> int:
+        """Committed intervention budget in tank-days; zero when no intervention activated."""
+        if self.intervention_start_day is None:
+            return 0
+        return len(self.selected_tanks) * self.cfg.quarantine_duration
 
     def _movement_stage(self) -> tuple[int, int, int]:
         """Stage 2: randomized asynchronous movement over the fixed transfer network.
@@ -357,6 +404,13 @@ class Simulation:
                 raise InvariantError(f"agent {ag.agent_id} is {ag.disease_state} but ever_infected is False")
         seen: set[int] = set()
         for tank in self.tanks:
+            if tank.management_state not in MANAGEMENT_STATES:
+                raise InvariantError(
+                    f"tank {tank.tank_id} has management_state {tank.management_state!r}, "
+                    f"expected one of {MANAGEMENT_STATES}"
+                )
+            if tank.management_state == QUARANTINED and not tank.is_quarantined_on(self.day):
+                raise InvariantError(f"tank {tank.tank_id} quarantine interval does not include day {self.day}")
             if tank.occupancy > tank.capacity:  # V006
                 raise InvariantError(f"tank {tank.tank_id} occupancy {tank.occupancy} > capacity {tank.capacity}")
             for a in tank.members:
@@ -413,7 +467,8 @@ class Simulation:
             status, stop_reason = STATUS_FAILED, "runtime error"
             error = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
 
-        metrics = compute_metrics(self.agents, self.daily, status) if self.daily else {}
+        intervention_cost = self._intervention_cost()
+        metrics = compute_metrics(self.agents, self.daily, status, intervention_cost) if self.daily else {}
         return RunRecord(
             config=cfg.to_dict(),
             status=status,
@@ -426,9 +481,9 @@ class Simulation:
             },
             initial_infected_agents=list(self.initial_infected_agents),
             initial_infected_tanks=list(self.initial_infected_tanks),
-            selected_tanks=[],
-            intervention_start_day=None,
-            intervention_cost=0,
+            selected_tanks=list(self.selected_tanks),
+            intervention_start_day=self.intervention_start_day,
+            intervention_cost=intervention_cost,
             daily=list(self.daily),
             metrics=metrics,
             code_commit=_git_commit(),
@@ -437,7 +492,9 @@ class Simulation:
         )
 
 
-def compute_metrics(agents: list[Agent], daily: list[DailyRecord], status: str) -> dict[str, Any]:
+def compute_metrics(
+    agents: list[Agent], daily: list[DailyRecord], status: str, intervention_cost: int = 0
+) -> dict[str, Any]:
     """Metrics of model-specification section 15.3. Censored runs get time_to_extinction = None."""
     ever = sum(1 for ag in agents if ag.ever_infected)
     peak = max(d.I for d in daily)
@@ -453,7 +510,7 @@ def compute_metrics(agents: list[Agent], daily: list[DailyRecord], status: str) 
         "time_to_peak": time_to_peak,
         "time_to_extinction": extinction,
         "days_simulated": daily[-1].day,
-        "intervention_cost": 0,  # M1: strategy is always "none"
+        "intervention_cost": intervention_cost,
     }
 
 

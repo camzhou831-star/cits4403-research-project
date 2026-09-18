@@ -159,6 +159,8 @@ response delay d = intervention activation day measured from outbreak introducti
 - `d > 0`：day `d` 的 movement stage 前激活。
 - intervention 只触发一次。
 
+实现中的 day `0` 是不执行 movement 的初始快照，第一个 movement stage 记录为 day `1`。因此实际记录的 `intervention_start_day = max(1, d)`；`d = 0` 和 `d = 1` 都在第一个 movement stage 前激活。主实验 delay levels 不应同时包含这两个语义重复的值。
+
 **Delay 起点：从 outbreak introduction（`t = 0`）计算，**Frozen 2026-09-11（D001，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）**。** 替代方案 first observed infection 需要 observation model 或额外 detection assumption，会扩大范围；本项目把 delay 解释为 detection plus administrative response 的合并抽象。
 
 被选 tanks 在 `[start_day, start_day + D)` 为 `quarantined`，day `start_day + D` 恢复 `open`。Duration `D` 在主实验固定，具体值为 **Candidate value, frozen after pilot（D004，issue #4）**。语义（half-open interval、只触发一次、按 tank-days 计 cost）已冻结；实现时 `D` 是普通配置数值，在 config 中标注 provisional。
