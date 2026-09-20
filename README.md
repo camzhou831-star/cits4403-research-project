@@ -12,8 +12,8 @@
 | Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
 
 - 截止时间：2026 年 10 月 9 日星期五 23:59。
-- 当前阶段：**代码阶段（M1 baseline 已合入，正在实现 M2 intervention / experiment runner）**。
-- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline、模块化网络、network-constrained movement 和 tank quarantine strategies；experiment runner 和正式实验结果尚未实现。**
+- 当前阶段：**代码阶段（M1、M2 已实现；pilot protocol 待两名成员确认后运行 pilot）**。
+- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline、模块化网络、network-constrained movement、tank quarantine strategies 和 batch experiment runner；pilot 和正式实验尚未运行，仓库中没有任何实验结果。**
 - Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
 - 共享 GitHub repository 已建立；所有改动经 feature branch 和 PR review 合入 `main`。
 
@@ -62,15 +62,18 @@
 4. GitHub collaborator 已接受邀请，PR #19 有跨成员 review；
 5. 正式 rubric / 提交格式尚未发布，已记录在 `docs/decision-log.md`，3-8 October 再次核对。
 
-**进入 M2（movement / intervention / experiment runner）合并前必须满足**
+**M2（movement / intervention / experiment runner）gate（已满足，2026-09-20）**
 
-- 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13）；
-- 手工 trace 与 event log 一致并由两名成员签署（issue #14）；
+- 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13，closed）；
+- 手工 trace 与 event log 一致并由两名成员签署（issue #14，closed）；
 - paired randomness 方案（event-keyed draws）已写入规格 §16 并实现（`turtlefarm/rng.py`）；
-- run metadata / failure record schema 冻结（issue #15）。
+- run metadata / failure record schema 冻结（issue #15，PR #25，2026-09-20 合入）。
+
+偏差记录：movement（PR #27）和 quarantine（PR #29）在 schema 合入之前已合并，与上面的 gate 顺序不一致。两者都不写 raw records；依赖 schema 的 experiment runner 是在 PR #25 合入之后才实现的（issue #30），因此没有任何 raw record 是在 schema 冻结前产生的。
 
 **进入正式实验前必须满足**
 
+- `docs/pilot-protocol.md` 的选择标准在运行前由两名成员确认；
 - pilot 完成，`beta`、`gamma`、`D`、`p_in`/`p_out`、levels 和 seed lists 冻结并记录；
 - V001-V012、V101-V110、fairness audit 全部通过（`docs/validation-plan.md` §10）。
 
@@ -109,18 +112,23 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
 | `docs/checkpoint-1-rehearsal-member-b.md` | Member B 的 Checkpoint 1 会前排练稿（中英对照，2026-09-07） |
 | `docs/hand-trace-3tank.md` | M1 手工 trace fixture：3 tanks / 6 agents / 3 days，与 `tests/test_hand_trace.py` 对照 |
+| `docs/run-result-schema.md` | Raw run record 的字段契约（`turtlefarm.run.v1`），runner 按此写 JSONL |
+| `docs/pilot-protocol.md` | Pilot 两阶段设计和**运行前写下的**选择标准（draft，待 Member B 确认） |
+| `docs/checkpoint-2-speaking-notes.md` | Checkpoint 2 两名成员英文讲稿、翻页位置、demo 步骤和问答分工 |
 | `docs/network-audit-2026-09-11.md` | 模块化网络生成器结构审计（16 个 p_in/p_out 组合 × 10 seeds），D005 候选值 |
 | `scripts/audit_network.py` | 重跑网络结构审计 |
+| `scripts/demo_checkpoint2.py` | Checkpoint 2 功能演示（单个 seed block，不是实验结果） |
+| `scripts/run_experiment.py` | 按 `experiments/config/*.json` 运行 batch，写 raw JSONL 和逐 run 汇总表 |
 | `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine)
-tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
-scripts/       repository bootstrap helpers
-experiments/   parameter configurations and runners (to be created in M2)
-results/       raw run records, summaries and selected figures (to be created after pilot)
+turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine; batch runner)
+tests/         V-numbered invariant, extreme-case, paired-draw, hand-trace, movement, quarantine and runner tests
+scripts/       checkpoint demo, network audit, experiment runner and repository bootstrap helpers
+experiments/   machine-readable experiment designs (experiments/config/*.json)
+results/       raw run records (git-ignored), summaries and selected figures (created when the pilot runs)
 ```
 
 ## Experiment and result records
