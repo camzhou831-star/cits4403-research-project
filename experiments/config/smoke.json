@@ -1,0 +1,9 @@
+{
+  "name": "smoke",
+  "transfer_rates": [0.0, 0.05],
+  "response_delays": [1, 10],
+  "network_seeds": [0],
+  "epidemic_seeds": [1, 2],
+  "policy_seeds": [1],
+  "fixed": {"beta": 0.1, "gamma": 0.1, "quarantine_duration": 7}
+}

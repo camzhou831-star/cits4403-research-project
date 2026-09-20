@@ -2,7 +2,7 @@
 
 Implementation follows docs/model-specification.md. The package currently provides S/I/R agents,
 within-tank transmission, recovery, a fixed modular transfer network, network-constrained movement,
-tank quarantine and stopping rules. The experiment runner remains M2 work.
+tank quarantine, stopping rules and the batch experiment runner (turtlefarm.runner).
 """
 
 from turtlefarm.config import SimulationConfig
