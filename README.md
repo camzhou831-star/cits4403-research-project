@@ -2,29 +2,29 @@
 
 ## Bridge Transfers and Quarantine in a Captive Turtle Farm
 
-本仓库用于 CITS4403 Research Project 的研究设计、模型实现、计算实验、分析和最终展示。项目使用完全合成的数据，研究模块化养殖缸系统中的疾病传播和移动限制。它是一个 **stylised explanatory model（风格化解释性模型）**，不预测真实龟类疾病，也不使用真实龟场客户数据。
+This repository holds the research design, model implementation, computational experiments, analysis and final presentation for the CITS4403 Research Project. The project uses fully synthetic data to study disease spread and movement restrictions in a modular tank housing system. It is a **stylised explanatory model**: it does not predict any real turtle disease and uses no real turtle-farm customer data.
 
 ## Team
 
 | Role | Name | GitHub | Contact |
 |---|---|---|---|
-| Member A | Cam Zhou | `camzhou831-star` | 待组内确认 |
-| Member B | Wenhao Zhang | `Winston-2hang` | 待组内确认 |
+| Member A | Cam Zhou | `camzhou831-star` | To be confirmed by the team |
+| Member B | Wenhao Zhang | `Winston-2hang` | To be confirmed by the team |
 
-- 截止时间：2026 年 10 月 9 日星期五 23:59。
-- 当前阶段：**代码阶段（M1 baseline 已合入，正在实现 M2 intervention / experiment runner）**。
-- 当前实现状态：**`turtlefarm/` 已实现最小 SIR baseline、模块化网络、network-constrained movement 和 tank quarantine strategies；experiment runner 和正式实验结果尚未实现。**
-- Checkpoint 1 已完成，facilitator 无修改要求；D001-D003、D006-D008 已采纳 working proposal 为最终值，D004/D005 待 pilot 后确定（见 `docs/decision-log.md`）。
-- 共享 GitHub repository 已建立；所有改动经 feature branch 和 PR review 合入 `main`。
+- Deadline: Friday 9 October 2026, 23:59.
+- Current stage: **code stage (M1 and M2 implemented; the pilot runs once both members confirm the pilot protocol)**.
+- Implementation status: **`turtlefarm/` implements the minimal SIR baseline, the modular network, network-constrained movement, tank quarantine strategies and the batch experiment runner; neither the pilot nor the formal experiment has been run, and the repository contains no experiment results.**
+- Checkpoint 1 is complete and the facilitator requested no changes; D001-D003 and D006-D008 adopted the working proposals as final values, D004/D005 will be decided after the pilot (see `docs/decision-log.md`).
+- The shared GitHub repository is set up; all changes reach `main` through a feature branch and PR review.
 
 ## Proposed system
 
-- 200 个合成 turtle agents 分布在 20 个 tanks 中。
-- 20 个 tanks 构成一个包含 4 个区域的模块化转移网络（modular transfer network）。
-- 个体疾病状态只有 `S / I / R`。
-- 缸的管理状态只有 `open / quarantined`。
-- 缸级 quarantine 在固定时间内禁止该缸的个体转入和转出，但缸内传播继续发生。
-- 少数连接不同区域的 tanks 可能具有较高 betweenness centrality，并形成 bridge tanks。
+- 200 synthetic turtle agents are distributed across 20 tanks.
+- The 20 tanks form a modular transfer network with 4 regions.
+- An agent's disease state is one of `S / I / R` only.
+- A tank's management state is one of `open / quarantined` only.
+- Tank-level quarantine blocks transfers into and out of that tank for a fixed period, while transmission inside the tank continues.
+- A few tanks that connect different regions may have high betweenness centrality and act as bridge tanks.
 
 ## Research questions
 
@@ -42,93 +42,101 @@
 
 ## Modelling approach
 
-项目计划使用离散时间的 agent-based model（ABM）和固定的 tank-transfer network：
+The project uses a discrete-time agent-based model (ABM) on a fixed tank-transfer network:
 
-- agent 层描述 SIR 疾病状态、所在 tank、同缸传播、恢复和个体转移；
-- network 层描述允许转移的 tank pairs 和模块化区域结构；
-- management 层比较 `No intervention`、`Random tank quarantine` 和 `Highest-betweenness tank quarantine`；
-- 主实验只改变 cross-tank transfer rate、response delay 和 intervention strategy；
-- 每个随机条件使用可追踪的 network seed、epidemic seed 和 random-policy seed。
+- the agent layer describes SIR disease state, current tank, within-tank transmission, recovery and individual transfers;
+- the network layer describes which tank pairs allow transfers and the modular region structure;
+- the management layer compares `No intervention`, `Random tank quarantine` and `Highest-betweenness tank quarantine`;
+- the main experiment varies only cross-tank transfer rate, response delay and intervention strategy;
+- every stochastic condition uses a traceable network seed, epidemic seed and random-policy seed.
 
-完整规格见 [docs/model-specification.md](docs/model-specification.md)。
+The full specification is in [docs/model-specification.md](docs/model-specification.md).
 
 ## Current stage and gates
 
-**已满足的 gate（进入代码阶段，2026-09-11）**
+**Gates already met (entering the code stage, 2026-09-11)**
 
-1. Checkpoint 1 已完成，facilitator 无修改要求；
-2. D001-D003、D006-D008 已冻结，D004/D005 的语义已冻结、数值待 pilot（`docs/model-specification.md` §18 两层冻结规则）；
-3. 两名成员已签署模型规格（issue #10）；
-4. GitHub collaborator 已接受邀请，PR #19 有跨成员 review；
-5. 正式 rubric / 提交格式尚未发布，已记录在 `docs/decision-log.md`，3-8 October 再次核对。
+1. Checkpoint 1 is complete and the facilitator requested no changes;
+2. D001-D003 and D006-D008 are frozen; D004/D005 have frozen semantics and numeric values pending the pilot (two-layer freeze rule, `docs/model-specification.md` section 18);
+3. both members signed off the model specification (issue #10);
+4. the GitHub collaborator accepted the invitation, and PR #19 has a cross-member review;
+5. the official rubric / submission format has not been released; this is recorded in `docs/decision-log.md` and will be checked again on 3-8 October.
 
-**进入 M2（movement / intervention / experiment runner）合并前必须满足**
+**M2 gate (movement / intervention / experiment runner) — met, 2026-09-20**
 
-- 正式 V001-V005、V011、V012、V101、V103、V104 测试通过（issue #13）；
-- 手工 trace 与 event log 一致并由两名成员签署（issue #14）；
-- paired randomness 方案（event-keyed draws）已写入规格 §16 并实现（`turtlefarm/rng.py`）；
-- run metadata / failure record schema 冻结（issue #15）。
+- formal tests V001-V005, V011, V012, V101, V103 and V104 pass (issue #13, closed);
+- the hand trace matches the event log and is signed by both members (issue #14, closed);
+- the paired-randomness scheme (event-keyed draws) is written into specification section 16 and implemented (`turtlefarm/rng.py`);
+- the run metadata / failure record schema is frozen (issue #15, PR #25, merged 2026-09-20).
 
-**进入正式实验前必须满足**
+Recorded deviation: movement (PR #27) and quarantine (PR #29) were merged before the schema, which does not follow the gate order above. Neither writes raw records; the experiment runner, which depends on the schema, was implemented only after PR #25 was merged (issue #30), so no raw record was produced before the schema was frozen.
 
-- pilot 完成，`beta`、`gamma`、`D`、`p_in`/`p_out`、levels 和 seed lists 冻结并记录；
-- V001-V012、V101-V110、fairness audit 全部通过（`docs/validation-plan.md` §10）。
+**Must be met before the formal experiment**
+
+- the selection criteria in `docs/pilot-protocol.md` are confirmed by both members before the pilot runs;
+- the pilot is complete, and `beta`, `gamma`, `D`, `p_in`/`p_out`, levels and seed lists are frozen and recorded;
+- V001-V012, V101-V110 and the fairness audit all pass (`docs/validation-plan.md` section 10).
 
 ## Environment
 
-Python 3.12，依赖固定在 `requirements.txt`。两名成员使用相同版本，保证 same-seed 结果可比。
+Python 3.12, with dependencies pinned in `requirements.txt`. Both members use the same versions so that same-seed results are comparable.
 
 ```bash
-uv venv --python 3.12 .venv          # 或 python3.12 -m venv .venv
+uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
-uv pip install -r requirements.txt   # 或 pip install -r requirements.txt
+uv pip install -r requirements.txt   # or: pip install -r requirements.txt
 python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 ```
 
-`.venv/` 已在 `.gitignore` 中，不提交。
+`.venv/` is listed in `.gitignore` and is not committed.
 
 ## Documentation map
 
 | File | Purpose |
 |---|---|
-| `docs/research-proposal.md` | 系统、动机、研究问题、贡献和范围 |
-| `docs/model-specification.md` | 可独立实现的一致模型规格 |
-| `docs/assumptions.md` | 编号假设、影响和敏感性需求 |
-| `docs/experiment-plan.md` | 主实验、配对设计、重复、分析和图表计划 |
-| `docs/validation-plan.md` | 不变量、极端情况和验证证据计划 |
-| `docs/checkpoint-1-brief.md` | 10 分钟 facilitator meeting 简报 |
-| `docs/checkpoint-1-speaking-notes.md` | 两名成员 3-4 分钟英文讲稿 |
-| `docs/collaboration-plan.md` | 沟通、GitHub workflow、review 和贡献记录 |
-| `docs/timeline.md` | 截止日前 must/should/optional 时间表 |
-| `docs/risk-register.md` | 风险、trigger、owner 和 mitigation |
-| `docs/facilitator-questions.md` | Checkpoint 需要确认的问题 |
-| `docs/literature-plan.md` | 文献检索方向和纳入标准 |
-| `docs/consistency-review.md` | 跨文档一致性审查和待确认决定 |
-| `docs/decision-log.md` | D001-D008 最终决定、facilitator 反馈记录和规格签署 |
-| `docs/week-plan-2026-09-05.md` | 5-11 September baseline model 周执行清单 |
-| `docs/checkpoint-1-prediction.md` | Checkpoint 1 排练稿：预测提问、准备答复和会后动作 |
-| `docs/checkpoint-1-rehearsal-member-b.md` | Member B 的 Checkpoint 1 会前排练稿（中英对照，2026-09-07） |
-| `docs/hand-trace-3tank.md` | M1 手工 trace fixture：3 tanks / 6 agents / 3 days，与 `tests/test_hand_trace.py` 对照 |
-| `docs/network-audit-2026-09-11.md` | 模块化网络生成器结构审计（16 个 p_in/p_out 组合 × 10 seeds），D005 候选值 |
-| `scripts/audit_network.py` | 重跑网络结构审计 |
-| `scripts/create_github_issues.sh` | 创建 milestones、labels 和首批 issues（支持 `--dry-run`） |
+| `docs/research-proposal.md` | System, motivation, research questions, contribution and scope |
+| `docs/model-specification.md` | Consistent model specification that can be implemented independently |
+| `docs/assumptions.md` | Numbered assumptions, their impact and sensitivity needs |
+| `docs/experiment-plan.md` | Main experiment, paired design, replication, analysis and figure plan |
+| `docs/validation-plan.md` | Invariants, extreme cases and validation evidence plan |
+| `docs/checkpoint-1-brief.md` | Brief for the 10-minute facilitator meeting |
+| `docs/checkpoint-1-speaking-notes.md` | 3-4 minute English speaking notes for both members |
+| `docs/collaboration-plan.md` | Communication, GitHub workflow, review and contribution record |
+| `docs/timeline.md` | Must/should/optional schedule up to the deadline |
+| `docs/risk-register.md` | Risks, triggers, owners and mitigation |
+| `docs/facilitator-questions.md` | Questions to confirm at checkpoints |
+| `docs/literature-plan.md` | Literature search directions and inclusion criteria |
+| `docs/consistency-review.md` | Cross-document consistency review and pending decisions |
+| `docs/decision-log.md` | Final decisions D001-D008, facilitator feedback record and specification sign-off |
+| `docs/week-plan-2026-09-05.md` | Weekly execution checklist for the 5-11 September baseline model |
+| `docs/checkpoint-1-prediction.md` | Checkpoint 1 rehearsal: predicted questions, prepared answers and follow-up actions |
+| `docs/checkpoint-1-rehearsal-member-b.md` | Member B's Checkpoint 1 rehearsal script (Chinese-English, 2026-09-07) |
+| `docs/hand-trace-3tank.md` | M1 hand-trace fixture: 3 tanks / 6 agents / 3 days, checked against `tests/test_hand_trace.py` |
+| `docs/run-result-schema.md` | Field contract of a raw run record (`turtlefarm.run.v1`); the runner writes JSONL to it |
+| `docs/pilot-protocol.md` | Two-stage pilot design and selection criteria **written before any data** (draft, pending Member B) |
+| `docs/checkpoint-2-speaking-notes.md` | Checkpoint 2 speaking notes for both members, screen positions, demo step and Q&A split |
+| `docs/network-audit-2026-09-11.md` | Structural audit of the modular network generator (16 p_in/p_out combinations x 10 seeds), D005 candidate values |
+| `scripts/audit_network.py` | Re-run the network structural audit |
+| `scripts/demo_checkpoint2.py` | Checkpoint 2 functionality demonstration (one seed block, not an experiment result) |
+| `scripts/run_experiment.py` | Run a batch from `experiments/config/*.json`; writes raw JSONL and a per-run summary table |
+| `scripts/create_github_issues.sh` | Create milestones, labels and the first issues (supports `--dry-run`) |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine)
-tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
-scripts/       repository bootstrap helpers
-experiments/   parameter configurations and runners (to be created in M2)
-results/       raw run records, summaries and selected figures (to be created after pilot)
+turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine; batch runner)
+tests/         V-numbered invariant, extreme-case, paired-draw, hand-trace, movement, quarantine and runner tests
+scripts/       checkpoint demo, network audit, experiment runner and repository bootstrap helpers
+experiments/   machine-readable experiment designs (experiments/config/*.json)
+results/       raw run records (git-ignored), summaries and selected figures (created when the pilot runs)
 ```
 
 ## Experiment and result records
 
-未来每次运行至少记录 model version / commit hash、complete configuration、network seed、epidemic seed、policy seed、network instance、strategy、response delay、quarantine budget、run status、stop reason、错误信息和全部预先定义的输出指标。
+Every future run records at least the model version / commit hash, complete configuration, network seed, epidemic seed, policy seed, network instance, strategy, response delay, quarantine budget, run status, stop reason, error information and all predefined output metrics.
 
-异常或失败运行不得静默删除。原始结果与清理后的分析表必须分开保存，并能从配置、seed 和代码版本重新生成。
+Anomalous or failed runs must not be deleted silently. Raw results and cleaned analysis tables are stored separately and must be reproducible from the configuration, seeds and code version.
 
 ## Academic integrity boundary
 
-旧 `turtle-farm` 项目只提供领域启发。项目不会复制旧项目、CITS4403 Lab Notebook、CITS4012、CITS1401、CITS5501 assessed work 或受限制第三方代码。模型、合成数据、规则、实验、分析和文字均需要为本项目重新设计。
+The earlier `turtle-farm` project provides domain inspiration only. This project does not copy that project, the CITS4403 Lab Notebook, assessed work from CITS4012, CITS1401 or CITS5501, or restricted third-party code. The model, synthetic data, rules, experiments, analysis and text are all designed anew for this project.
