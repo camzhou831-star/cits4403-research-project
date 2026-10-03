@@ -1,6 +1,6 @@
 # Run Metadata and Raw-Result Schema
 
-Status: draft for issue #15, aligned with the movement implementation merged in PR #27. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
+Status: adopted (issue #15, PR #25); implemented by `turtlefarm/runner.py` and checked field by field in `tests/test_runner.py`. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
 
 ## 1. Storage contract
 
@@ -141,13 +141,15 @@ The runner must serialise dataclasses and tuples into ordinary JSON objects and 
 | Commit provenance | `RunRecord.code_commit` | available |
 | Network ID, adjacency, centrality, attempt and diagnostics | `RunRecord.network` | available |
 | Initial case provenance | `initial_infected_agents`, `initial_infected_tanks` | available |
-| Daily S/I/R, tank states and transfer counters | `RunRecord.daily` | available; network-constrained movement populates attempted, accepted, and blocked counters |
+| Daily S/I/R, tank states and transfer counters | `RunRecord.daily` | available |
 | Status, stop reason, errors and censoring | `status`, `stop_reason`, `error`, `metrics` | available |
-| Selected tanks, intervention timing and cost | existing `RunRecord` fields plus `config` | structure available; values remain placeholders until quarantine is implemented |
-| Schema version, run ID, timestamp and configuration hash | none | runner must add in M2 |
-| JSONL persistence | none | runner must add in M2 |
+| Selected tanks, intervention timing and cost | `selected_tanks`, `intervention_start_day`, `intervention_cost` | available since PR #29 |
+| `intervention_duration_days` | `turtlefarm.runner.to_raw_record` | available; projection of `config.quarantine_duration`, null for `none` |
+| Schema version, run ID, timestamp and configuration hash | `turtlefarm.runner.to_raw_record`, `configuration_hash` | available |
+| JSONL persistence, append-only, one line per attempted run | `turtlefarm.runner.run_design` | available; an existing file is refused unless resumed, and resume never retries a recorded configuration |
+| Refusal of validation scenarios | `turtlefarm.runner.ExperimentDesign` | available; every run is built with `design="main"` and a design file cannot override it |
 
-The model therefore supplies the configuration, network, movement, disease, status, and metric information required by this schema. The M2 runner must add the execution envelope and persistence layer, while quarantine implementation must replace the remaining intervention placeholder values.
+The model supplies every scientific field. The runner adds only the execution envelope and persistence; `tests/test_runner.py::test_raw_record_has_every_schema_field_and_is_json_serialisable` asserts that a raw record has exactly the top-level fields of section 2 and that `metrics` is passed through unchanged.
 
 ## 10. Review checklist for issue #15
 
