@@ -289,13 +289,18 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     run_status_table(summary).to_csv(out / "run-status.csv", index=False)
-    cond = condition_summary(summary)
+    cond = condition_summary(summary, n_boot=args.n_boot, seed=args.boot_seed)
     cond.to_csv(out / "condition-summary.csv", index=False)
-    diffs = paired_differences(summary)
+    design_path = ROOT / "experiments" / "config" / f"{args.design}.json"
+    expected_seeds = len(json.loads(design_path.read_text(encoding="utf-8"))["policy_seeds"]) if design_path.exists() else None
+    diffs = paired_differences(summary, expected_policy_seeds=expected_seeds)
     diffs.to_csv(out / "paired-differences.csv", index=False)
     effects = paired_effect_table(diffs, n_boot=args.n_boot, seed=args.boot_seed)
     effects.to_csv(out / "paired-effects.csv", index=False)
-    baseline_effect_table(baseline_differences(summary), n_boot=args.n_boot, seed=args.boot_seed).to_csv(
+    base_diffs = baseline_differences(summary, expected_policy_seeds=expected_seeds)
+    if base_diffs.attrs["incomplete_blocks"]:
+        print(f"WARNING: {base_diffs.attrs['incomplete_blocks']} cells excluded from baseline comparisons as incomplete")
+    baseline_effect_table(base_diffs, n_boot=args.n_boot, seed=args.boot_seed).to_csv(
         out / "baseline-effects.csv", index=False
     )
     print(

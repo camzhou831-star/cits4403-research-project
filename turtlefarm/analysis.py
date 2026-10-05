@@ -289,18 +289,37 @@ def condition_summary(
     return out
 
 
-def paired_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS) -> pd.DataFrame:
+def _complete_arm_cells(arms: pd.DataFrame, keys: list[str], expected_policy_seeds: int | None) -> pd.Series:
+    """Boolean per cell (``keys``): exactly one targeted run and exactly ``expected_policy_seeds`` random runs
+    with distinct policy seeds. ``None`` infers the expected count as the largest seen, which cannot detect a
+    seed missing from every cell, so callers that know the design should pass it."""
+    targeted_n = arms[arms["strategy"] == "betweenness"].groupby(keys).size()
+    random = arms[arms["strategy"] == "random"].groupby(keys)["policy_seed"].agg(["size", "nunique"])
+    cells = targeted_n.index.union(random.index)
+    targeted_n = targeted_n.reindex(cells, fill_value=0)
+    random = random.reindex(cells, fill_value=0)
+    expected = expected_policy_seeds if expected_policy_seeds is not None else int(random["nunique"].max() or 0)
+    return (targeted_n == 1) & (random["size"] == expected) & (random["nunique"] == expected)
+
+
+def paired_differences(
+    summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, expected_policy_seeds: int | None = None
+) -> pd.DataFrame:
     """Targeted-minus-random difference per paired block (experiment-plan section 6).
 
     The block key is (network_seed, epidemic_seed, transfer_rate, response_delay, quarantine_duration).
     The random arm of a block is the mean over its policy seeds, so each block contributes one difference.
-    A block is dropped if either arm failed; the count of dropped blocks is kept in ``attrs``.
+    A block is dropped if either arm failed (``attrs["dropped_blocks"]``) or if it does not have exactly one
+    targeted run and ``expected_policy_seeds`` distinct random runs (``attrs["incomplete_blocks"]``).
     """
     keys = list(BLOCK_KEYS) + ["response_delay", "quarantine_duration"]
     arms = summary[summary["strategy"].isin(["betweenness", "random"])]
     failed_blocks = arms.loc[arms["status"] == STATUS_FAILED, keys].drop_duplicates()
     ok = arms.merge(failed_blocks, on=keys, how="left", indicator=True)
     ok = ok[ok["_merge"] == "left_only"]
+    complete = _complete_arm_cells(ok, keys, expected_policy_seeds)
+    ok = ok.join(complete.rename("_complete"), on=keys)
+    ok = ok[ok["_complete"]]
     metrics = list(metrics)
     targeted = ok[ok["strategy"] == "betweenness"].set_index(keys)
     random_mean = ok[ok["strategy"] == "random"].groupby(keys)[metrics].mean()
@@ -312,12 +331,7 @@ def paired_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_M
         joined[f"diff_{m}"] = joined[f"{m}_targeted"] - joined[f"{m}_random"]
     out = joined.reset_index()
     out.attrs["dropped_blocks"] = len(failed_blocks)
-    # Completeness: every block must have one targeted run and the same number of random policy seeds.
-    seeds_per_block = ok[ok["strategy"] == "random"].groupby(keys).size()
-    targeted_keys, random_keys = set(targeted.index), set(seeds_per_block.index)
-    out.attrs["incomplete_blocks"] = len(targeted_keys ^ random_keys) + int(
-        (seeds_per_block != seeds_per_block.max()).sum() if len(seeds_per_block) else 0
-    )
+    out.attrs["incomplete_blocks"] = int((~complete).sum())
     return out
 
 
@@ -452,30 +466,43 @@ def pick_representative_runs(
     return picked
 
 
-def baseline_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS) -> pd.DataFrame:
+def baseline_differences(
+    summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, expected_policy_seeds: int | None = None
+) -> pd.DataFrame:
     """Strategy-minus-no-intervention difference per paired block (descriptive; added 2026-10-06 after the
     formal results, to show how much each quarantine changes the shared baseline at each response delay).
 
     One row per (block, strategy) with strategy in {betweenness, random}; the random arm is the mean over its
-    policy seeds. A block with any failed run is dropped.
+    policy seeds. A block with any failed run is dropped. A block without exactly one baseline, or a cell
+    without one targeted run and ``expected_policy_seeds`` distinct random runs, is excluded and counted in
+    ``attrs["incomplete_blocks"]``.
     """
     metrics = list(metrics)
     keys = list(BLOCK_KEYS)
+    cell_keys = keys + ["response_delay", "quarantine_duration"]
     failed = summary.loc[summary["status"] == STATUS_FAILED, keys].drop_duplicates()
     ok = summary.merge(failed, on=keys, how="left", indicator=True)
-    ok = ok[ok["_merge"] == "left_only"]
-    base = ok[ok["strategy"] == "none"].set_index(keys)[metrics]
-    arms = (
-        ok[ok["strategy"] != "none"]
-        .groupby(keys + ["strategy", "response_delay", "quarantine_duration"])[metrics]
-        .mean()
-        .reset_index()
-    )
-    out = arms.join(base, on=keys, rsuffix="_none")
+    ok = ok[ok["_merge"] == "left_only"].drop(columns="_merge")
+    base_rows = ok[ok["strategy"] == "none"]
+    base_n = base_rows.groupby(keys).size()
+    arms = ok[ok["strategy"] != "none"]
+    complete = _complete_arm_cells(arms, cell_keys, expected_policy_seeds)
+    complete_cells = complete[complete].index.to_frame(index=False)
+    complete_cells = complete_cells[
+        complete_cells.set_index(keys).index.isin(base_n[base_n == 1].index)
+    ]
+    arms = arms.merge(complete_cells, on=cell_keys)
+    base = base_rows.set_index(keys)[metrics]
+    base = base[base.index.isin(base_n[base_n == 1].index)]
+    out = arms.groupby(cell_keys + ["strategy"])[metrics].mean().reset_index()
+    out = out.join(base, on=keys, rsuffix="_none")
     for m in metrics:
         out[f"{m}_arm"] = out[m]
         out[f"diff_{m}"] = out[m] - out[f"{m}_none"]
-    return out.drop(columns=metrics)
+    out = out.drop(columns=metrics)
+    all_cells = len(complete)
+    out.attrs["incomplete_blocks"] = int(all_cells - len(complete_cells))
+    return out
 
 
 def baseline_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, **boot_kwargs) -> pd.DataFrame:

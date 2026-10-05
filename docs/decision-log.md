@@ -129,6 +129,14 @@
 
 外部审查：2026-10-06 由 Codex CLI 以只读模式做验收审查，结论 ACCEPT WITH FIXES，无 Blocker；独立重算的 20 余个报告数字全部一致。逐条处理见 PR #34。
 
+复核（第二轮）：上一轮报告层面问题全部 RESOLVED；A4（复用 network / policy seeds）判为 DISPUTED-ACCEPTABLE，理由被接受；独立重算表 1 聚类 CI 等数字全部一致。剩余 3 项：
+
+- 配对完整性检查改为对照设计文件，严格要求每个 block 恰好 1 个 targeted run、指定数量的不同 policy seeds 和 1 个基线，不完整的 block 排除并计数；
+- `--n-boot` / `--boot-seed` 现在也传给表 1；
+- `outbreak_class` 基于快照的局限保留（要彻底解决需改模型输出并重跑全部实验），已在代码文档、自动检查和报告局限性中披露，当前报告受影响的 2 次运行已人工核实。
+
+以上修复不改变报告中的任何结果数字（`formal-nested` 与 `formal` 均为 0 个不完整 block）。
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |

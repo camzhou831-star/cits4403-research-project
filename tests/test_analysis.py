@@ -313,3 +313,26 @@ def test_condition_summary_ci_resamples_networks_and_stays_in_range():
     assert base["ci95_high"] <= 1.0 + 1e-12
     assert base["ci95_low"] - 1e-12 <= base["mean"] <= base["ci95_high"] + 1e-12
     assert base["ci95_low"] < base["ci95_high"]  # networks differ, so the interval is not degenerate
+
+
+def test_completeness_needs_the_design_seed_count_and_one_targeted_run():
+    df = _formal_rows()
+    # a policy seed missing from every block is only detectable against the design's seed count
+    without_seed_2 = df[~((df.strategy == "random") & (df.policy_seed == 2))]
+    assert paired_differences(without_seed_2).attrs["incomplete_blocks"] == 0
+    strict = paired_differences(without_seed_2, expected_policy_seeds=2)
+    assert strict.attrs["incomplete_blocks"] == 12 and strict.empty
+    # a duplicated targeted run makes the block incomplete
+    dup = pd.concat([df, df[(df.strategy == "betweenness") & (df.epidemic_seed == 0) & (df.network_seed == 0)]])
+    diffs = paired_differences(dup, expected_policy_seeds=2)
+    assert diffs.attrs["incomplete_blocks"] == 1 and len(diffs) == 11
+
+
+def test_missing_baseline_is_excluded_and_counted():
+    df = _formal_rows()
+    no_base = df.drop(df.index[(df.strategy == "none") & (df.epidemic_seed == 0) & (df.network_seed == 0)])
+    diffs = baseline_differences(no_base, expected_policy_seeds=2)
+    assert diffs.attrs["incomplete_blocks"] == 1
+    assert not diffs.filter(like="diff_").isna().any().any()
+    table = baseline_effect_table(diffs, n_boot=20)
+    assert (table["blocks"] == 11).all()
