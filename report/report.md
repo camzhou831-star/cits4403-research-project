@@ -108,7 +108,7 @@ Epidemic draws are *event-keyed*, an implementation of common random numbers [9]
 
 ### 2.6 Verification
 
-The test suite has 166 automated tests, covering:
+The test suite has 167 automated tests, covering:
 
 - the invariants: agent count, `S + I + R = 200`, one tank per agent, capacity, no reinfection, quarantine blocking both directions, and reproducibility under identical seeds;
 - extreme cases, for example `beta = 0`, `gamma = 1`, `transfer_rate = 0` and a full tank;

@@ -336,3 +336,21 @@ def test_missing_baseline_is_excluded_and_counted():
     assert not diffs.filter(like="diff_").isna().any().any()
     table = baseline_effect_table(diffs, n_boot=20)
     assert (table["blocks"] == 11).all()
+
+
+def test_error_bars_tolerate_bounds_a_rounding_error_past_the_mean(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "scripts" / "analyse_results.py"
+    spec = importlib.util.spec_from_file_location("analyse_results", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    # affected tanks are always 1 at transfer rate 0: the bootstrap bound lands just above the mean
+    cond = pd.DataFrame([
+        {"transfer_rate": r, "response_delay": d, "strategy": s, "metric": "affected_tanks",
+         "mean": 1.0, "ci95_low": 1.0 + 2e-16, "ci95_high": 1.0 - 2e-16}
+        for r in (0.0, 0.1) for d in (1, 12) for s in ("none", "random", "betweenness")
+    ])
+    module.plot_metric_vs_transfer(cond, "affected_tanks", tmp_path / "fig.png")
+    assert (tmp_path / "fig.png").exists()

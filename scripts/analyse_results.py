@@ -60,6 +60,12 @@ METRIC_LABELS = {
 }
 
 
+def _error_lengths(mean: pd.Series, low: pd.Series, high: pd.Series) -> list:
+    """Error-bar lengths for matplotlib. When every value in a cell is identical, the bootstrap bounds can
+    differ from the mean by ~1e-16 in either direction, which matplotlib rejects as a negative length."""
+    return [(mean - low).clip(lower=0), (high - mean).clip(lower=0)]
+
+
 def run_status_table(summary: pd.DataFrame) -> pd.DataFrame:
     """Completed / censored / failed counts per condition; reported, never filtered silently (section 11)."""
     return (
@@ -84,7 +90,7 @@ def plot_metric_vs_transfer(cond: pd.DataFrame, metric: str, path: Path) -> None
             sel = sel.sort_values("transfer_rate")
             ax.errorbar(
                 sel["transfer_rate"], sel["mean"],
-                yerr=[sel["mean"] - sel["ci95_low"], sel["ci95_high"] - sel["mean"]],
+                yerr=_error_lengths(sel["mean"], sel["ci95_low"], sel["ci95_high"]),
                 marker="o", capsize=3, label=strategy, color=STRATEGY_COLORS[strategy],
             )
         ax.set_title(f"response delay = {int(delay)} d")
@@ -106,7 +112,7 @@ def plot_paired_effects(effects: pd.DataFrame, path: Path, subset: str = "all_bl
             sel = sel.sort_values("transfer_rate")
             ax.errorbar(
                 sel["transfer_rate"], sel["mean_diff"],
-                yerr=[sel["mean_diff"] - sel["mean_diff_ci95_low"], sel["mean_diff_ci95_high"] - sel["mean_diff"]],
+                yerr=_error_lengths(sel["mean_diff"], sel["mean_diff_ci95_low"], sel["mean_diff_ci95_high"]),
                 marker="o", capsize=3, label=f"delay {int(delay)} d", color=CATEGORICAL[i],
             )
         ax.axhline(0, color="grey", lw=0.8)

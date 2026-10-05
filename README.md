@@ -18,7 +18,7 @@ This repository holds the research design, model implementation, computational e
 
 | Part | State |
 |---|---|
-| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 166 tests pass. |
+| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 167 tests pass. |
 | Pilot | Run; parameters frozen (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
@@ -85,7 +85,7 @@ Python 3.12, with dependencies pinned in `requirements.txt`.
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt   # or: pip install -r requirements.txt
-python -m pytest -q                  # 166 tests
+python -m pytest -q                  # 167 tests
 
 # pilot (about 4 minutes in total) and parameter selection
 python scripts/run_experiment.py experiments/config/pilot-stage1-disease.json

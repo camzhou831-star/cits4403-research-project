@@ -1,0 +1,5 @@
+transfer_rate,share_cross_region,runs
+0.0,0.0,100
+0.01,0.36,100
+0.025,0.86,100
+0.1,1.0,100
