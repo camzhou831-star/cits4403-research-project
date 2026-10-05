@@ -72,3 +72,11 @@ No-intervention `time_to_extinction` median = 65 天，因此 Q2 的上限为 16
   - 全部 blocks 的效应；
   - 只看“response day 时仍有感染”的 blocks 的效应。
 - Runtime 约 45 runs/s。正式实验 5200 runs 预计 2 分钟。
+
+## 6. 补充说明（2026-10-06，正式实验后发现）
+
+Pilot 的 seeds 是交叉的：每个 network 使用同一组 epidemic seeds 9000-9009。在 event-keyed draws 下，同一 epidemic seed 在所有 network 上有相同的初始感染 agent 和早期抽样，因此本报告中的比例实际只基于 **10 个独立的疫情起点**（network 间的变异仍然有效）。
+
+例如，§4 中 D = 14 下“隔离从未启动”的 284 个 runs 有 240 个来自 seeds 9003 和 9006：这两个 seeds 在所有 network 上都在第 12 天前 extinction。其余 44 个来自 9002、9005、9009。
+
+参数选择不重做。正式实验改为嵌套 seeds（`formal-nested`），见 `decision-log.md`。

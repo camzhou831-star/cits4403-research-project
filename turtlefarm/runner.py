@@ -10,6 +10,12 @@ Inside one block every strategy shares the network instance and the event-keyed 
     1 shared no-intervention baseline                       (D007: not repeated per delay)
     + per response delay: 1 betweenness run + 1 random run per policy seed
 
+By default every network seed is crossed with every epidemic seed. With ``nested_epidemic_seeds`` the
+epidemic seeds are split in order into equal consecutive groups, one group per network seed, so that no
+epidemic seed is shared between networks (experiment-plan section 5: epidemic replicates nested within a
+network). Crossed seeds share the initial infected agent and early draws across networks, which makes the
+networks correlated rather than independent clusters.
+
 A pilot design may additionally ``sweep`` otherwise-fixed fields (beta, gamma, D, ...) and may leave
 ``response_delays`` and ``policy_seeds`` empty to run the no-intervention baseline only. A formal design
 has no sweep: those values are frozen before it runs (experiment-plan section 9).
@@ -58,6 +64,7 @@ class ExperimentDesign:
     policy_seeds: tuple[int, ...]
     fixed: dict[str, Any] = field(default_factory=dict)
     sweep: dict[str, tuple[Any, ...]] = field(default_factory=dict)  # pilot only
+    nested_epidemic_seeds: bool = False
 
     def __post_init__(self) -> None:
         errs: list[str] = []
@@ -84,19 +91,35 @@ class ExperimentDesign:
             errs.append(f"fields cannot be both fixed and swept: {sorted(set(self.fixed) & set(self.sweep))}")
         if any(not levels for levels in self.sweep.values()):
             errs.append("every swept field needs at least one level")
+        if self.nested_epidemic_seeds and self.network_seeds and len(self.epidemic_seeds) % len(self.network_seeds):
+            errs.append(
+                f"nested_epidemic_seeds needs len(epidemic_seeds) divisible by len(network_seeds), got "
+                f"{len(self.epidemic_seeds)} and {len(self.network_seeds)}"
+            )
         if errs:
             raise ConfigError("; ".join(errs))
+
+    def seed_pairs(self) -> list[tuple[int, int]]:
+        """(network_seed, epidemic_seed) pairs: crossed by default, nested if requested."""
+        if not self.nested_epidemic_seeds:
+            return list(itertools.product(self.network_seeds, self.epidemic_seeds))
+        per_network = len(self.epidemic_seeds) // len(self.network_seeds)
+        return [
+            (network_seed, epidemic_seed)
+            for i, network_seed in enumerate(self.network_seeds)
+            for epidemic_seed in self.epidemic_seeds[i * per_network : (i + 1) * per_network]
+        ]
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExperimentDesign":
         known = {
             "name", "transfer_rates", "response_delays", "network_seeds", "epidemic_seeds", "policy_seeds",
-            "fixed", "sweep",
+            "fixed", "sweep", "nested_epidemic_seeds",
         }
         unknown = sorted(set(data) - known)
         if unknown:
             raise ConfigError(f"unknown design keys: {unknown}")
-        missing = sorted(known - {"fixed", "sweep"} - set(data))
+        missing = sorted(known - {"fixed", "sweep", "nested_epidemic_seeds"} - set(data))
         if missing:
             raise ConfigError(f"missing design keys: {missing}")
         return cls(
@@ -108,6 +131,7 @@ class ExperimentDesign:
             policy_seeds=tuple(data["policy_seeds"]),
             fixed=dict(data.get("fixed", {})),
             sweep={name: tuple(levels) for name, levels in data.get("sweep", {}).items()},
+            nested_epidemic_seeds=bool(data.get("nested_epidemic_seeds", False)),
         )
 
     @classmethod
@@ -122,8 +146,8 @@ class ExperimentDesign:
         parameter raises ``ConfigError`` before any run starts, never halfway through a batch."""
         swept = [dict(zip(self.sweep, values)) for values in itertools.product(*self.sweep.values())]
         configs: list[SimulationConfig] = []
-        for candidate, network_seed, epidemic_seed, transfer_rate in itertools.product(
-            swept, self.network_seeds, self.epidemic_seeds, self.transfer_rates
+        for candidate, (network_seed, epidemic_seed), transfer_rate in itertools.product(
+            swept, self.seed_pairs(), self.transfer_rates
         ):
             common = dict(
                 self.fixed,

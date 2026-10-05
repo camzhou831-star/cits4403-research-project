@@ -99,6 +99,20 @@
 - 正式实验开始后，不因结果与 hypothesis 不符而修改上述参数（experiment-plan §9）。
 - 两名成员确认：Member A 2026-10-06；Member B 待确认。
 
+### 2026-10-06：第一次正式实验（`formal`）的 seed 交叉问题，改为嵌套 seeds 重跑
+
+- 问题：`formal` 中 20 个 network 共用同一组 5 个 epidemic seeds（runner 用 `itertools.product` 交叉）。在 event-keyed draws 下，同一 epidemic seed 在所有 network 上有相同的初始感染 agent 和相同的早期抽样，因此 network 之间并不独立：
+  - pilot 中 seed 9003、9006 在全部 5 个 network 上都在第 12 天前 extinction，其余 8 个 seeds 都没有；
+  - `formal` 的 5 个 seeds 中没有早期 extinction 的 seed。
+- 后果：`formal` 只有 5 个独立的疫情起点。按 network 聚类的 bootstrap 假设 clusters 独立，会低估不确定性。这与 experiment-plan §5“epidemic replicates nested within the same network”的设计不符。
+- 发现时间：**Member A 在看过 `formal` 的条件汇总和配对效应之后**发现，起因是 pilot 与 formal 的启动率不一致（delay 12：80% vs 100%）。重跑依据的是 experiment-plan §5 原有的嵌套要求，不是结果方向。
+- 处理：
+  - runner 增加 `nested_epidemic_seeds`，按顺序把 epidemic seeds 平均分给各 network；
+  - 新 design `formal-nested`：network 200-219，epidemic 20000-20099（每个 network 5 个，互不共享），policy 1000-1002；参数与 freeze record 完全相同；5200 runs。
+  - `formal` 的 raw records 保留，不删除；正式结果以 `formal-nested` 为准，报告中披露两次运行及原因。
+- 对 pilot 的影响：pilot 同样是交叉 seeds，Stage 1/2 的判定实际只基于 10 个独立的疫情起点（network 间变异仍有效）。Pilot 不重跑，在 `pilot-report-2026-10-06.md` 中注明。
+- Member B 事后确认：待定（日期：—）
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |
