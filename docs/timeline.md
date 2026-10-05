@@ -68,7 +68,15 @@
 
 - runtime optimisation only if needed。
 
+### Status at 2026-09-20
+
+- Must have：全部完成。Movement / capacity（PR #27）、management state 和三种 strategies（PR #29）、pre-outbreak betweenness selection、budget-fair pairing、三类 seed 分离、validation cases（111 tests on `main`）。
+- Should have：batch runner、design validation 和 raw-result provenance 晚于计划两天，于 2026-09-20 实现（issue #30，`turtlefarm/runner.py`，加 25 个测试）；schema 于 2026-09-20 合入（PR #25）。End-to-end 由 `experiments/config/smoke.json` 覆盖。
+- 流程缺口：PR #27、#29 无跨成员 review 记录，见 `collaboration-plan.md` §8。
+
 ## 19-25 September - Pilot and formal experiments
+
+Status at 2026-09-20：`docs/pilot-protocol.md` 已起草（选择标准在运行前写下），待 Member B 确认；确认后 Stage 1 约 1 分钟可跑完。Pilot 和 formal experiment 均未运行。
 
 ### Must have
 

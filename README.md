@@ -12,8 +12,8 @@ This repository holds the research design, model implementation, computational e
 | Member B | Wenhao Zhang | `Winston-2hang` | To be confirmed by the team |
 
 - Deadline: Friday 9 October 2026, 23:59.
-- Current stage: **code stage (M1 baseline merged; M2 intervention / experiment runner in progress)**.
-- Implementation status: **`turtlefarm/` implements the minimal SIR baseline, the modular network, network-constrained movement and tank quarantine strategies; the experiment runner and formal experiment results do not exist yet.**
+- Current stage: **code stage (M1 and M2 implemented; the pilot runs once both members confirm the pilot protocol)**.
+- Implementation status: **`turtlefarm/` implements the minimal SIR baseline, the modular network, network-constrained movement, tank quarantine strategies and the batch experiment runner; neither the pilot nor the formal experiment has been run, and the repository contains no experiment results.**
 - Checkpoint 1 is complete and the facilitator requested no changes; D001-D003 and D006-D008 adopted the working proposals as final values, D004/D005 will be decided after the pilot (see `docs/decision-log.md`).
 - The shared GitHub repository is set up; all changes reach `main` through a feature branch and PR review.
 
@@ -62,15 +62,18 @@ The full specification is in [docs/model-specification.md](docs/model-specificat
 4. the GitHub collaborator accepted the invitation, and PR #19 has a cross-member review;
 5. the official rubric / submission format has not been released; this is recorded in `docs/decision-log.md` and will be checked again on 3-8 October.
 
-**Must be met before merging M2 (movement / intervention / experiment runner)**
+**M2 gate (movement / intervention / experiment runner) — met, 2026-09-20**
 
-- formal tests V001-V005, V011, V012, V101, V103 and V104 pass (issue #13);
-- the hand trace matches the event log and is signed by both members (issue #14);
+- formal tests V001-V005, V011, V012, V101, V103 and V104 pass (issue #13, closed);
+- the hand trace matches the event log and is signed by both members (issue #14, closed);
 - the paired-randomness scheme (event-keyed draws) is written into specification section 16 and implemented (`turtlefarm/rng.py`);
-- the run metadata / failure record schema is frozen (issue #15).
+- the run metadata / failure record schema is frozen (issue #15, PR #25, merged 2026-09-20).
+
+Recorded deviation: movement (PR #27) and quarantine (PR #29) were merged before the schema, which does not follow the gate order above. Neither writes raw records; the experiment runner, which depends on the schema, was implemented only after PR #25 was merged (issue #30), so no raw record was produced before the schema was frozen.
 
 **Must be met before the formal experiment**
 
+- the selection criteria in `docs/pilot-protocol.md` are confirmed by both members before the pilot runs;
 - the pilot is complete, and `beta`, `gamma`, `D`, `p_in`/`p_out`, levels and seed lists are frozen and recorded;
 - V001-V012, V101-V110 and the fairness audit all pass (`docs/validation-plan.md` section 10).
 
@@ -109,18 +112,23 @@ python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
 | `docs/checkpoint-1-prediction.md` | Checkpoint 1 rehearsal: predicted questions, prepared answers and follow-up actions |
 | `docs/checkpoint-1-rehearsal-member-b.md` | Member B's Checkpoint 1 rehearsal script (Chinese-English, 2026-09-07) |
 | `docs/hand-trace-3tank.md` | M1 hand-trace fixture: 3 tanks / 6 agents / 3 days, checked against `tests/test_hand_trace.py` |
+| `docs/run-result-schema.md` | Field contract of a raw run record (`turtlefarm.run.v1`); the runner writes JSONL to it |
+| `docs/pilot-protocol.md` | Two-stage pilot design and selection criteria **written before any data** (draft, pending Member B) |
+| `docs/checkpoint-2-speaking-notes.md` | Checkpoint 2 speaking notes for both members, screen positions, demo step and Q&A split |
 | `docs/network-audit-2026-09-11.md` | Structural audit of the modular network generator (16 p_in/p_out combinations x 10 seeds), D005 candidate values |
 | `scripts/audit_network.py` | Re-run the network structural audit |
+| `scripts/demo_checkpoint2.py` | Checkpoint 2 functionality demonstration (one seed block, not an experiment result) |
+| `scripts/run_experiment.py` | Run a batch from `experiments/config/*.json`; writes raw JSONL and a per-run summary table |
 | `scripts/create_github_issues.sh` | Create milestones, labels and the first issues (supports `--dry-run`) |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine)
-tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
-scripts/       repository bootstrap helpers
-experiments/   parameter configurations and runners (to be created in M2)
-results/       raw run records, summaries and selected figures (to be created after pilot)
+turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine; batch runner)
+tests/         V-numbered invariant, extreme-case, paired-draw, hand-trace, movement, quarantine and runner tests
+scripts/       checkpoint demo, network audit, experiment runner and repository bootstrap helpers
+experiments/   machine-readable experiment designs (experiments/config/*.json)
+results/       raw run records (git-ignored), summaries and selected figures (created when the pilot runs)
 ```
 
 ## Experiment and result records
