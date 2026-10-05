@@ -200,7 +200,12 @@ def stage2_design(selection: Stage1Selection, delays: tuple[int, int, int], stag
 
 
 def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
-    """Criteria Q1-Q3 per D candidate. Uses pooled intervention runs and the shared baselines only."""
+    """Criteria Q1-Q3 per D candidate. Uses pooled intervention runs and the shared baselines only.
+
+    Q1 is computed over runs whose quarantine actually started (2026-10-06 correction, decision-log): a run
+    that goes extinct before the response day never quarantines anything, which says nothing about whether
+    an active quarantine blocks transfers. The original all-runs share is kept as ``Q1_original_all_runs``.
+    """
     gamma = summary["gamma"].unique()
     if len(gamma) != 1:
         raise ValueError("Stage 2 must use a single frozen gamma")
@@ -209,20 +214,27 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     rows = []
     interventions = summary[(summary["strategy"] != "none") & (summary["status"] != STATUS_FAILED)]
     for d, df in interventions.groupby("quarantine_duration", sort=True):
-        share_blocking = float((df["blocked_transfers"] >= 1).mean())
+        blocking = df["blocked_transfers"] >= 1
+        started = df["intervention_start_day"].notna()
+        share_all = float(blocking.mean())
+        share_started = float(blocking[started].mean()) if started.any() else 0.0
         rows.append(
             {
                 "quarantine_duration": int(d),
                 "runs": len(df),
-                "share_blocked_ge_1": share_blocking,
+                "runs_quarantine_started": int(started.sum()),
+                "share_blocked_ge_1_all_runs": share_all,
+                "share_blocked_ge_1_started": share_started,
                 "baseline_extinction_median": extinction_median,
-                "Q1_quarantine_not_noop": share_blocking >= 0.90,
+                "Q1_original_all_runs": share_all >= 0.90,
+                "Q1_quarantine_not_noop": share_started >= 0.90,
                 "Q2_D_le_25pct_extinction": d <= 0.25 * extinction_median,
                 "Q3_D_ge_infectious_period": d >= 1 / gamma[0],
             }
         )
     table = pd.DataFrame(rows)
     table["passed"] = table[["Q1_quarantine_not_noop", "Q2_D_le_25pct_extinction", "Q3_D_ge_infectious_period"]].all(axis=1)
+    table["passed_original_q1"] = table[["Q1_original_all_runs", "Q2_D_le_25pct_extinction", "Q3_D_ge_infectious_period"]].all(axis=1)
     return table
 
 
@@ -281,9 +293,12 @@ def paired_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_M
     ok = arms.merge(failed_blocks, on=keys, how="left", indicator=True)
     ok = ok[ok["_merge"] == "left_only"]
     metrics = list(metrics)
-    targeted = ok[ok["strategy"] == "betweenness"].set_index(keys)[metrics]
+    targeted = ok[ok["strategy"] == "betweenness"].set_index(keys)
     random_mean = ok[ok["strategy"] == "random"].groupby(keys)[metrics].mean()
-    joined = targeted.join(random_mean, lsuffix="_targeted", rsuffix="_random", how="inner")
+    joined = targeted[metrics].join(random_mean, lsuffix="_targeted", rsuffix="_random", how="inner")
+    # Before the response day every arm of a block shares the same draws, so a quarantine that never
+    # started (extinction first) is a property of the block, not of the strategy (pilot report section 5).
+    joined["quarantine_started"] = targeted["intervention_start_day"].notna().reindex(joined.index)
     for m in metrics:
         joined[f"diff_{m}"] = joined[f"{m}_targeted"] - joined[f"{m}_random"]
         joined[f"rel_reduction_{m}"] = np.where(
@@ -315,14 +330,19 @@ def cluster_bootstrap_ci(
 
 
 def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, **boot_kwargs) -> pd.DataFrame:
-    """Mean and median paired difference with cluster-bootstrap CIs per (transfer_rate, response_delay, D)."""
+    """Mean and median paired difference with cluster-bootstrap CIs per (transfer_rate, response_delay, D),
+    for all blocks and for the blocks whose quarantine started (``subset`` column)."""
     rows = []
     cell_keys = ["transfer_rate", "response_delay", "quarantine_duration"]
-    for cell, group in diffs.groupby(cell_keys, sort=True):
+    subsets = {"all_blocks": diffs, "quarantine_started": diffs[diffs["quarantine_started"]]}
+    for (subset, sub), (cell, group) in (
+        ((name, sub), item) for name, sub in subsets.items() for item in sub.groupby(cell_keys, sort=True)
+    ):
         for m in metrics:
             mean, lo, hi = cluster_bootstrap_ci(group, f"diff_{m}", **boot_kwargs)
             rows.append(
                 {
+                    "subset": subset,
                     **dict(zip(cell_keys, cell)),
                     "metric": m,
                     "blocks": len(group),

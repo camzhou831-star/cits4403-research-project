@@ -89,7 +89,7 @@ Median 不是整数时按四舍五入（0.5 进位，`floor(x + 0.5)`）取整�
 
 | # | 标准 | 阈值 | 理由 |
 |---|---|---|---|
-| Q1 | Quarantine 不是空操作 | pooled intervention runs 中 `blocked_transfers ≥ 1` 的 share ≥ 90% | Q5：`k`、`D` 不能无效 |
+| Q1 | Quarantine 不是空操作 | pooled intervention runs 中**隔离实际启动（`intervention_start_day` 非空）的 runs** 里 `blocked_transfers ≥ 1` 的 share ≥ 90%（2026-10-06 看过 Stage 2 数据后修正分母，原定义为全部 intervention runs；见 `decision-log.md`，两种定义的结果都报告） | Q5：`k`、`D` 不能无效 |
 | Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25%（取 Stage 2 全部 transfer levels 的共享 baseline 中 status = completed 的 runs 合并计算；censored runs 不计入） | Q5：不能“几乎删除整个 network” |
 | Q3 | 至少覆盖一个平均 infectious period | `D ≥ 1 / gamma` | 短于 infectious period 的隔离在机制上难以解释 |
 

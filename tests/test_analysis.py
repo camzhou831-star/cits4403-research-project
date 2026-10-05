@@ -140,10 +140,10 @@ def test_stage2_design_is_a_valid_runner_design():
 
 def test_stage2_selects_smallest_passing_duration():
     rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0, blocked_transfers=0,
-                 time_to_extinction=100)]
+                 time_to_extinction=100, intervention_start_day=np.nan)]
     for d, blocked in ((7, 5), (14, 5), (21, 5), (28, 5)):
         rows += [dict(strategy=s, status="completed", gamma=0.1, quarantine_duration=d, blocked_transfers=blocked,
-                      time_to_extinction=np.nan) for s in ("random", "betweenness")]
+                      time_to_extinction=np.nan, intervention_start_day=1) for s in ("random", "betweenness")]
     table = evaluate_stage2(pd.DataFrame(rows))
     # Q3 needs D >= 1/gamma = 10, Q2 needs D <= 25
     assert table.set_index("quarantine_duration")["passed"].to_dict() == {7: False, 14: True, 21: True, 28: False}
@@ -155,10 +155,12 @@ def _formal_rows():
     for net, epi in itertools.product(range(3), range(4)):
         common = dict(network_seed=net, epidemic_seed=epi, transfer_rate=0.05, quarantine_duration=14, status="completed")
         rows.append(dict(common, strategy="none", response_delay=0, final_attack_rate=0.6, affected_tanks=10))
-        rows.append(dict(common, strategy="betweenness", response_delay=5, final_attack_rate=0.3, affected_tanks=4))
+        start = np.nan if epi == 3 else 5.0  # epidemic seed 3 dies out before the response day
+        rows.append(dict(common, strategy="betweenness", response_delay=5, final_attack_rate=0.3, affected_tanks=4,
+                         intervention_start_day=start))
         for policy_seed, ar in ((1, 0.4), (2, 0.6)):
             rows.append(dict(common, strategy="random", response_delay=5, policy_seed=policy_seed,
-                             final_attack_rate=ar, affected_tanks=6))
+                             final_attack_rate=ar, affected_tanks=6, intervention_start_day=start))
     return pd.DataFrame(rows)
 
 
@@ -187,6 +189,8 @@ def test_cluster_bootstrap_resamples_networks():
 def test_effect_table_and_condition_summary_shapes():
     effects = paired_effect_table(paired_differences(_formal_rows()), n_boot=100)
     assert set(effects["metric"]) == {"final_attack_rate", "affected_tanks"}
+    blocks = effects.groupby("subset")["blocks"].first().to_dict()
+    assert blocks == {"all_blocks": 12, "quarantine_started": 9}
     assert (effects["share_targeted_better"] == 1.0).all()
     cond = condition_summary(_formal_rows(), metrics=("final_attack_rate",))
     baseline = cond[cond["strategy"] == "none"]
@@ -205,3 +209,17 @@ def test_analysis_runs_on_real_runner_output(tmp_path):
     assert len(diffs) == 2 * 2 * 2  # networks x transfer rates x delays
     assert not paired_effect_table(diffs, n_boot=50).empty
     assert not condition_summary(summary).empty
+
+
+def test_q1_counts_only_runs_whose_quarantine_started():
+    rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0, blocked_transfers=0,
+                 time_to_extinction=100, intervention_start_day=np.nan)]
+    # 8 started runs that all block, 2 runs that went extinct before the response day
+    rows += [dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=14, blocked_transfers=3,
+                  time_to_extinction=np.nan, intervention_start_day=12)] * 8
+    rows += [dict(strategy="betweenness", status="completed", gamma=0.1, quarantine_duration=14, blocked_transfers=0,
+                  time_to_extinction=5, intervention_start_day=np.nan)] * 2
+    (row,) = evaluate_stage2(pd.DataFrame(rows)).to_dict("records")
+    assert row["share_blocked_ge_1_all_runs"] == 0.8 and not row["Q1_original_all_runs"]
+    assert row["share_blocked_ge_1_started"] == 1.0 and row["Q1_quarantine_not_noop"]
+    assert row["passed"] and not row["passed_original_q1"]

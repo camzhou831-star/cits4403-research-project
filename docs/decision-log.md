@@ -9,8 +9,8 @@
 | D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | 组内（facilitator 未提出异议） | 2026-09-11 | Checkpoint 1（2026-09-07）未对 delay 起点提出修改要求，采用 working proposal（spec §11） |
 | D002 | Tank capacity | 12 | 12 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D003 | Quarantined tank count `k` | 2 | 2 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
-| D004 | Quarantine duration `D` | Select after pilot | （待 pilot） | — | — | 按 experiment-plan 在 19-25 Sep pilot 后确定，issue #4 保持 open |
-| D005 | Network `p_in` / `p_out` | Select after structural pilot | （candidate 0.6 / 0.05，待 M2 pilot 冻结） | — | — | Structural audit 2026-09-11（`network-audit-2026-09-11.md`）给出候选值；数值在 movement pilot 后冻结，issue #5 保持 open |
+| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A（Member B 待确认） | 2026-10-06 | Stage 2 pilot Q1-Q3（Q1 分母修正后），`pilot-report-2026-10-06.md` §4 |
+| D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A（Member B 待确认） | 2026-10-06 | Structural audit 候选值；movement pilot 中 S1-S6 在该网络参数下可满足，无需更换 |
 | D006 | `max_days` | 365 | 365 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal；仍记录 `censored_max_days` 状态 |
 | D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D008 | Headline outcome | Attack rate + affected tanks co-primary | Attack rate + affected tanks co-primary | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
@@ -67,6 +67,37 @@
 - 由脚本生成 `experiments/config/pilot-stage2-intervention.json`：transfer levels 0.01 / 0.025 / 0.1，`D` candidates 7 / 14 / 21，policy seeds 900-902，5550 runs。
 - 需在报告中说明：在所选 regime 下，`transfer_rate = 0.1` 的 no-intervention median attack rate 为 1.0（接近饱和），该 level 上的 intervention 差异可能受天花板限制。
 - Member B 事后确认：待定（日期：—）
+
+### 2026-10-06：Stage 2 结论，Q1 分母在看过数据后修正
+
+- 运行：`pilot-stage2-intervention`，5550 runs，failed 0、censored 0。逐项表：`results/pilot/pilot-stage2-intervention-criteria.csv`。
+- **按原定义（全部 intervention runs），没有 D candidate 满足 Q1**：三个 D 的 share 都是 85.3% < 90%。
+- 原因：284 / 1800 个 intervention runs 在 response day（12 或 33）之前已 extinction，隔离从未启动，`blocked_transfers` 必然为 0；这衡量的是“疫情是否活到 response day”，不是“隔离是否生效”。隔离实际启动的 runs 中 share 为 97.3%-97.4%。
+- 修正（Member A 决定，看过数据之后）：Q1 的分母改为隔离实际启动的 runs（`pilot-protocol.md` Q1 行已更新）。`pilot_select.py` 同时输出 `Q1_original_all_runs` 与 `passed_original_q1`，两种结果都保留。
+- 这一修正不影响选出哪个 D：在任何 Q1 定义下，只有 D = 14 同时满足 Q2（D ≤ 0.25 × 65 = 16.25）和 Q3（D ≥ 1/gamma = 10）。
+- 结论：**D = 14**，budget = 2 × 14 = 28 tank-days。
+- Member B 事后确认：待定（日期：—）
+
+## Parameter freeze record（experiment-plan §9；2026-10-06）
+
+| 项 | 冻结值 | 依据 |
+|---|---|---|
+| `beta` / `gamma` | 0.2 / 0.1 | Stage 1 第 2 轮 rule 2 |
+| Transfer-rate levels | 0 / 0.01 / 0.025 / 0.1 | Stage 1 第 2 轮 rule 3 |
+| Response-delay levels | 1 / 12 / 33 天 | D1-D3 |
+| `D`（D004） | 14 | Stage 2 |
+| `p_in` / `p_out`（D005） | 0.6 / 0.05 | Structural audit + pilot |
+| Capacity / `k` / `max_days` | 12 / 2 / 365 | D002 / D003 / D006（2026-09-11） |
+| Network seeds | 200-219（20 个） | experiment-plan §8：≥ 10 networks；runtime 允许时增加 network 数以稳定按 network 聚类的 bootstrap |
+| Epidemic seeds | 10000-10004（每个 network 5 个） | experiment-plan §8：≥ 5 per network |
+| Policy seeds | 1000-1002（每个 block 3 个） | experiment-plan §8：2-3 |
+| 排除的 pilot seeds | network 100-104、epidemic 9000-9009、policy 900-902 | pilot-protocol §1 rule 3 |
+| Planned runs | 5200（4 transfer levels × 100 blocks × 13 runs） | `experiments/config/formal.json` |
+| 每个 condition 的 replicates | 100 blocks（≥ 30） | experiment-plan §8 |
+
+- 新增分析口径（正式实验运行前写入）：配对效应同时报告全部 blocks，以及隔离实际启动的 blocks（`turtlefarm/analysis.py` 的 `subset` 列），原因见 `pilot-report-2026-10-06.md` §5。
+- 正式实验开始后，不因结果与 hypothesis 不符而修改上述参数（experiment-plan §9）。
+- 两名成员确认：Member A 2026-10-06；Member B 待确认。
 
 ## Change history
 

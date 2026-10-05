@@ -75,12 +75,12 @@ def plot_metric_vs_transfer(cond: pd.DataFrame, metric: str, path: Path) -> None
     plt.close(fig)
 
 
-def plot_paired_effects(effects: pd.DataFrame, path: Path) -> None:
+def plot_paired_effects(effects: pd.DataFrame, path: Path, subset: str = "all_blocks") -> None:
     """Figure 4: mean targeted-minus-random difference with network-cluster bootstrap CI.
     Negative = highest-betweenness quarantine did better in that cell."""
     fig, axes = plt.subplots(1, len(PRIMARY_METRICS), figsize=(5 * len(PRIMARY_METRICS), 3.4), squeeze=False)
     for ax, metric in zip(axes[0], PRIMARY_METRICS):
-        df = effects[effects["metric"] == metric]
+        df = effects[(effects["metric"] == metric) & (effects["subset"] == subset)]
         for delay, sel in df.groupby("response_delay"):
             sel = sel.sort_values("transfer_rate")
             ax.errorbar(
@@ -136,11 +136,15 @@ def main() -> int:
     diffs.to_csv(out / "paired-differences.csv", index=False)
     effects = paired_effect_table(diffs, n_boot=args.n_boot, seed=args.boot_seed)
     effects.to_csv(out / "paired-effects.csv", index=False)
-    print(f"{len(summary)} runs; {len(diffs)} paired blocks ({diffs.attrs['dropped_blocks']} dropped for failed runs)")
+    print(
+        f"{len(summary)} runs; {len(diffs)} paired blocks ({diffs.attrs['dropped_blocks']} dropped for failed runs, "
+        f"{int(diffs['quarantine_started'].sum())} with quarantine started)"
+    )
 
     plot_metric_vs_transfer(cond, "final_attack_rate", out / "fig2-attack-rate.png")
     plot_metric_vs_transfer(cond, "affected_tanks", out / "fig3-affected-tanks.png")
     plot_paired_effects(effects, out / "fig4-paired-effects.png")
+    plot_paired_effects(effects, out / "fig4b-paired-effects-quarantine-started.png", subset="quarantine_started")
     plot_distribution(summary, "peak_infected", out / "fig5-peak-infected.png")
     plot_distribution(summary, "time_to_extinction", out / "fig6-time-to-extinction.png")
     # TODO fig1: modular network, colour = region, size = betweenness (turtlefarm.network)
