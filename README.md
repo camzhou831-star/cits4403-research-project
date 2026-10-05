@@ -154,4 +154,4 @@ The earlier `turtle-farm` project provides domain inspiration only. This project
 
 ## Use of AI tools
 
-Most of Member A's commits were written with Claude (Claude Code); these carry a `Co-Authored-By: Claude` line. Codex CLI was used for read-only acceptance reviews. Every suggestion was checked by a team member before being kept, and the team is responsible for all content. Counts are recorded in `docs/collaboration-plan.md` section 8.
+Most of Member A's commits were written with Claude (Claude Code). Commits up to 6 October 2026 carry a `Co-Authored-By: Claude` line; later commits do not carry the line, and AI assistance continued. Codex CLI was used for read-only acceptance reviews. Every suggestion was checked by a team member before being kept, and the team is responsible for all content. Counts are recorded in `docs/collaboration-plan.md` section 8.
