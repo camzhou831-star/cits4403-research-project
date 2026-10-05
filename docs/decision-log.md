@@ -40,6 +40,16 @@
 - [x] Member A 已通读 `model-specification.md` 并确认可独立实现。日期：2026-09-07（issue #10）
 - [x] Member B 已通读 `model-specification.md` 并确认可独立实现。日期：2026-09-06（issue #10）
 
+## Protocol deviations
+
+### 2026-10-06：Stage 1 pilot 在 Member B 签署 pilot-protocol 前运行
+
+- 偏离内容：`pilot-protocol.md` 要求两名成员确认标准后才运行 pilot；Stage 1 由 Member A 在 Member B 签署前运行。
+- 原因：截止 2026-10-09，Member B 当晚无法联系；为留出正式实验和报告时间，Member A 决定先运行。
+- 防止 outcome-driven tuning 的措施：选择标准（含 2026-10-06 的 5 处补充）在运行前以 commit `d2be9bf` 推送到 PR #34，本条记录也在运行前推送；selection 由 `scripts/pilot_select.py` 按已推送的标准机械执行。
+- 若 Member B 在 review 中要求修改标准：修改及原因写入本节，并同时报告“按原标准”和“按修改后标准”的选择结果，不得只报告后者。
+- Member B 事后确认：待定（日期：—）
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |
