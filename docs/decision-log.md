@@ -50,6 +50,14 @@
 - 若 Member B 在 review 中要求修改标准：修改及原因写入本节，并同时报告“按原标准”和“按修改后标准”的选择结果，不得只报告后者。
 - Member B 事后确认：待定（日期：—）
 
+### 2026-10-06：Stage 1 第 1 轮无 candidate 通过，按 rule 5 扩展 transfer grid 重跑
+
+- 第 1 轮结果（`pilot-stage1-disease`，2000 runs，failed 0）：8 个 `(beta, gamma)` candidates 全部满足 S1-S4、S6，全部**只因 S5 失败**。逐项表：`results/pilot/pilot-stage1-disease-criteria.csv`。
+- 失败原因：S5 要求相邻 level 的 mean accepted transfers per day 至少相差 2 倍。原 grid 中 0.01→0.02 与 0.05→0.10 的名义比例正好是 2 倍，capacity 拦截使实测只有约 1.77 倍和 1.88 倍，因此任何三档组合都无法满足 S5。
+- 处理（rule 5）：阈值不变；transfer grid 增加 `0.025`，即 `[0, 0.01, 0.02, 0.025, 0.05, 0.1]`，使 `0.01 → 0.025 → 0.1` 的名义间隔为 2.5 倍和 4 倍；其余设置、seeds 与第 1 轮相同；完整重跑 Stage 1，design 名 `pilot-stage1-disease-r2`。第 1 轮 raw records 保留，不删除。
+- 披露：新 grid 由 Member A 在看过第 1 轮的 transfer volume、affected tanks 和 attack rate 汇总后决定；选择 0.025 的依据是 transfer volume 的倍数关系，而非 attack rate。本条在第 2 轮运行前推送。
+- Member B 事后确认：待定（日期：—）
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |

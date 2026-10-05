@@ -2,6 +2,7 @@
 
 Usage:
     python scripts/pilot_select.py stage1    # S1-S6, rules 1-3, D1-D3 -> experiments/config/pilot-stage2-intervention.json
+    python scripts/pilot_select.py stage1 --design pilot-stage1-disease-r2   # a rerun on an extended grid (rule 5)
     python scripts/pilot_select.py stage2    # Q1-Q3 -> selected quarantine duration D
 
 Reads results/summary/<design>.csv and results/raw/<design>.jsonl, prints every criterion for every
@@ -46,13 +47,13 @@ def _summary(name: str) -> pd.DataFrame:
 
 
 def stage1(args: argparse.Namespace) -> int:
-    summary = _summary(STAGE1)
+    summary = _summary(args.design)
     results = evaluate_stage1(summary)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     table = pd.DataFrame(
         [{"beta": r.beta, "gamma": r.gamma, **r.checks, "passed": r.passed, "s5_triples": r.triples, **r.notes} for r in results]
     )
-    table.to_csv(OUT_DIR / "stage1-criteria.csv", index=False)
+    table.to_csv(OUT_DIR / f"{args.design}-criteria.csv", index=False)
     print(table[["beta", "gamma", *results[0].checks, "passed"]].to_string(index=False))
 
     selection = select_stage1(summary, results)
@@ -63,14 +64,14 @@ def stage1(args: argparse.Namespace) -> int:
     print(f"\nselected beta={selection.beta} gamma={selection.gamma} transfer_rates={selection.transfer_rates}")
 
     middle = selection.transfer_rates[2]
-    delays = delay_levels(iter_raw(ROOT / "results" / "raw" / f"{STAGE1}.jsonl"), selection.beta, selection.gamma, middle)
-    (OUT_DIR / "stage1-delays.json").write_text(json.dumps(delays, indent=2), encoding="utf-8")
+    delays = delay_levels(iter_raw(ROOT / "results" / "raw" / f"{args.design}.jsonl"), selection.beta, selection.gamma, middle)
+    (OUT_DIR / f"{args.design}-delays.json").write_text(json.dumps(delays, indent=2), encoding="utf-8")
     print(f"delay levels: {delays}")
     if not delays["valid"]:
         print(f"STOP: {delays['reason']}", file=sys.stderr)
         return 3
 
-    stage1_design = json.loads((ROOT / "experiments" / "config" / f"{STAGE1}.json").read_text(encoding="utf-8"))
+    stage1_design = json.loads((ROOT / "experiments" / "config" / f"{args.design}.json").read_text(encoding="utf-8"))
     design = stage2_design(selection, delays["levels"], stage1_design)
     ExperimentDesign.from_dict(design).configs()  # validate before writing
     out = ROOT / "experiments" / "config" / f"{STAGE2}.json"
@@ -98,6 +99,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="stage", required=True)
     p1 = sub.add_parser("stage1")
+    p1.add_argument("--design", default=STAGE1, help="Stage 1 design name (default: %(default)s)")
     p1.add_argument("--force", action="store_true", help="overwrite an existing Stage 2 design")
     sub.add_parser("stage2")
     args = parser.parse_args()
