@@ -1,0 +1,50 @@
+{
+  "name": "pilot-stage2-intervention",
+  "transfer_rates": [
+    0.01,
+    0.025,
+    0.1
+  ],
+  "response_delays": [
+    1,
+    12,
+    33
+  ],
+  "network_seeds": [
+    100,
+    101,
+    102,
+    103,
+    104
+  ],
+  "epidemic_seeds": [
+    9000,
+    9001,
+    9002,
+    9003,
+    9004,
+    9005,
+    9006,
+    9007,
+    9008,
+    9009
+  ],
+  "policy_seeds": [
+    900,
+    901,
+    902
+  ],
+  "fixed": {
+    "p_in": 0.6,
+    "p_out": 0.05,
+    "beta": 0.2,
+    "gamma": 0.1
+  },
+  "sweep": {
+    "quarantine_duration": [
+      7,
+      14,
+      21
+    ]
+  }
+}

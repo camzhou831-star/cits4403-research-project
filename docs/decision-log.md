@@ -58,6 +58,16 @@
 - 披露：新 grid 由 Member A 在看过第 1 轮的 transfer volume、affected tanks 和 attack rate 汇总后决定；选择 0.025 的依据是 transfer volume 的倍数关系，而非 attack rate。本条在第 2 轮运行前推送。
 - Member B 事后确认：待定（日期：—）
 
+### 2026-10-06：Stage 1 结论（第 2 轮，`pilot-stage1-disease-r2`）
+
+- 2400 runs，failed 0。7/8 个 candidates 满足 S1-S6；`beta = 0.05, gamma = 0.2` 因 S5 失败。逐项表：`results/pilot/pilot-stage1-disease-r2-criteria.csv`。
+- Rule 3：所有通过的 candidates 的 transfer levels 都是 `0.01 / 0.025 / 0.1`（跨度最大）。
+- Rule 2（中间 level 0.025 的 median final attack rate 最接近 0.5）：选中 `beta = 0.2, gamma = 0.1`（median 0.458，距 0.5 为 0.042）；次近为 `beta = 0.15, gamma = 0.1`（0.435，0.065）。
+- Response-delay levels（D1-D3，40 个 non-minor runs）：**1 / 12 / 33 天**（D2、D3 的 median 恰为整数，未发生取整）。
+- 由脚本生成 `experiments/config/pilot-stage2-intervention.json`：transfer levels 0.01 / 0.025 / 0.1，`D` candidates 7 / 14 / 21，policy seeds 900-902，5550 runs。
+- 需在报告中说明：在所选 regime 下，`transfer_rate = 0.1` 的 no-intervention median attack rate 为 1.0（接近饱和），该 level 上的 intervention 差异可能受天花板限制。
+- Member B 事后确认：待定（日期：—）
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |
