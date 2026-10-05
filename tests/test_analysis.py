@@ -284,3 +284,32 @@ def test_baseline_differences_pair_each_arm_with_its_block_baseline():
     table = baseline_effect_table(diffs, n_boot=50)
     row = table[(table.strategy == "betweenness") & (table.metric == "final_attack_rate")].iloc[0]
     assert np.isclose(row.rel_reduction, 0.5) and row.blocks == 12
+
+
+def test_float_noise_counts_as_a_tie_not_a_win():
+    df = _formal_rows()
+    # make every arm identical, then perturb the random mean by floating-point noise only
+    df["final_attack_rate"] = 0.1
+    df.loc[df["strategy"] == "random", "final_attack_rate"] = [0.1 + 1e-17, 0.1 - 1e-17] * (len(df[df.strategy == "random"]) // 2)
+    effects = paired_effect_table(paired_differences(df), metrics=("final_attack_rate",), n_boot=20)
+    assert (effects["share_targeted_better"] == 0).all() and (effects["share_tied"] == 1).all()
+
+
+def test_missing_random_seed_or_targeted_arm_is_reported():
+    df = _formal_rows()
+    assert paired_differences(df).attrs["incomplete_blocks"] == 0
+    drop_seed = df.index[(df.strategy == "random") & (df.policy_seed == 2) & (df.epidemic_seed == 0) & (df.network_seed == 0)]
+    assert paired_differences(df.drop(drop_seed)).attrs["incomplete_blocks"] == 1
+    drop_arm = df.index[(df.strategy == "betweenness") & (df.epidemic_seed == 1) & (df.network_seed == 1)]
+    assert paired_differences(df.drop(drop_arm)).attrs["incomplete_blocks"] == 1
+
+
+def test_condition_summary_ci_resamples_networks_and_stays_in_range():
+    df = _formal_rows()
+    # networks 0, 1, 2 have different mean attack rates, all close to the upper bound of 1
+    df.loc[df["strategy"] == "none", "final_attack_rate"] = [1.0] * 4 + [1.0, 0.9, 1.0, 1.0] + [0.9] * 4
+    cond = condition_summary(df, metrics=("final_attack_rate",), n_boot=200)
+    base = cond[cond["strategy"] == "none"].iloc[0]
+    assert base["ci95_high"] <= 1.0 + 1e-12
+    assert base["ci95_low"] - 1e-12 <= base["mean"] <= base["ci95_high"] + 1e-12
+    assert base["ci95_low"] < base["ci95_high"]  # networks differ, so the interval is not degenerate

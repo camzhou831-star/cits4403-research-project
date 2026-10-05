@@ -300,8 +300,11 @@ def main() -> int:
     )
     print(
         f"{len(summary)} runs; {len(diffs)} paired blocks ({diffs.attrs['dropped_blocks']} dropped for failed runs, "
-        f"{int(diffs['quarantine_started'].sum())} with quarantine started)"
+        f"{int(diffs['quarantine_started'].sum())} with quarantine started, "
+        f"{diffs.attrs['incomplete_blocks']} incomplete)"
     )
+    if diffs.attrs["incomplete_blocks"]:
+        print("WARNING: some blocks are missing a targeted run or random policy seeds; check the raw file")
 
     plot_metric_vs_transfer(cond, "final_attack_rate", out / "fig2-attack-rate.png")
     plot_metric_vs_transfer(cond, "affected_tanks", out / "fig3-affected-tanks.png")
@@ -325,6 +328,23 @@ def main() -> int:
                 "tie_groups": len(net["tie_groups"]), **net["metrics"],
             })
         pd.DataFrame(sorted(networks.values(), key=lambda n: n["network_seed"])).to_csv(out / "networks.csv", index=False)
+        hidden = [
+            (r["config"]["network_seed"], r["config"]["epidemic_seed"], r["config"]["transfer_rate"], outbreak_class(r))
+            for r in baselines
+            if r["metrics"].get("affected_tanks", 0)
+            > len({t["tank_id"] for d in r["daily"] for t in d["tanks"] if t["I"] > 0})
+        ]
+        (out / "outbreak-class-check.json").write_text(json.dumps({
+            "baseline_runs": len(baselines),
+            "runs_with_hidden_affected_tanks": len(hidden),
+            "of_which_classed_local": [list(h[:3]) for h in hidden if h[3] == "local"],
+        }, indent=2), encoding="utf-8")
+        if hidden:
+            local = [h for h in hidden if h[3] == "local"]
+            print(
+                f"outbreak_class check: {len(hidden)} baseline runs have affected tanks not visible in daily "
+                f"snapshots; {len(local)} of them are classed local and need a manual check: {local}"
+            )
         classes = pd.DataFrame(
             [{"transfer_rate": r["config"]["transfer_rate"], "cross_region": outbreak_class(r) == "cross_region"}
              for r in baselines if r["status"] == "completed"]

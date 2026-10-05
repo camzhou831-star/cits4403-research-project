@@ -25,6 +25,9 @@ MINOR_OUTBREAK_MAX_ATTACK_RATE = 0.06  # pilot-protocol section 3: infection nev
 CANDIDATE_KEYS = ("beta", "gamma")
 BLOCK_KEYS = ("network_seed", "epidemic_seed", "transfer_rate")
 PRIMARY_METRICS = ("final_attack_rate", "affected_tanks")
+# Paired differences are means of up to three runs, so identical outcomes can differ by ~1e-17 in floating
+# point. Anything within this tolerance counts as a tie.
+DIFF_TOLERANCE = 1e-9
 SECONDARY_METRICS = ("peak_infected", "time_to_extinction")
 
 
@@ -248,8 +251,11 @@ def select_duration(table: pd.DataFrame) -> int | None:
 # --------------------------------------------------------------------------------------------------
 
 
-def condition_summary(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS + SECONDARY_METRICS) -> pd.DataFrame:
-    """Count, mean, median, SD, IQR and a normal-approximation 95% CI per condition and metric.
+def condition_summary(
+    summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS + SECONDARY_METRICS, **boot_kwargs
+) -> pd.DataFrame:
+    """Count, mean, median, SD, IQR and a 95% CI per condition and metric. The CI is a network-cluster
+    bootstrap (runs sharing a network are not independent), which also keeps it inside the outcome's range.
     The shared no-intervention baseline is reported once per transfer rate (D007)."""
     keys = ["transfer_rate", "response_delay", "strategy"]
     df = summary[summary["status"] != STATUS_FAILED].copy()
@@ -260,7 +266,10 @@ def condition_summary(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
             values = group[metric].dropna().astype(float)
             n = len(values)
             mean = values.mean() if n else np.nan
-            half = 1.96 * values.std(ddof=1) / math.sqrt(n) if n > 1 else np.nan
+            if n > 1:
+                _, ci_low, ci_high = cluster_bootstrap_ci(group.dropna(subset=[metric]), metric, **boot_kwargs)
+            else:
+                ci_low = ci_high = np.nan
             rows.append(
                 {
                     **dict(zip(keys, cond)),
@@ -271,8 +280,8 @@ def condition_summary(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
                     "median": values.median() if n else np.nan,
                     "sd": values.std(ddof=1) if n > 1 else np.nan,
                     "iqr": values.quantile(0.75) - values.quantile(0.25) if n else np.nan,
-                    "ci95_low": mean - half,
-                    "ci95_high": mean + half,
+                    "ci95_low": ci_low,
+                    "ci95_high": ci_high,
                 }
             )
     out = pd.DataFrame(rows)
@@ -303,6 +312,12 @@ def paired_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_M
         joined[f"diff_{m}"] = joined[f"{m}_targeted"] - joined[f"{m}_random"]
     out = joined.reset_index()
     out.attrs["dropped_blocks"] = len(failed_blocks)
+    # Completeness: every block must have one targeted run and the same number of random policy seeds.
+    seeds_per_block = ok[ok["strategy"] == "random"].groupby(keys).size()
+    targeted_keys, random_keys = set(targeted.index), set(seeds_per_block.index)
+    out.attrs["incomplete_blocks"] = len(targeted_keys ^ random_keys) + int(
+        (seeds_per_block != seeds_per_block.max()).sum() if len(seeds_per_block) else 0
+    )
     return out
 
 
@@ -379,7 +394,8 @@ def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
                     "rel_reduction": rel,
                     "rel_reduction_ci95_low": rel_lo,
                     "rel_reduction_ci95_high": rel_hi,
-                    "share_targeted_better": float((group[f"diff_{m}"] < 0).mean()),
+                    "share_targeted_better": float((group[f"diff_{m}"] < -DIFF_TOLERANCE).mean()),
+                    "share_tied": float((group[f"diff_{m}"].abs() <= DIFF_TOLERANCE).mean()),
                 }
             )
     return pd.DataFrame(rows)
@@ -398,7 +414,11 @@ def regions_ever_infected(raw: dict[str, Any]) -> set[int]:
 
 def outbreak_class(raw: dict[str, Any]) -> str:
     """``local`` if infection never reached a tank outside the region(s) of the initially infected tank(s),
-    otherwise ``cross_region``."""
+    otherwise ``cross_region``.
+
+    Limitation: the daily records are end-of-day snapshots, so an infectious agent that enters a tank and
+    recovers on the same day is not visible. ``scripts/analyse_results.py`` counts runs where the model's
+    ``affected_tanks`` exceeds the tanks seen here, and those runs should be checked by hand."""
     regions = raw["network"]["regions"]
     initial = {regions[t] for t in raw["initial_infected_tanks"]}
     return "local" if regions_ever_infected(raw) <= initial else "cross_region"

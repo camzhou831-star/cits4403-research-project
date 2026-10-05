@@ -24,6 +24,8 @@ sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
+from turtlefarm.analysis import DIFF_TOLERANCE
+
 FORMAL = "formal-nested"
 CROSSED = "formal"
 PILOTS = ("pilot-stage1-disease", "pilot-stage1-disease-r2", "pilot-stage2-intervention")
@@ -214,8 +216,9 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     pdiff = pd.read_csv(ANALYSIS / FORMAL / "paired-differences.csv")
     for (rate, delay), g in pdiff[pdiff["transfer_rate"] > 0].groupby(["transfer_rate", "response_delay"]):
         key = f"tvr_final_attack_rate_{rate_key(rate)}_d{int(delay)}"
-        v[key + "_equal"] = pct((g["diff_final_attack_rate"] == 0).mean(), 0)
-        v[key + "_worse"] = pct((g["diff_final_attack_rate"] > 0).mean(), 0)
+        diff = g["diff_final_attack_rate"]
+        v[key + "_equal"] = pct((diff.abs() <= DIFF_TOLERANCE).mean(), 0)
+        v[key + "_worse"] = pct((diff > DIFF_TOLERANCE).mean(), 0)
     started = pdiff.copy()
     started = started[started["transfer_rate"] > 0]
     for delay, g in started.groupby("response_delay"):
@@ -250,6 +253,12 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     v["ar_ratio_0p01_to_0p025"] = f"{b[('final_attack_rate', 0.025)] / b[('final_attack_rate', 0.01)]:.1f}"
     v["tanks_ratio_0p01_to_0p025"] = f"{b[('affected_tanks', 0.025)] / b[('affected_tanks', 0.01)]:.1f}"
     v["max_vsbase_reduction"] = pct(be.loc[be["metric"] == "final_attack_rate", "rel_reduction"].max())
+    chk = json.loads((ANALYSIS / FORMAL / "outbreak-class-check.json").read_text(encoding="utf-8"))
+    v["oc_hidden_runs"] = str(chk["runs_with_hidden_affected_tanks"])
+    v["oc_baseline_runs"] = str(chk["baseline_runs"])
+    v["oc_hidden_local"] = str(len(chk["of_which_classed_local"]))
+    sumf = pd.read_csv(ROOT / "results" / "summary" / f"{FORMAL}.csv")
+    v["base_infected_0"] = f"{sumf[(sumf['strategy'] == 'none') & (sumf['transfer_rate'] == 0)]['ever_infected'].mean():.1f}"
     v["figdir"] = f"../results/analysis/{FORMAL}"
     return v, tables
 

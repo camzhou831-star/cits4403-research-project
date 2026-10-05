@@ -126,9 +126,9 @@ The invariants are also checked at runtime on every day of every run, and any vi
 - the lowest level does not saturate;
 - three non-zero levels differ by at least a factor of two in accepted transfers per day.
 
-In the first round ({{pilot1_runs}} runs) none of the {{pilot1_candidates}} `(beta, gamma)` candidates met the last criterion. The grid's adjacent levels differ by a nominal factor of exactly 2, and capacity blocking pulled the realised ratio below 2. Following the protocol, we kept the threshold, added a level of 0.025 and reran the whole stage ({{pilot2_runs}} runs). {{pilot2_passed}} candidates then passed. The pre-registered tie-break rule chose `beta` = {{beta}} and `gamma` = {{gamma}} (mean infectious period {{mean_infectious_days}} days), with transfer levels {{transfer_levels}}.
+In the first round ({{pilot1_runs}} runs) none of the {{pilot1_candidates}} `(beta, gamma)` candidates met the last criterion. The grid's adjacent levels differ by a nominal factor of exactly 2, and capacity blocking pulled the realised ratio below 2. As the protocol requires, we kept the threshold and reran the whole stage ({{pilot2_runs}} runs) on an extended grid. The added level, 0.025, was chosen by one member after seeing the first round's transfer volumes; the protocol also requires both members to confirm a new grid, and this confirmation was still pending. {{pilot2_passed}} candidates then passed. The pre-registered selection rule picks the candidate whose median attack rate at the middle transfer level is closest to 0.5; it chose `beta` = {{beta}} and `gamma` = {{gamma}} (mean infectious period {{mean_infectious_days}} days), with transfer levels {{transfer_levels}}.
 
-The three response delays are 1 (immediate), the median day on which infection first reaches a second tank, and the median time to peak. They were computed from {{pilot_nonminor_runs}} non-minor outbreaks and gave delays of {{delay_levels}} days.
+The three response delays are 1 (immediate), the median day on which infection first reaches a second tank, and the median time to peak. They were computed from {{pilot_nonminor_runs}} non-minor outbreaks and gave delays of {{delay_levels}} days. The pilot used the crossed seed design described in Section 2.8 (10 epidemic seeds shared by 5 networks), so these quantities rest on only 10 independent outbreak origins.
 
 **Stage 2** chose *D* from 7, 14 and 21 days. A candidate had to meet three conditions:
 
@@ -155,7 +155,7 @@ We used {{n_networks}} network instances, each with {{epi_per_network}} epidemic
 
 This gives {{formal_runs}} runs in total.
 
-A first formal run reused the same 5 epidemic seeds in every network, so the networks were crossed with the seeds instead of having seeds nested within them. Because draws are event-keyed, this gave every network the same initial infected agent and the same early dynamics, leaving only {{crossed_epidemic_seeds}} independent outbreak origins. The intended design (experiment plan §5) nests epidemic seeds within networks. We found the problem after viewing that run's results, reran with nested seeds, and report the nested run. The crossed run is kept, and Section 3.5 compares the two.
+A first formal run reused the same 5 epidemic seeds in every network, so the networks were crossed with the seeds instead of having seeds nested within them. Because draws are event-keyed, this gave every network the same initial infected agent and the same random draws. Outcomes were therefore strongly correlated across networks, leaving only {{crossed_epidemic_seeds}} independent outbreak origins. For example, whether an outbreak died out early depended on the seed rather than on the network. The intended design (experiment plan §5) nests epidemic seeds within networks. We found the problem after viewing that run's results, reran with nested seeds, and report the nested run. The crossed run is kept, and Section 3.5 compares the two.
 
 ### 2.9 Analysis
 
@@ -180,14 +180,14 @@ All {{formal_runs}} formal runs completed (failed: {{formal_failed}}; censored a
 
 Without intervention, the transfer rate determines whether an outbreak stays in its first tank or spreads through the system (Table 1; Figures 2–3):
 
-- **Transfer rate 0.** Infection never leaves the initial tank: the mean attack rate is {{base_final_attack_rate_0}}, i.e. the 10 agents of that tank.
+- **Transfer rate 0.** Infection never leaves the initial tank: the mean attack rate is {{base_final_attack_rate_0}}, an average of {{base_infected_0}} of the 10 agents in that tank.
 - **Transfer rate 0.01.** The mean attack rate is {{base_final_attack_rate_0p01}} and {{base_affected_tanks_0p01}} tanks are affected.
 - **Transfer rate 0.025.** The mean attack rate is {{base_final_attack_rate_0p025}} and {{base_affected_tanks_0p025}} tanks are affected.
 - **Transfer rate 0.1.** The outbreak saturates the system: the attack rate is {{base_final_attack_rate_0p1}} and {{base_affected_tanks_0p1}} of the 20 tanks are affected.
 
 The epidemic lasts longest at the intermediate rate, with a median time to extinction of {{base_time_to_extinction_0p025_median}} days at 0.025 against {{base_time_to_extinction_0p1_median}} days at 0.1. At the intermediate rate, infection moves slowly from region to region; at the highest rate it reaches every region quickly and burns out sooner.
 
-*Table 1. No-intervention outcomes by transfer rate ({{formal_blocks_per_rate}} runs each; 95% CIs are normal approximations).*
+*Table 1. No-intervention outcomes by transfer rate ({{formal_blocks_per_rate}} runs each; 95% CIs from a bootstrap that resamples whole networks).*
 
 {{table:baseline}}
 
@@ -249,9 +249,9 @@ In the earlier crossed-seed run ({{crossed_epidemic_seeds}} epidemic seeds share
 
 **H1 is supported.** The no-intervention attack rate rises steeply with the transfer rate: {{base_final_attack_rate_0}}, {{base_final_attack_rate_0p01}}, {{base_final_attack_rate_0p025}} and {{base_final_attack_rate_0p1}} at rates 0, 0.01, 0.025 and 0.1. The number of affected tanks follows the same pattern. The steepest change falls between 0.01 and 0.025. Over this range, the share of outbreaks that reach a second region rises from {{cross_share_0p01}} to {{cross_share_0p025}}, so outbreaks switch from mostly staying within one region to mostly crossing regions ({{cross_share_0p1}} at 0.1). This is consistent with a mobility threshold for invading new subpopulations in metapopulation models [3]. We did not estimate the threshold itself, so we describe the pattern without claiming one was located.
 
-**H2 is supported in direction but the effect is small.** Under each strategy and transfer rate, the mean attack rate does not fall as the delay grows, apart from one dip of under 0.01. The mean number of affected tanks shows a few similar small dips. For random quarantine at 0.025 it rises from {{arm_random_final_attack_rate_0p025_d1}} to {{arm_random_final_attack_rate_0p025_d33}}. For targeted quarantine it is almost flat, from {{arm_betweenness_final_attack_rate_0p025_d1}} to {{arm_betweenness_final_attack_rate_0p025_d33}}. Because the overall effect of a 2-tank, {{D}}-day quarantine is modest, the room for the delay to matter is also small.
+**H2 is supported in direction but the effect is small.** Under each strategy and transfer rate, the mean attack rate does not fall as the delay grows, apart from one dip of under 0.01. At transfer rate 0.025, the mean attack rate under random quarantine rises from {{arm_random_final_attack_rate_0p025_d1}} to {{arm_random_final_attack_rate_0p025_d33}}, while under targeted quarantine it is almost flat, from {{arm_betweenness_final_attack_rate_0p025_d1}} to {{arm_betweenness_final_attack_rate_0p025_d33}}. The mean number of affected tanks shows a few similar small dips. Because the overall effect of a 2-tank, {{D}}-day quarantine is modest, the room for the delay to matter is also small.
 
-**H3 receives limited support.** Targeted quarantine has a lower point estimate than random quarantine in most cells with transfer rate 0.025 or 0.1. However, only the 0.025 rate with a 33-day delay has an interval excluding 0, and even there targeted quarantine is worse in a third of the blocks. At 0.01, the point estimates slightly favour random quarantine. The evidence therefore does not support the general claim that targeted quarantine is better under this budget. It supports a narrower one: at an intermediate transfer rate, targeted quarantine keeps its effect when the response is late, while random quarantine loses most of its effect.
+**H3 receives limited support.** Targeted quarantine has a lower point estimate than random quarantine in most cells with transfer rate 0.025 or 0.1. However, only the 0.025 rate with a 33-day delay has an interval excluding 0, and even there targeted quarantine is worse in a third of the blocks. At 0.01, the point estimates slightly favour random quarantine. The evidence therefore does not support the general claim that targeted quarantine is better under this budget. The data are consistent with a narrower, descriptive pattern: at an intermediate transfer rate, the effect of targeted quarantine did not decline with a later response, while that of random quarantine did. Testing this would need a pre-specified strategy × delay comparison.
 
 ### 4.2 A possible mechanism (not tested)
 
@@ -259,7 +259,7 @@ Why would random quarantine lose its effect with delay while targeted quarantine
 
 A randomly chosen tank is a useful barrier only if the infection has not yet reached or passed it. As the outbreak grows, more randomly chosen tanks have already been infected or are far from the remaining susceptible regions, so closing them changes little.
 
-A high-betweenness tank sits on many of the shortest paths between regions (Figure 1). It therefore stays relevant for as long as some region remains uninfected. Figure 7 shows that regions are invaded weeks apart at this transfer rate, so a quarantine on day 33 can still block a later invasion.
+A high-betweenness tank sits on many of the shortest paths between regions (Figure 1). It therefore stays relevant for as long as some region remains uninfected. In the representative cross-region run (Figure 7), regions were invaded weeks apart, so a quarantine on day 33 could still block a later invasion.
 
 Testing this would require recording, for each quarantined tank, whether it was already infected at the response day and how many transfers it blocked between regions. Both can be derived from the existing raw records.
 
@@ -269,16 +269,24 @@ Testing this would require recording, for each quarantined tank, whether it was 
 - **One budget.** We studied a single quarantine budget (2 tanks for {{D}} days) and a single disease regime (`beta` = {{beta}}, `gamma` = {{gamma}}). Larger budgets, other durations, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run.
 - **Simplified response.** The response delay counts from the introduction of infection, with no detection model. Quarantine blocks transfers only; transmission inside the tank continues, and movement does not depend on disease state.
 - **Statistical precision.** With {{n_networks}} networks and {{formal_blocks_per_rate}} blocks per cell, the intervals are wide relative to the differences between strategies. Of the 18 targeted − random comparisons, we highlight the 2 that exclude 0. With no true difference, about one interval in twenty would exclude 0 by chance, so a single supportive cell among 18 correlated comparisons needs replication.
-- **Post-hoc elements.** Several analysis choices were made after data were seen and are flagged where they occur: the correction to criterion Q1, the added transfer level, the nested-seed rerun and the strategy-minus-baseline comparison. In each case the original result is kept in the repository.
-- **Partial sign-off.** The second team member had not yet signed off the pilot protocol when the pilot ran. This is recorded in the decision log.
+- **Post-hoc elements.** Several choices were made after data were seen and are flagged where they occur:
+  - the correction to criterion Q1;
+  - the added transfer level;
+  - the nested-seed rerun, and the crossed-versus-nested comparison;
+  - the strategy-minus-baseline comparison;
+  - the rule for choosing representative runs.
+
+  Each is recorded in the decision log, and the original results are kept in the repository.
+- **Partial sign-off.** The second team member had not yet signed off the pilot protocol when the pilot ran, nor confirmed the extended transfer grid. Both are recorded in the decision log.
+- **Outbreak classes.** The local/cross-region classification uses end-of-day snapshots, so an infectious agent that arrives in a tank and recovers on the same day is not seen. This happened in {{oc_hidden_runs}} of {{oc_baseline_runs}} baseline runs. The {{oc_hidden_local}} of them classed as local were rerun, and their affected tanks were all inside the initial region.
 
 ## 5. Conclusion
 
 In a modular tank system, the transfer rate decides whether a local outbreak stays local. Moving from a transfer rate of 0.01 to 0.025 multiplies the attack rate by {{ar_ratio_0p01_to_0p025}} and the number of affected tanks by {{tanks_ratio_0p01_to_0p025}}.
 
-A small quarantine budget of 2 tanks for {{D}} days reduces the attack rate by at most {{max_vsbase_reduction}}. Where it helps most, at intermediate transfer rates, choosing the bridging, high-betweenness tanks preserves the effect of a late response, which random selection does not. Across all conditions, however, we could not show that targeted quarantine beats random quarantine.
+A small quarantine budget of 2 tanks for {{D}} days reduces the attack rate by at most {{max_vsbase_reduction}}. Across all conditions, we could not show that targeted quarantine beats random quarantine. At the intermediate transfer rate, the effect of targeted quarantine did not decline with a later response while that of random quarantine did; this is a descriptive pattern, not a tested result.
 
-The practical lesson of the model is that **limiting cross-region transfers in the first place matters more than which tanks are closed after an outbreak has begun**.
+Within this model, the transfer rate changes outcomes far more than the choice of quarantined tanks does under this budget. We did not test whether reducing cross-region transfers would be a better use of resources than quarantine, because the transfer rate was an experimental factor, not an intervention with a cost.
 
 All results can be regenerated from the repository:
 
@@ -304,7 +312,7 @@ python scripts/build_report.py
 
 [7] R. M. Christley, G. L. Pinchbeck, R. G. Bowers, D. Clancy, N. P. French, R. Bennett and J. Turner, "Infection in social networks: Using network analysis to identify high-risk individuals," *American Journal of Epidemiology*, vol. 162, no. 10, pp. 1024–1031, 2005. doi:10.1093/aje/kwi308
 
-[8] L. C. Freeman, "A set of measures of centrality based on betweenness," *Sociometry*, vol. 40, no. 1, p. 35, 1977. doi:10.2307/3033543
+[8] L. C. Freeman, "A set of measures of centrality based on betweenness," *Sociometry*, vol. 40, no. 1, pp. 35–41, 1977. doi:10.2307/3033543
 
 [9] P. Glasserman and D. D. Yao, "Some guidelines and guarantees for common random numbers," *Management Science*, vol. 38, no. 6, pp. 884–908, 1992. doi:10.1287/mnsc.38.6.884
 

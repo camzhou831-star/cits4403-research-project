@@ -113,6 +113,22 @@
 - 对 pilot 的影响：pilot 同样是交叉 seeds，Stage 1/2 的判定实际只基于 10 个独立的疫情起点（network 间变异仍有效）。Pilot 不重跑，在 `pilot-report-2026-10-06.md` 中注明。
 - Member B 事后确认：待定（日期：—）
 
+## Analysis decisions made after the formal results（2026-10-06）
+
+以下决定均在看过 `formal` 和/或 `formal-nested` 的汇总结果之后做出，在报告中逐项标注为 post-hoc。
+
+| # | 决定 | 原因 | 位置 |
+|---|---|---|---|
+| A1 | 增加“各策略 − 同 block 无干预基线”的配对比较（`baseline_differences`），作为描述性分析 | 研究问题 1 的 delay 效应只能相对基线体现；原计划只比较 targeted 与 random | `turtlefarm/analysis.py`，报告 §3.3 / 表 2 |
+| A2 | 代表性运行（图 7）规则：转移率 0.025 的无干预运行按 local / cross-region 分类，每类取 final attack rate 最接近该类中位数的一次，并列取较小 seeds | experiment-plan §13 要求客观规则；规则在只看过汇总结果、未看任何单次轨迹时写定 | `pick_representative_runs`，报告图 7 |
+| A3 | 报告 `formal`（交叉 seeds）与 `formal-nested` 的对比（不跨 0 的格子数：7 vs 2） | 披露交叉设计高估精度 | 报告 §3.5 |
+| A4 | `formal-nested` 复用 `formal` 的 network seeds 200-219 与 policy seeds 1000-1002，只更换 epidemic seeds | 交叉问题只来自共享 epidemic seeds；network 由 seed 确定性生成，复用同一批网络使两次运行的对比只差 seed 设计 | `experiments/config/formal-nested.json` |
+| A5 | 条件汇总的 95% CI 由正态近似改为按 network 聚类的 bootstrap | 外部审查发现同一 network 的 runs 不独立，且正态近似在 attack rate 0.1 档的上限超过 1 | `condition_summary`，报告表 1 |
+| A6 | 配对差的胜负/平局判定使用容差 1e-9 | 外部审查发现浮点误差（约 1e-17）在转移率 0 时把完全相同的结果计为 targeted 更优；报告引用的 52% / 15% / 33% 不受影响 | `DIFF_TOLERANCE` |
+| A7 | `outbreak_class` 基于每日快照，可能看不到当天到达又当天恢复的感染个体；`analyse_results.py` 自动列出受影响的 runs | 外部审查发现；`formal-nested` 中 5/400 次基线运行受影响，其中 2 次被归为 local，重跑后确认受影响缸都在初始 region 内，分类正确 | `outbreak-class-check.json` |
+
+外部审查：2026-10-06 由 Codex CLI 以只读模式做验收审查，结论 ACCEPT WITH FIXES，无 Blocker；独立重算的 20 余个报告数字全部一致。逐条处理见 PR #34。
+
 ## Change history
 
 | Date | Decision changed | Documents updated | PR |
