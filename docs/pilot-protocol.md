@@ -54,7 +54,7 @@ Design：`experiments/config/pilot-stage1-disease.json`。
 
 1. 保留同时满足 S1-S6 的 `(beta, gamma)` candidates。
 2. 若多于一个：选 S5 所选三个 levels 中**中间 level** 的 median `final_attack_rate` 最接近 0.5 的 candidate（上下都有最大变化空间）；仍并列则选较小的 `beta`。
-3. Transfer-rate levels = `0` + S5 中满足条件的三个 non-zero levels；若有多组满足，选跨度最大的一组。
+3. Transfer-rate levels = `0` + S5 中满足条件的三个 non-zero levels；若有多组满足，选跨度（最高 level − 最低 level）最大的一组；跨度仍并列时，选**中间 level 较小**的一组（在 hypothesis 关心的低转移率一侧保留更细的分辨率；该规则不看任何 outcome）。例：`(0.01, 0.02, 0.1)` 与 `(0.01, 0.05, 0.1)` 并列时选前者。
 
 这些标准只使用 no-intervention runs，因此与 hypothesis 的方向无关。
 
@@ -68,6 +68,7 @@ Stage 2 的 design 文件在 Stage 1 结论写入 `decision-log.md` 之后才创
 | `D` candidates（`sweep.quarantine_duration`） | 7、14、21 |
 | Response-delay candidates | 由下方 D1-D3 规则从 Stage 1 数据推出，不再另行扫描 |
 | Policy seeds | 900、901、902 |
+| Transfer rates | Stage 1 选出的三个 **non-zero** levels。`transfer_rate = 0` 时 quarantine 不可能拦截任何转移（Q1 必然不满足），加入只会稀释 Q1，因此不纳入 Stage 2 |
 | Seeds | 与 Stage 1 相同的 5 × 10 blocks |
 
 ### Response-delay levels（只用 Stage 1 的 no-intervention 数据决定）
@@ -80,6 +81,8 @@ Stage 2 的 design 文件在 Stage 1 结论写入 `decision-log.md` 之后才创
 | D2 intermediate | `affected_tanks_ever` 首次达到 2 的 day 的 median（感染首次离开初始 tank） |
 | D3 late | `time_to_peak` 的 median |
 
+Median 不是整数时按四舍五入（0.5 进位，`floor(x + 0.5)`）取整为 day。
+
 若 D2 ≥ D3 或 D2 ≤ 1，说明三个 levels 无法区分：记录该结果，回到 Stage 1 选择规则的下一个 candidate，不得手动挑选 delay。
 
 ### `D` 的选择标准（strategy 合并后计算，不比较 strategy）
@@ -87,19 +90,27 @@ Stage 2 的 design 文件在 Stage 1 结论写入 `decision-log.md` 之后才创
 | # | 标准 | 阈值 | 理由 |
 |---|---|---|---|
 | Q1 | Quarantine 不是空操作 | pooled intervention runs 中 `blocked_transfers ≥ 1` 的 share ≥ 90% | Q5：`k`、`D` 不能无效 |
-| Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25% | Q5：不能“几乎删除整个 network” |
+| Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25%（取 Stage 2 全部 transfer levels 的共享 baseline 中 status = completed 的 runs 合并计算；censored runs 不计入） | Q5：不能“几乎删除整个 network” |
 | Q3 | 至少覆盖一个平均 infectious period | `D ≥ 1 / gamma` | 短于 infectious period 的隔离在机制上难以解释 |
+
+Q1 的局限：模型的 `blocked_transfers` 同时计入“origin 被隔离”和“没有 open 且未满的 neighbour”（含 capacity）两种拦截，不单独区分 quarantine。Stage 1 的 S6 已限制 capacity 拦截占比 ≤ 20%，因此 Q1 主要反映 quarantine；pilot report 需写明这一点。
 
 选择规则：满足 Q1-Q3 的最小 `D`。Budget 为 `k × D` tank-days，对 random 和 betweenness 相同（D003：`k = 2`）。
 
-## 5. Pilot 之后
+## 5. 选择规则的实现
+
+上述标准由 `turtlefarm/analysis.py` 实现，`scripts/pilot_select.py stage1` / `stage2` 应用于记录好的 pilot 结果，并把每个 candidate 的逐项判定写入 `results/pilot/`。规则无法给出唯一选择时（例如没有 candidate 通过、规则 2 在 `beta` 也相同时仍并列），脚本以 exit code 3 停止，不自动挑选；按 §1 rule 5 处理。
+
+2026-10-06 补充（运行前、未看任何 pilot 数据）：Stage 1 规则 3 的并列处理、Stage 2 的 transfer levels、delay 取整、Q2 的 baseline 范围和 Q1 的计数局限。
+
+## 6. Pilot 之后
 
 1. 写 `docs/pilot-report-<date>.md`：每个 candidate 的标准逐项结果、被排除的 candidate、failed / censored runs、runtime。
 2. 在 `decision-log.md` 冻结 `beta`、`gamma`、`D`、`p_in` / `p_out`、transfer-rate levels、delay levels、seed lists 和 replication counts，关闭 issues #4、#5。
 3. 创建 `experiments/config/formal.json`（无 `sweep`；seeds 与 pilot seeds 不重叠）。
 4. 从 `turtlefarm/config.py` 的 `PROVISIONAL_FIELDS` 中移除已冻结的字段。
 
-## 6. Sign-off
+## 7. Sign-off
 
 | Member | 确认标准（运行前） | 日期 |
 |---|---|---|
