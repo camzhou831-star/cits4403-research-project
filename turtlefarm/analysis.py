@@ -430,3 +430,56 @@ def pick_representative_runs(
         )
         picked[name] = {"raw": best, "class_size": len(runs), "class_median": median}
     return picked
+
+
+def baseline_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS) -> pd.DataFrame:
+    """Strategy-minus-no-intervention difference per paired block (descriptive; added 2026-10-06 after the
+    formal results, to show how much each quarantine changes the shared baseline at each response delay).
+
+    One row per (block, strategy) with strategy in {betweenness, random}; the random arm is the mean over its
+    policy seeds. A block with any failed run is dropped.
+    """
+    metrics = list(metrics)
+    keys = list(BLOCK_KEYS)
+    failed = summary.loc[summary["status"] == STATUS_FAILED, keys].drop_duplicates()
+    ok = summary.merge(failed, on=keys, how="left", indicator=True)
+    ok = ok[ok["_merge"] == "left_only"]
+    base = ok[ok["strategy"] == "none"].set_index(keys)[metrics]
+    arms = (
+        ok[ok["strategy"] != "none"]
+        .groupby(keys + ["strategy", "response_delay", "quarantine_duration"])[metrics]
+        .mean()
+        .reset_index()
+    )
+    out = arms.join(base, on=keys, rsuffix="_none")
+    for m in metrics:
+        out[f"{m}_arm"] = out[m]
+        out[f"diff_{m}"] = out[m] - out[f"{m}_none"]
+    return out.drop(columns=metrics)
+
+
+def baseline_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, **boot_kwargs) -> pd.DataFrame:
+    """Mean strategy-minus-baseline difference and relative reduction with network-cluster bootstrap CIs."""
+    rows = []
+    cell_keys = ["strategy", "transfer_rate", "response_delay", "quarantine_duration"]
+    for cell, group in diffs.groupby(cell_keys, sort=True):
+        for m in metrics:
+            mean, lo, hi = cluster_bootstrap_ci(group, f"diff_{m}", **boot_kwargs)
+            neg = group.assign(_neg_diff=-group[f"diff_{m}"])
+            rel, rel_lo, rel_hi = cluster_bootstrap_ratio(neg, "_neg_diff", f"{m}_none", **boot_kwargs)
+            rows.append(
+                {
+                    **dict(zip(cell_keys, cell)),
+                    "metric": m,
+                    "blocks": len(group),
+                    "mean_none": float(group[f"{m}_none"].mean()),
+                    "mean_arm": float(group[f"{m}_arm"].mean()),
+                    "mean_diff": mean,
+                    "mean_diff_ci95_low": lo,
+                    "mean_diff_ci95_high": hi,
+                    "rel_reduction": rel,
+                    "rel_reduction_ci95_low": rel_lo,
+                    "rel_reduction_ci95_high": rel_hi,
+                }
+            )
+    return pd.DataFrame(rows)

@@ -33,6 +33,8 @@ import pandas as pd
 from turtlefarm.analysis import (
     PRIMARY_METRICS,
     REPRESENTATIVE_TRANSFER_RATE,
+    baseline_differences,
+    baseline_effect_table,
     condition_summary,
     paired_differences,
     paired_effect_table,
@@ -292,6 +294,9 @@ def main() -> int:
     diffs.to_csv(out / "paired-differences.csv", index=False)
     effects = paired_effect_table(diffs, n_boot=args.n_boot, seed=args.boot_seed)
     effects.to_csv(out / "paired-effects.csv", index=False)
+    baseline_effect_table(baseline_differences(summary), n_boot=args.n_boot, seed=args.boot_seed).to_csv(
+        out / "baseline-effects.csv", index=False
+    )
     print(
         f"{len(summary)} runs; {len(diffs)} paired blocks ({diffs.attrs['dropped_blocks']} dropped for failed runs, "
         f"{int(diffs['quarantine_started'].sum())} with quarantine started)"
@@ -309,6 +314,16 @@ def main() -> int:
         first_network = min(r["config"]["network_seed"] for r in baselines)
         network_raw = next(r for r in baselines if r["config"]["network_seed"] == first_network)
         plot_network(network_raw, network_raw["config"]["k"], out / "fig1-network.png")
+        networks = {}
+        for r in baselines:
+            net = r["network"]
+            networks.setdefault(net["network_seed"], {
+                "network_seed": net["network_seed"], "attempt": net["attempt"], "network_hash": net["network_hash"],
+                "top_k": ",".join(map(str, net["ranking"][: r["config"]["k"]])),
+                "top_k_regions": ",".join(str(net["regions"][t]) for t in net["ranking"][: r["config"]["k"]]),
+                "tie_groups": len(net["tie_groups"]), **net["metrics"],
+            })
+        pd.DataFrame(sorted(networks.values(), key=lambda n: n["network_seed"])).to_csv(out / "networks.csv", index=False)
         picked = pick_representative_runs(baselines)
         selection = {
             name: {"network_seed": p["raw"]["config"]["network_seed"], "epidemic_seed": p["raw"]["config"]["epidemic_seed"],

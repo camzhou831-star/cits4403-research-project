@@ -10,6 +10,8 @@ import pandas as pd
 import pytest
 
 from turtlefarm.analysis import (
+    baseline_differences,
+    baseline_effect_table,
     condition_summary,
     cluster_bootstrap_ci,
     delay_levels,
@@ -270,3 +272,15 @@ def test_representative_run_is_closest_to_class_median_with_seed_tie_break():
     assert picked["local"]["class_size"] == 3 and picked["local"]["class_median"] == 0.06
     assert (picked["local"]["raw"]["config"]["network_seed"], picked["local"]["raw"]["config"]["epidemic_seed"]) == (0, 1)
     assert picked["cross_region"]["raw"]["config"]["epidemic_seed"] == 2
+
+
+def test_baseline_differences_pair_each_arm_with_its_block_baseline():
+    diffs = baseline_differences(_formal_rows())
+    assert set(diffs["strategy"]) == {"betweenness", "random"} and len(diffs) == 24
+    targeted = diffs[diffs["strategy"] == "betweenness"]
+    assert np.allclose(targeted["diff_final_attack_rate"], 0.3 - 0.6)
+    random = diffs[diffs["strategy"] == "random"]
+    assert np.allclose(random["diff_affected_tanks"], 6 - 10)
+    table = baseline_effect_table(diffs, n_boot=50)
+    row = table[(table.strategy == "betweenness") & (table.metric == "final_attack_rate")].iloc[0]
+    assert np.isclose(row.rel_reduction, 0.5) and row.blocks == 12
