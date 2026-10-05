@@ -301,32 +301,52 @@ def paired_differences(summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_M
     joined["quarantine_started"] = targeted["intervention_start_day"].notna().reindex(joined.index)
     for m in metrics:
         joined[f"diff_{m}"] = joined[f"{m}_targeted"] - joined[f"{m}_random"]
-        joined[f"rel_reduction_{m}"] = np.where(
-            joined[f"{m}_random"] > 0, -joined[f"diff_{m}"] / joined[f"{m}_random"], np.nan
-        )
     out = joined.reset_index()
     out.attrs["dropped_blocks"] = len(failed_blocks)
     return out
 
 
-def cluster_bootstrap_ci(
+def _cluster_resample_counts(n_clusters: int, n_boot: int, seed: int) -> np.ndarray:
+    """(n_boot, n_clusters) times each network instance is drawn when resampling whole clusters."""
+    rng = np.random.default_rng(seed)
+    picked = rng.integers(0, n_clusters, size=(n_boot, n_clusters))
+    return np.stack([np.bincount(row, minlength=n_clusters) for row in picked])
+
+
+def cluster_bootstrap_ratio(
     df: pd.DataFrame,
-    value: str,
+    numerator: str,
+    denominator: str | None = None,
     cluster: str = "network_seed",
     n_boot: int = 2000,
     seed: int = 0,
-    stat=np.mean,
 ) -> tuple[float, float, float]:
-    """Point estimate and percentile 95% CI, resampling whole network instances (experiment-plan section 12)."""
-    groups = [g[value].dropna().to_numpy() for _, g in df.groupby(cluster)]
-    point = float(stat(np.concatenate(groups)))
-    rng = np.random.default_rng(seed)
-    boots = np.empty(n_boot)
-    for i in range(n_boot):
-        picked = rng.integers(0, len(groups), size=len(groups))
-        boots[i] = stat(np.concatenate([groups[j] for j in picked]))
-    low, high = np.percentile(boots, [2.5, 97.5])
-    return point, float(low), float(high)
+    """sum(numerator) / sum(denominator) (or / row count) with a percentile 95% CI from resampling whole
+    network instances (experiment-plan section 12). Covers both a mean and a ratio of means. The same
+    ``seed`` draws the same resamples for every statistic."""
+    df = df.dropna(subset=[numerator] + ([denominator] if denominator else []))
+    by = df.groupby(cluster)
+    num = by[numerator].sum().to_numpy(dtype=float)
+    den = by[denominator].sum().to_numpy(dtype=float) if denominator else by.size().to_numpy(dtype=float)
+    point = num.sum() / den.sum() if den.sum() > 0 else float("nan")
+    counts = _cluster_resample_counts(len(num), n_boot, seed)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        boots = (counts @ num) / (counts @ den)
+    low, high = np.nanpercentile(boots, [2.5, 97.5]) if np.isfinite(boots).any() else (np.nan, np.nan)
+    return float(point), float(low), float(high)
+
+
+def cluster_bootstrap_ci(df: pd.DataFrame, value: str, **kwargs) -> tuple[float, float, float]:
+    """Mean of ``value`` with a network-cluster bootstrap CI."""
+    return cluster_bootstrap_ratio(df, value, **kwargs)
+
+
+def relative_reduction(df: pd.DataFrame, metric: str) -> float:
+    """Ratio of means: 1 - mean(targeted) / mean(random) = -mean(diff) / mean(random). Positive means the
+    targeted arm is lower. Unlike a mean of per-block ratios it is not dominated by blocks whose random-arm
+    value is close to zero."""
+    denominator = df[f"{metric}_random"].mean()
+    return float(-df[f"diff_{metric}"].mean() / denominator) if denominator > 0 else float("nan")
 
 
 def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, **boot_kwargs) -> pd.DataFrame:
@@ -340,6 +360,9 @@ def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
     ):
         for m in metrics:
             mean, lo, hi = cluster_bootstrap_ci(group, f"diff_{m}", **boot_kwargs)
+            # relative reduction = -sum(diff) / sum(random), bootstrapped on the same resamples
+            neg = group.assign(_neg_diff=-group[f"diff_{m}"])
+            rel, rel_lo, rel_hi = cluster_bootstrap_ratio(neg, "_neg_diff", f"{m}_random", **boot_kwargs)
             rows.append(
                 {
                     "subset": subset,
@@ -351,8 +374,59 @@ def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
                     "mean_diff_ci95_low": lo,
                     "mean_diff_ci95_high": hi,
                     "median_diff": float(group[f"diff_{m}"].median()),
-                    "mean_rel_reduction": float(group[f"rel_reduction_{m}"].mean()),
+                    "mean_targeted": float(group[f"{m}_targeted"].mean()),
+                    "mean_random": float(group[f"{m}_random"].mean()),
+                    "rel_reduction": rel,
+                    "rel_reduction_ci95_low": rel_lo,
+                    "rel_reduction_ci95_high": rel_hi,
                     "share_targeted_better": float((group[f"diff_{m}"] < 0).mean()),
                 }
             )
     return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------------------------------
+# Representative runs (experiment-plan section 13: chosen by an objective rule, not by appearance)
+# --------------------------------------------------------------------------------------------------
+
+REPRESENTATIVE_TRANSFER_RATE = 0.025  # the middle formal level
+
+
+def regions_ever_infected(raw: dict[str, Any]) -> set[int]:
+    return {t["region_id"] for day in raw["daily"] for t in day["tanks"] if t["I"] > 0}
+
+
+def outbreak_class(raw: dict[str, Any]) -> str:
+    """``local`` if infection never reached a tank outside the region(s) of the initially infected tank(s),
+    otherwise ``cross_region``."""
+    regions = raw["network"]["regions"]
+    initial = {regions[t] for t in raw["initial_infected_tanks"]}
+    return "local" if regions_ever_infected(raw) <= initial else "cross_region"
+
+
+def pick_representative_runs(
+    raw_records: Iterable[dict[str, Any]], transfer_rate: float = REPRESENTATIVE_TRANSFER_RATE
+) -> dict[str, dict[str, Any]]:
+    """Rule fixed on 2026-10-06 after viewing only aggregate formal results, before viewing any single run:
+    among completed no-intervention runs at ``transfer_rate``, split by ``outbreak_class`` and pick, per class,
+    the run whose final attack rate is closest to that class's median; ties go to the smallest
+    (network_seed, epidemic_seed). Returns ``{class: {"raw": ..., "class_size": ..., "class_median": ...}}``."""
+    by_class: dict[str, list[dict[str, Any]]] = {}
+    for raw in raw_records:
+        cfg = raw["config"]
+        if cfg["strategy"] != "none" or cfg["transfer_rate"] != transfer_rate or raw["status"] != STATUS_COMPLETED:
+            continue
+        by_class.setdefault(outbreak_class(raw), []).append(raw)
+    picked = {}
+    for name, runs in sorted(by_class.items()):
+        median = float(np.median([r["metrics"]["final_attack_rate"] for r in runs]))
+        best = min(
+            runs,
+            key=lambda r: (
+                abs(r["metrics"]["final_attack_rate"] - median),
+                r["config"]["network_seed"],
+                r["config"]["epidemic_seed"],
+            ),
+        )
+        picked[name] = {"raw": best, "class_size": len(runs), "class_median": median}
+    return picked

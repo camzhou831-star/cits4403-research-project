@@ -17,7 +17,10 @@ from turtlefarm.analysis import (
     evaluate_stage2,
     paired_differences,
     paired_effect_table,
+    outbreak_class,
+    pick_representative_runs,
     pick_triple,
+    relative_reduction,
     round_half_up,
     select_duration,
     select_stage1,
@@ -168,7 +171,7 @@ def test_paired_difference_averages_random_policy_seeds_per_block():
     diffs = paired_differences(_formal_rows())
     assert len(diffs) == 12
     assert np.allclose(diffs["diff_final_attack_rate"], 0.3 - 0.5)
-    assert np.allclose(diffs["rel_reduction_affected_tanks"], 2 / 6)
+    assert "rel_reduction_affected_tanks" not in diffs  # per-block ratios are not reported
 
 
 def test_failed_arm_drops_whole_block():
@@ -223,3 +226,47 @@ def test_q1_counts_only_runs_whose_quarantine_started():
     assert row["share_blocked_ge_1_all_runs"] == 0.8 and not row["Q1_original_all_runs"]
     assert row["share_blocked_ge_1_started"] == 1.0 and row["Q1_quarantine_not_noop"]
     assert row["passed"] and not row["passed_original_q1"]
+
+
+def test_relative_reduction_is_a_ratio_of_means_not_a_mean_of_ratios():
+    # block 0: random 0.01 -> 0.03 (per-block ratio -200%); block 1: random 0.5 -> 0.3 (+40%)
+    diffs = pd.DataFrame({
+        "network_seed": [0, 1], "x_targeted": [0.03, 0.3], "x_random": [0.01, 0.5],
+    }).assign(diff_x=lambda d: d.x_targeted - d.x_random)
+    assert np.isclose(relative_reduction(diffs, "x"), 1 - 0.33 / 0.51)
+    assert np.isnan(relative_reduction(diffs.assign(x_random=0.0), "x"))
+
+
+def test_effect_table_relative_reduction_agrees_with_mean_diff():
+    effects = paired_effect_table(paired_differences(_formal_rows()), n_boot=100)
+    row = effects[(effects.subset == "all_blocks") & (effects.metric == "affected_tanks")].iloc[0]
+    assert np.isclose(row.rel_reduction, -row.mean_diff / row.mean_random)
+    assert np.isclose(row.rel_reduction, 1 - 4 / 6)
+    assert row.rel_reduction_ci95_low <= row.rel_reduction <= row.rel_reduction_ci95_high
+
+
+def _run_record(network_seed, epidemic_seed, attack_rate, infected_regions, rate=0.025, strategy="none"):
+    regions = [t // 5 for t in range(20)]
+    tanks = [{"tank_id": t, "region_id": regions[t], "I": int(regions[t] in infected_regions and t % 5 == 0)} for t in range(20)]
+    return {
+        "config": {"strategy": strategy, "transfer_rate": rate, "network_seed": network_seed, "epidemic_seed": epidemic_seed},
+        "status": "completed", "network": {"regions": regions}, "initial_infected_tanks": [0],
+        "daily": [{"tanks": tanks}], "metrics": {"final_attack_rate": attack_rate},
+    }
+
+
+def test_outbreak_class_uses_initial_region():
+    assert outbreak_class(_run_record(0, 0, 0.05, {0})) == "local"
+    assert outbreak_class(_run_record(0, 0, 0.5, {0, 2})) == "cross_region"
+
+
+def test_representative_run_is_closest_to_class_median_with_seed_tie_break():
+    raws = [
+        _run_record(1, 1, 0.04, {0}), _run_record(0, 2, 0.06, {0}), _run_record(0, 1, 0.06, {0}),
+        _run_record(2, 1, 0.30, {0, 1}), _run_record(2, 2, 0.50, {0, 1}), _run_record(2, 3, 0.90, {0, 3}),
+        _run_record(9, 9, 0.50, {0, 1}, rate=0.1), _run_record(9, 8, 0.50, {0, 1}, strategy="random"),
+    ]
+    picked = pick_representative_runs(raws)
+    assert picked["local"]["class_size"] == 3 and picked["local"]["class_median"] == 0.06
+    assert (picked["local"]["raw"]["config"]["network_seed"], picked["local"]["raw"]["config"]["epidemic_seed"]) == (0, 1)
+    assert picked["cross_region"]["raw"]["config"]["epidemic_seed"] == 2

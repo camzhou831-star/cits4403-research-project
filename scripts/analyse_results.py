@@ -8,13 +8,15 @@ Reads results/summary/<design>.csv only and writes everything to results/analysi
 in the report can be regenerated from the raw records with two commands. Pilot designs are refused: pilot
 data are never used as evidence for the hypothesis (pilot-protocol section 1).
 
-Status: skeleton. Figures 2-6 are drafted; figure 1 (network diagram) and figure 7 (representative runs,
-chosen by an objective rule) are still TODO.
+Figures 1 and 7 also read results/raw/<design>.jsonl: figure 1 draws the network instance stored in the
+run records, and figure 7 picks representative runs by the rule in ``pick_representative_runs``.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import math
 import sys
 from pathlib import Path
 
@@ -25,12 +27,28 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import networkx as nx
 import pandas as pd
 
-from turtlefarm.analysis import PRIMARY_METRICS, condition_summary, paired_differences, paired_effect_table
+from turtlefarm.analysis import (
+    PRIMARY_METRICS,
+    REPRESENTATIVE_TRANSFER_RATE,
+    condition_summary,
+    paired_differences,
+    paired_effect_table,
+    pick_representative_runs,
+)
+from turtlefarm.runner import iter_raw
 from turtlefarm.model import STATUS_CENSORED, STATUS_FAILED
 
 STRATEGY_ORDER = ("none", "random", "betweenness")
+# Fixed categorical order, validated for CVD separation on a light surface (dataviz reference palette).
+CATEGORICAL = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100")
+STRATEGY_COLORS = dict(zip(STRATEGY_ORDER, CATEGORICAL))
+SIR_COLORS = {"S": CATEGORICAL[0], "I": CATEGORICAL[1], "R": CATEGORICAL[2]}
+INK, MUTED = "#0b0b0b", "#8a8984"
+plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "axes.edgecolor": MUTED,
+                     "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "lines.linewidth": 2})
 METRIC_LABELS = {
     "final_attack_rate": "Final attack rate",
     "affected_tanks": "Affected tanks",
@@ -64,7 +82,7 @@ def plot_metric_vs_transfer(cond: pd.DataFrame, metric: str, path: Path) -> None
             ax.errorbar(
                 sel["transfer_rate"], sel["mean"],
                 yerr=[sel["mean"] - sel["ci95_low"], sel["ci95_high"] - sel["mean"]],
-                marker="o", capsize=3, label=strategy,
+                marker="o", capsize=3, label=strategy, color=STRATEGY_COLORS[strategy],
             )
         ax.set_title(f"response delay = {int(delay)} d")
         ax.set_xlabel("transfer rate")
@@ -81,12 +99,12 @@ def plot_paired_effects(effects: pd.DataFrame, path: Path, subset: str = "all_bl
     fig, axes = plt.subplots(1, len(PRIMARY_METRICS), figsize=(5 * len(PRIMARY_METRICS), 3.4), squeeze=False)
     for ax, metric in zip(axes[0], PRIMARY_METRICS):
         df = effects[(effects["metric"] == metric) & (effects["subset"] == subset)]
-        for delay, sel in df.groupby("response_delay"):
+        for i, (delay, sel) in enumerate(df.groupby("response_delay")):
             sel = sel.sort_values("transfer_rate")
             ax.errorbar(
                 sel["transfer_rate"], sel["mean_diff"],
                 yerr=[sel["mean_diff"] - sel["mean_diff_ci95_low"], sel["mean_diff_ci95_high"] - sel["mean_diff"]],
-                marker="o", capsize=3, label=f"delay {int(delay)} d",
+                marker="o", capsize=3, label=f"delay {int(delay)} d", color=CATEGORICAL[i],
             )
         ax.axhline(0, color="grey", lw=0.8)
         ax.set_title(f"{METRIC_LABELS[metric]}: targeted - random")
@@ -111,6 +129,144 @@ def plot_distribution(summary: pd.DataFrame, metric: str, path: Path) -> None:
     if metric == "time_to_extinction":
         censored = int((df["status"] == STATUS_CENSORED).sum())
         fig.suptitle(f"completed runs only; {censored} censored runs reported separately", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def _raw_baselines(raw_path: Path):
+    """No-intervention raw records only; skipping other lines before parsing keeps a large file fast."""
+    with raw_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if '"strategy":"none"' in line:
+                yield json.loads(line)
+
+
+def _network_layout(edges: list, regions: list[int]) -> dict[int, tuple[float, float]]:
+    """Deterministic spring layout (numpy only), started from one quadrant per region so regions stay grouped
+    while connected tanks are pulled together."""
+    graph = nx.Graph()
+    graph.add_nodes_from(range(len(regions)))
+    graph.add_edges_from(map(tuple, edges))
+    corners = [(-1, 1), (1, 1), (-1, -1), (1, -1)]
+    start = {
+        t: (corners[r % 4][0] + 0.3 * math.cos(t), corners[r % 4][1] + 0.3 * math.sin(t)) for t, r in enumerate(regions)
+    }
+    layout = nx.spring_layout(graph, pos=start, seed=0, iterations=500)
+    pos = {t: [float(x), float(y)] for t, (x, y) in layout.items()}
+    # collision relaxation: push apart tanks closer than min_dist (dense regions otherwise collapse)
+    span = max(max(abs(x), abs(y)) for x, y in pos.values())
+    min_dist = 0.16 * span
+    for _ in range(300):
+        moved = False
+        for a in pos:
+            for b in pos:
+                if a >= b:
+                    continue
+                dx, dy = pos[b][0] - pos[a][0], pos[b][1] - pos[a][1]
+                dist = math.hypot(dx, dy)
+                if dist < min_dist:
+                    if dist == 0:
+                        dx, dy, dist = 1.0, 0.0, 1.0
+                    push = (min_dist - dist) / 2
+                    pos[a][0] -= push * dx / dist
+                    pos[a][1] -= push * dy / dist
+                    pos[b][0] += push * dx / dist
+                    pos[b][1] += push * dy / dist
+                    moved = True
+        if not moved:
+            break
+    return {t: (x, y) for t, (x, y) in pos.items()}
+
+
+def _edges_crossing_nodes(edges: list, pos: dict, clearance: float) -> list[tuple[int, int, int]]:
+    """(a, b, tank) where edge a-b passes within ``clearance`` of a tank that is not one of its ends."""
+    hits = []
+    for a, b in edges:
+        (x1, y1), (x2, y2) = pos[a], pos[b]
+        length2 = (x2 - x1) ** 2 + (y2 - y1) ** 2 or 1e-12
+        for tank, (x, y) in pos.items():
+            if tank in (a, b):
+                continue
+            t = max(0.0, min(1.0, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / length2))
+            if math.hypot(x - (x1 + t * (x2 - x1)), y - (y1 + t * (y2 - y1))) < clearance:
+                hits.append((a, b, tank))
+    return hits
+
+
+def plot_network(raw: dict, k: int, path: Path) -> None:
+    """Figure 1: one network instance. Colour = region, area = betweenness, black ring = the k tanks the
+    highest-betweenness strategy quarantines (pre-outbreak ranking, ties broken by tank id)."""
+    net = raw["network"]
+    regions, betweenness = net["regions"], net["betweenness"]
+    pos = _network_layout(net["edges"], regions)
+    span = max(max(abs(x), abs(y)) for x, y in pos.values())
+    for a, b, tank in _edges_crossing_nodes(net["edges"], pos, clearance=0.06 * span):
+        print(f"figure 1 warning: edge {a}-{b} passes close to tank {tank}; check the drawing")
+    for a in pos:
+        for b in pos:
+            if a < b and math.dist(pos[a], pos[b]) < 0.12 * span:
+                print(f"figure 1 warning: tanks {a} and {b} overlap; check the drawing")
+    selected = set(net["ranking"][:k])
+    fig, ax = plt.subplots(figsize=(7, 6))
+    for a, b in net["edges"]:
+        cross = regions[a] != regions[b]
+        ax.plot(*zip(pos[a], pos[b]), color=INK if cross else MUTED, lw=1.8 if cross else 0.9,
+                alpha=0.9 if cross else 0.6, zorder=1)
+    top = max(betweenness) or 1.0
+    for tank, (x, y) in pos.items():
+        ax.scatter(x, y, s=120 + 900 * betweenness[tank] / top, color=CATEGORICAL[regions[tank] % 4],
+                   edgecolors=INK if tank in selected else "#fcfcfb", linewidths=3 if tank in selected else 2, zorder=2)
+        ax.annotate(str(tank), (x, y), ha="center", va="center", fontsize=8, color=INK, zorder=3)
+    handles = [
+        plt.Line2D([], [], marker="o", ls="", markersize=9, color=CATEGORICAL[r % 4], label=f"region {r}")
+        for r in sorted(set(regions))
+    ]
+    ax.legend(handles=handles, frameon=False, loc="upper left", bbox_to_anchor=(1.0, 1.0), fontsize=9)
+    ax.set_title(
+        f"Network seed {net['network_seed']} (p_in={net['p_in']}, p_out={net['p_out']})\n"
+        f"node area = betweenness; black ring = top-{k} tanks {sorted(selected)}; dark edges cross regions",
+        fontsize=9,
+    )
+    ax.margins(0.12)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def plot_representative_runs(picked: dict, path: Path) -> None:
+    """Figure 7: S/I/R totals (top) and infected agents per region (bottom) for the representative local and
+    cross-region outbreaks. Region lines are labelled directly at their peak."""
+    classes = [c for c in ("local", "cross_region") if c in picked]
+    fig, axes = plt.subplots(2, len(classes), figsize=(5.5 * len(classes), 6), sharex="col", squeeze=False)
+    for col, name in enumerate(classes):
+        raw = picked[name]["raw"]
+        cfg = raw["config"]
+        days = [d["day"] for d in raw["daily"]]
+        top, bottom = axes[0][col], axes[1][col]
+        for state in ("S", "I", "R"):
+            top.plot(days, [d[state] for d in raw["daily"]], color=SIR_COLORS[state], label=state)
+        top.set_title(
+            f"{name.replace('_', '-')} outbreak (class n={picked[name]['class_size']}, "
+            f"median AR={picked[name]['class_median']:.3f})\n"
+            f"network {cfg['network_seed']}, epidemic {cfg['epidemic_seed']}, transfer {cfg['transfer_rate']}, "
+            f"AR={raw['metrics']['final_attack_rate']:.3f}",
+            fontsize=9,
+        )
+        top.set_ylabel("agents")
+        top.legend(frameon=False, fontsize=8)
+        regions = sorted({t["region_id"] for t in raw["daily"][0]["tanks"]})
+        for region in regions:
+            series = [sum(t["I"] for t in d["tanks"] if t["region_id"] == region) for d in raw["daily"]]
+            bottom.plot(days, series, color=CATEGORICAL[region % 4])
+            peak = max(series)
+            if peak > 0:
+                bottom.annotate(f"region {region}", (days[series.index(peak)], peak), xytext=(3, 3),
+                                textcoords="offset points", fontsize=8, color=INK)
+        bottom.set_ylabel("infected agents by region")
+        bottom.set_xlabel("day")
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
@@ -147,8 +303,25 @@ def main() -> int:
     plot_paired_effects(effects, out / "fig4b-paired-effects-quarantine-started.png", subset="quarantine_started")
     plot_distribution(summary, "peak_infected", out / "fig5-peak-infected.png")
     plot_distribution(summary, "time_to_extinction", out / "fig6-time-to-extinction.png")
-    # TODO fig1: modular network, colour = region, size = betweenness (turtlefarm.network)
-    # TODO fig7: S/I/R time series of one local and one cross-group outbreak, picked by a rule fixed in advance
+    raw_path = ROOT / "results" / "raw" / f"{args.design}.jsonl"
+    if raw_path.exists():
+        baselines = list(_raw_baselines(raw_path))
+        first_network = min(r["config"]["network_seed"] for r in baselines)
+        network_raw = next(r for r in baselines if r["config"]["network_seed"] == first_network)
+        plot_network(network_raw, network_raw["config"]["k"], out / "fig1-network.png")
+        picked = pick_representative_runs(baselines)
+        selection = {
+            name: {"network_seed": p["raw"]["config"]["network_seed"], "epidemic_seed": p["raw"]["config"]["epidemic_seed"],
+                   "run_id": p["raw"]["run_id"], "final_attack_rate": p["raw"]["metrics"]["final_attack_rate"],
+                   "class_size": p["class_size"], "class_median": p["class_median"], "config": p["raw"]["config"]}
+            for name, p in picked.items()
+        }
+        selection["rule"] = (f"no-intervention runs at transfer_rate={REPRESENTATIVE_TRANSFER_RATE}; per outbreak class, "
+                             "final attack rate closest to the class median; ties -> smallest (network_seed, epidemic_seed)")
+        (out / "fig7-selection.json").write_text(json.dumps(selection, indent=2), encoding="utf-8")
+        plot_representative_runs(picked, out / "fig7-representative-runs.png")
+    else:
+        print(f"no {raw_path.relative_to(ROOT)}: figures 1 and 7 skipped (regenerate the raw file first)")
     print(f"tables and figures -> {out.relative_to(ROOT)}")
     return 0
 
