@@ -146,11 +146,11 @@ Git merge conflict 由 branch author 先处理，reviewer 再确认语义没有�
 | W9 | Tank quarantine strategies 和 Checkpoint 2 demo script | Member B | PR 上无 review 记录（自行合并）；Member A 于 2026-09-20 在 `origin/main` 复跑 111 tests 和 demo | #28 / PR #29 | Merged |
 | W10（19-25 Sep） | Batch experiment runner、design files、pilot protocol draft | Member A | Member B 于 2026-10-03 合并；PR 页面无 review 评论；pilot 选择标准的确认仍待 Member B 签署（pilot-protocol §7） | #30 / PR #31 | Merged |
 | W10 | Checkpoint 2 讲稿、贡献表、README gate 更新 | Member A 起草；Member B 负责自己的 sections | Member B approve 并于 2026-10-03 合并 | #18 / PR #32 | Approved；但合入的是 `experiment/batch-runner` 而非 `main`（见下方流程缺口），内容由 PR #35 带回 |
-| W10-W11 | Conceptual system diagram | 原计划 Member B；实际由 Member A 绘制（2026-10-06，`scripts/draw_concept_diagram.py`） | 待 Member B review | #17 / PR #35 | In review |
+| W10-W11 | Conceptual system diagram | 原计划 Member B；实际由 Member A 绘制（2026-10-06，`scripts/draw_concept_diagram.py`） | Member A 于 2026-10-06 将 PR #35 合入 PR #34 的分支，PR #35 页面无 review 记录；待 Member B 在 PR #34 中 review | #17 / PR #35 → PR #34 | 随 PR #34 进入 `main` |
 | W11（2-6 Oct） | Pilot 运行（Stage 1 两轮、Stage 2）和 parameter freeze | Member A | Member B 确认待定：pilot 在其签署 protocol 前运行，偏离已记入 decision-log | #4、#5 / PR #34 | In review |
 | W11 | Pilot selection 实现、formal experiment（`formal`，发现 seed 交叉后以 `formal-nested` 重跑）、analysis、figures 1-7 | Member A | Codex CLI 两轮只读验收（ACCEPT WITH FIXES，修复见 PR #34）；待 Member B review | #4、#5 / PR #34 | In review |
 | W11 | 报告初稿（全文，数字由脚本渲染）、文献核对 | Member A | 待 Member B review；3 条文献的 claim fit 待 Member B 交叉核实 | PR #34 | In review |
-| W11 | README 收尾、贡献表更新、找回 PR #32 内容 | Member A | 待 Member B review | #17、#18 / PR #35 | In review |
+| W11 | README 收尾、贡献表更新、找回 PR #32 内容、干净环境复现、Checkpoint 3 讲稿和 demo 计划 | Member A | 同上：经 PR #35 合入 PR #34 的分支；讲稿和 demo 计划在 PR #35 合并后推送，另行合入（merge `6fe077f`）；待 Member B review | #17、#18 / PR #35 → PR #34 | 随 PR #34 进入 `main` |
 
 已知流程缺口（2026-09-20 记录）：PR #27 和 PR #29 由作者自行合并，PR 页面没有跨成员 review，不符合 §5 对 model 变更的 review 要求。补救：Member A 已在 `origin/main` 上复跑完整测试和 demo；从 issue #30 起，model / experiment PR 必须有另一名成员的 GitHub review 记录后才能合并。
 
