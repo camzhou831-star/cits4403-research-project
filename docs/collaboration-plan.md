@@ -156,7 +156,7 @@ Git merge conflict 由 branch author 先处理，reviewer 再确认语义没有�
 
 已知流程缺口（2026-10-06 记录）：PR #32 叠在 `experiment/batch-runner` 上。PR #31 先把该分支合入 `main`，3 分钟后 PR #32 才合并，结果只合进了 `experiment/batch-runner`，它的内容（Checkpoint 2 讲稿、本贡献表、README 更新）一直没有进入 `main`。补救：PR #35 合并 merge commit `1495833`。以后叠加的 PR 合并前先确认 base 分支仍然存在且指向 `main`。
 
-AI 工具使用记录（2026-10-06 统计，全部分支）：自 2026-09-05 起，Member A 的 39 个提交中有 30 个在 Claude 协助下完成（commit 中带 `Co-Authored-By: Claude` 行）；2026-10-06 的外部验收审查使用 Codex CLI。Member A 对所有提交内容负责，并逐条核实了工具给出的审查意见。
+AI 工具使用记录（2026-10-06 统计，全部分支）：自 2026-09-05 起，Member A 的 39 个提交中有 30 个在 Claude 协助下完成（commit 中带 `Co-Authored-By: Claude` 行）；2026-10-06 的外部验收审查使用 Codex CLI。2026-10-06 之后的提交不再加署名行，此后 Claude 协助的提交无法从 commit 记录中识别，以本说明为准。Member A 对所有提交内容负责，并逐条核实了工具给出的审查意见。
 
 贡献不以 commit 数量单独衡量；model decisions、reviews、experiment verification 和 presentation preparation 同样记录。
 
