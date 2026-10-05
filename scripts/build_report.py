@@ -163,6 +163,9 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
                 v[key] = pct(r["rel_reduction"])
                 v[key + "_ci"] = ci(r["rel_reduction_ci95_low"], r["rel_reduction_ci95_high"], pct)
                 v[key + "_diff"] = f3(r["mean_diff"]) if m == "final_attack_rate" else f2(r["mean_diff"])
+                v[f"arm_{strategy}_{m}_{rate_key(rate)}_d{int(delay)}"] = (
+                    f3(r["mean_arm"]) if m == "final_attack_rate" else f2(r["mean_arm"])
+                )
                 if m == "final_attack_rate":
                     mark = "" if excludes_zero(r["mean_diff_ci95_low"], r["mean_diff_ci95_high"]) else "†"
                     cells.append(f"{pct(r['rel_reduction'])} {ci(r['rel_reduction_ci95_low'], r['rel_reduction_ci95_high'], pct)}{mark}")
@@ -240,6 +243,13 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     v["fig7_rate"] = f"{sel['local']['config']['transfer_rate']:g}"
     v["local_share_0p025"] = pct(sel["local"]["class_size"] / (sel["local"]["class_size"] + sel["cross_region"]["class_size"]), 0)
 
+    oc = pd.read_csv(ANALYSIS / FORMAL / "outbreak-classes.csv")
+    for _, r in oc.iterrows():
+        v[f"cross_share_{rate_key(r['transfer_rate'])}"] = pct(r["share_cross_region"], 0)
+    b = cond[(cond["strategy"] == "none")].set_index(["metric", "transfer_rate"])["mean"]
+    v["ar_ratio_0p01_to_0p025"] = f"{b[('final_attack_rate', 0.025)] / b[('final_attack_rate', 0.01)]:.1f}"
+    v["tanks_ratio_0p01_to_0p025"] = f"{b[('affected_tanks', 0.025)] / b[('affected_tanks', 0.01)]:.1f}"
+    v["max_vsbase_reduction"] = pct(be.loc[be["metric"] == "final_attack_rate", "rel_reduction"].max())
     v["figdir"] = f"../results/analysis/{FORMAL}"
     return v, tables
 

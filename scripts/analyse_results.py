@@ -35,6 +35,7 @@ from turtlefarm.analysis import (
     REPRESENTATIVE_TRANSFER_RATE,
     baseline_differences,
     baseline_effect_table,
+    outbreak_class,
     condition_summary,
     paired_differences,
     paired_effect_table,
@@ -324,6 +325,13 @@ def main() -> int:
                 "tie_groups": len(net["tie_groups"]), **net["metrics"],
             })
         pd.DataFrame(sorted(networks.values(), key=lambda n: n["network_seed"])).to_csv(out / "networks.csv", index=False)
+        classes = pd.DataFrame(
+            [{"transfer_rate": r["config"]["transfer_rate"], "cross_region": outbreak_class(r) == "cross_region"}
+             for r in baselines if r["status"] == "completed"]
+        )
+        classes.groupby("transfer_rate")["cross_region"].agg(["mean", "size"]).rename(
+            columns={"mean": "share_cross_region", "size": "runs"}
+        ).reset_index().to_csv(out / "outbreak-classes.csv", index=False)
         picked = pick_representative_runs(baselines)
         selection = {
             name: {"network_seed": p["raw"]["config"]["network_seed"], "epidemic_seed": p["raw"]["config"]["epidemic_seed"],

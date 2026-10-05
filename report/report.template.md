@@ -1,6 +1,33 @@
 # Bridge Transfers and Quarantine in a Captive Turtle Farm
 
-*Draft: Methods and Results. Introduction, Discussion and Conclusion to follow.*
+*CITS4403 Research Project. Draft for team review.*
+
+## 1. Introduction
+
+Moving animals between housing units is a routine part of captive husbandry. It is also a pathway for infection. In livestock systems, recorded animal movements have been linked to the spread of bovine tuberculosis [1], and the structure of the movement network shapes how pathogens can spread [2].
+
+A facility made of many tanks has the same basic structure as a **metapopulation**: transmission is local within each unit, and units are connected by occasional transfers. In metapopulation models, an infection reaches a large share of subpopulations only when mobility exceeds an invasion threshold [3]. The structure of the contact network shapes how an epidemic spreads [4]. In networks with strong community structure, the few links between communities strongly affect whether a local outbreak becomes a global one [5].
+
+This structure raises a practical question for anyone who can restrict movement. Suppose only a few tanks can be closed. Does it matter *which* tanks they are? Targeting the network position of nodes is far more effective than uniform random action in heterogeneous networks [6]. Network measures have also been used to identify individuals at high risk of infection [7]. In networks with strong community structure, interventions aimed at individuals that bridge communities outperform those aimed at highly connected individuals [5]. Betweenness centrality [8], the fraction of shortest paths passing through a node, is a natural pre-outbreak measure of such bridging.
+
+We study these ideas in a deliberately simple system: 200 synthetic turtles in 20 tanks, grouped into 4 regions of a modular transfer network. Disease spreads within tanks, and turtles are occasionally moved along network edges. We ask two questions:
+
+- **Primary.** How do the cross-tank transfer rate and the response delay affect the final outbreak size and the number of affected tanks?
+- **Secondary.** Under the same intervention budget, does quarantining the highest-betweenness tanks reduce spread more than quarantining randomly chosen tanks?
+
+We tested three hypotheses, fixed before the experiment:
+
+- **H1.** A low but non-zero transfer rate lets a local outbreak spread between regions, raising the attack rate and the number of affected tanks.
+- **H2.** A longer response delay does not lower the attack rate or the number of affected tanks.
+- **H3.** Under an equal budget, highest-betweenness quarantine lowers both outcomes more than random quarantine.
+
+The contribution is a controlled computational experiment, not a new simulator. Three design choices make the comparison clean:
+
+- **Common random numbers.** Every strategy within a comparison block sees identical randomness, through event-keyed random draws [9].
+- **Pre-registered parameter selection.** The criteria for choosing parameters were written down before the pilot data were seen.
+- **Cluster-level uncertainty.** Confidence intervals resample whole network instances.
+
+We report the deviations from our own protocol and their effect on the results. The model is a stylised explanation of mechanism, not a forecast for any real facility.
 
 ## 2. Methods
 
@@ -32,7 +59,7 @@ Across the {{n_networks}} networks of the formal experiment:
 
 | Property | Median | Range |
 |---|---|---|
-| Modularity | {{net_modularity_median}} | {{net_modularity_min}}–{{net_modularity_max}} |
+| Modularity of the region partition [10] | {{net_modularity_median}} | {{net_modularity_min}}–{{net_modularity_max}} |
 | Between-region edges | {{net_n_inter_edges_median}} | {{net_n_inter_edges_min}}–{{net_n_inter_edges_max}} |
 | Mean degree | {{net_mean_degree_median}} | {{net_mean_degree_min}}–{{net_mean_degree_max}} |
 | Diameter | {{net_diameter_median}} | {{net_diameter_min}}–{{net_diameter_max}} |
@@ -61,7 +88,7 @@ We compare three strategies:
 
 - **No intervention.**
 - **Random quarantine.** Choose *k* tanks uniformly at random. Only the policy seed drives this choice.
-- **Highest-betweenness quarantine.** Choose the *k* tanks with the highest betweenness in the pre-outbreak network, breaking exact ties by tank id.
+- **Highest-betweenness quarantine.** Choose the *k* tanks with the highest normalised betweenness [8] in the pre-outbreak network (computed with networkx, which implements Brandes' algorithm [11]), breaking exact ties by tank id.
 
 Neither selector can see infection state or future movements. Both interventions quarantine *k* = 2 tanks, starting on the same response day and lasting *D* = {{D}} days, so each costs *k* × *D* = {{budget}} tank-days. The only difference between them is which tanks are chosen.
 
@@ -75,7 +102,7 @@ Each run is driven by three seeds:
 - an **epidemic seed**, which fixes the initial infection and every movement, transmission and recovery draw;
 - a **policy seed**, which fixes the random strategy's choice of tanks.
 
-Epidemic draws are *event-keyed*: the uniform number used for any (process, day, agent) event depends only on the epidemic seed and that key. As a result, every strategy in a comparison block experiences exactly the same randomness. Their trajectories are identical until the quarantine starts, so any later difference comes from the intervention itself.
+Epidemic draws are *event-keyed*, an implementation of common random numbers [9]: the uniform number used for any (process, day, agent) event depends only on the epidemic seed and that key. As a result, every strategy in a comparison block experiences exactly the same randomness. Their trajectories are identical until the quarantine starts, so any later difference comes from the intervention itself.
 
 ### 2.6 Verification
 
@@ -215,3 +242,72 @@ In the other cells the intervals include 0. At transfer rate 0.01 the point esti
 ### 3.5 Sensitivity to the seed design
 
 In the earlier crossed-seed run ({{crossed_epidemic_seeds}} epidemic seeds shared by every network), {{crossed_cells_excluding_zero}} of the {{tvr_cells}} cells had a CI excluding 0, against {{tvr_cells_excluding_zero}} in the nested design. With only five shared outbreak origins, the networks behave like correlated rather than independent clusters, so the crossed run overstated its precision. The nested design is the one reported above.
+
+## 4. Discussion
+
+### 4.1 Hypotheses
+
+**H1 is supported.** The no-intervention attack rate rises steeply with the transfer rate: {{base_final_attack_rate_0}}, {{base_final_attack_rate_0p01}}, {{base_final_attack_rate_0p025}} and {{base_final_attack_rate_0p1}} at rates 0, 0.01, 0.025 and 0.1. The number of affected tanks follows the same pattern. The steepest change falls between 0.01 and 0.025. Over this range, the share of outbreaks that reach a second region rises from {{cross_share_0p01}} to {{cross_share_0p025}}, so outbreaks switch from mostly staying within one region to mostly crossing regions ({{cross_share_0p1}} at 0.1). This is consistent with a mobility threshold for invading new subpopulations in metapopulation models [3]. We did not estimate the threshold itself, so we describe the pattern without claiming one was located.
+
+**H2 is supported in direction but the effect is small.** Under each strategy and transfer rate, the mean attack rate does not fall as the delay grows, apart from one dip of under 0.01. The mean number of affected tanks shows a few similar small dips. For random quarantine at 0.025 it rises from {{arm_random_final_attack_rate_0p025_d1}} to {{arm_random_final_attack_rate_0p025_d33}}. For targeted quarantine it is almost flat, from {{arm_betweenness_final_attack_rate_0p025_d1}} to {{arm_betweenness_final_attack_rate_0p025_d33}}. Because the overall effect of a 2-tank, {{D}}-day quarantine is modest, the room for the delay to matter is also small.
+
+**H3 receives limited support.** Targeted quarantine has a lower point estimate than random quarantine in most cells with transfer rate 0.025 or 0.1. However, only the 0.025 rate with a 33-day delay has an interval excluding 0, and even there targeted quarantine is worse in a third of the blocks. At 0.01, the point estimates slightly favour random quarantine. The evidence therefore does not support the general claim that targeted quarantine is better under this budget. It supports a narrower one: at an intermediate transfer rate, targeted quarantine keeps its effect when the response is late, while random quarantine loses most of its effect.
+
+### 4.2 A possible mechanism (not tested)
+
+Why would random quarantine lose its effect with delay while targeted quarantine does not? We offer one explanation, which this experiment did not test.
+
+A randomly chosen tank is a useful barrier only if the infection has not yet reached or passed it. As the outbreak grows, more randomly chosen tanks have already been infected or are far from the remaining susceptible regions, so closing them changes little.
+
+A high-betweenness tank sits on many of the shortest paths between regions (Figure 1). It therefore stays relevant for as long as some region remains uninfected. Figure 7 shows that regions are invaded weeks apart at this transfer rate, so a quarantine on day 33 can still block a later invasion.
+
+Testing this would require recording, for each quarantined tank, whether it was already infected at the response day and how many transfers it blocked between regions. Both can be derived from the existing raw records.
+
+### 4.3 Limitations
+
+- **Stylised system.** Turtles, tanks, the disease and the network are all synthetic. Nothing here is calibrated to a real pathogen or facility, and the magnitudes should not be read as predictions.
+- **One budget.** We studied a single quarantine budget (2 tanks for {{D}} days) and a single disease regime (`beta` = {{beta}}, `gamma` = {{gamma}}). Larger budgets, other durations, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run.
+- **Simplified response.** The response delay counts from the introduction of infection, with no detection model. Quarantine blocks transfers only; transmission inside the tank continues, and movement does not depend on disease state.
+- **Statistical precision.** With {{n_networks}} networks and {{formal_blocks_per_rate}} blocks per cell, the intervals are wide relative to the differences between strategies. Of the 18 targeted − random comparisons, we highlight the 2 that exclude 0. With no true difference, about one interval in twenty would exclude 0 by chance, so a single supportive cell among 18 correlated comparisons needs replication.
+- **Post-hoc elements.** Several analysis choices were made after data were seen and are flagged where they occur: the correction to criterion Q1, the added transfer level, the nested-seed rerun and the strategy-minus-baseline comparison. In each case the original result is kept in the repository.
+- **Partial sign-off.** The second team member had not yet signed off the pilot protocol when the pilot ran. This is recorded in the decision log.
+
+## 5. Conclusion
+
+In a modular tank system, the transfer rate decides whether a local outbreak stays local. Moving from a transfer rate of 0.01 to 0.025 multiplies the attack rate by {{ar_ratio_0p01_to_0p025}} and the number of affected tanks by {{tanks_ratio_0p01_to_0p025}}.
+
+A small quarantine budget of 2 tanks for {{D}} days reduces the attack rate by at most {{max_vsbase_reduction}}. Where it helps most, at intermediate transfer rates, choosing the bridging, high-betweenness tanks preserves the effect of a late response, which random selection does not. Across all conditions, however, we could not show that targeted quarantine beats random quarantine.
+
+The practical lesson of the model is that **limiting cross-region transfers in the first place matters more than which tanks are closed after an outbreak has begun**.
+
+All results can be regenerated from the repository:
+
+```bash
+python scripts/run_experiment.py experiments/config/formal-nested.json
+python scripts/analyse_results.py formal-nested
+python scripts/build_report.py
+```
+
+## References
+
+[1] M. Gilbert, A. Mitchell, D. Bourn, J. Mawdsley, R. Clifton-Hadley and W. Wint, "Cattle movements and bovine tuberculosis in Great Britain," *Nature*, vol. 435, no. 7041, pp. 491–496, 2005. doi:10.1038/nature03548
+
+[2] R. Kao, L. Danon, D. Green and I. Kiss, "Demographic structure and pathogen dynamics on the network of livestock movements in Great Britain," *Proceedings of the Royal Society B*, vol. 273, no. 1597, pp. 1999–2007, 2006. doi:10.1098/rspb.2006.3505
+
+[3] V. Colizza and A. Vespignani, "Epidemic modeling in metapopulation systems with heterogeneous coupling pattern: Theory and simulations," *Journal of Theoretical Biology*, vol. 251, no. 3, pp. 450–467, 2008. doi:10.1016/j.jtbi.2007.11.028
+
+[4] M. J. Keeling and K. T. Eames, "Networks and epidemic models," *Journal of the Royal Society Interface*, vol. 2, no. 4, pp. 295–307, 2005. doi:10.1098/rsif.2005.0051
+
+[5] M. Salathé and J. H. Jones, "Dynamics and control of diseases in networks with community structure," *PLoS Computational Biology*, vol. 6, no. 4, e1000736, 2010. doi:10.1371/journal.pcbi.1000736
+
+[6] R. Pastor-Satorras and A. Vespignani, "Immunization of complex networks," *Physical Review E*, vol. 65, no. 3, 036104, 2002. doi:10.1103/PhysRevE.65.036104
+
+[7] R. M. Christley, G. L. Pinchbeck, R. G. Bowers, D. Clancy, N. P. French, R. Bennett and J. Turner, "Infection in social networks: Using network analysis to identify high-risk individuals," *American Journal of Epidemiology*, vol. 162, no. 10, pp. 1024–1031, 2005. doi:10.1093/aje/kwi308
+
+[8] L. C. Freeman, "A set of measures of centrality based on betweenness," *Sociometry*, vol. 40, no. 1, p. 35, 1977. doi:10.2307/3033543
+
+[9] P. Glasserman and D. D. Yao, "Some guidelines and guarantees for common random numbers," *Management Science*, vol. 38, no. 6, pp. 884–908, 1992. doi:10.1287/mnsc.38.6.884
+
+[10] M. E. J. Newman, "Modularity and community structure in networks," *Proceedings of the National Academy of Sciences*, vol. 103, no. 23, pp. 8577–8582, 2006. doi:10.1073/pnas.0601602103
+
+[11] U. Brandes, "A faster algorithm for betweenness centrality," *Journal of Mathematical Sociology*, vol. 25, no. 2, pp. 163–177, 2001. doi:10.1080/0022250X.2001.9990249
