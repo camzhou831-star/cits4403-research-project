@@ -205,9 +205,10 @@ def stage2_design(selection: Stage1Selection, delays: tuple[int, int, int], stag
 def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     """Criteria Q1-Q3 per D candidate. Uses pooled intervention runs and the shared baselines only.
 
-    Q1 is computed over runs whose quarantine actually started (2026-10-06 correction, decision-log): a run
-    that goes extinct before the response day never quarantines anything, which says nothing about whether
-    an active quarantine blocks transfers. The original all-runs share is kept as ``Q1_original_all_runs``.
+    The legacy whole-run blocked counter mixes capacity and quarantine blocking, including days outside
+    quarantine. Keep both historical proxy denominators for audit, but neither verifies quarantine-specific
+    Q1. Q1 and overall acceptance are nullable (unverified), not an automatic duration-selection gate.
+    A future causal blocking measure requires a separately documented definition and validation.
     """
     gamma = summary["gamma"].unique()
     if len(gamma) != 1:
@@ -229,20 +230,30 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
                 "share_blocked_ge_1_all_runs": share_all,
                 "share_blocked_ge_1_started": share_started,
                 "baseline_extinction_median": extinction_median,
-                "Q1_original_all_runs": share_all >= 0.90,
-                "Q1_quarantine_not_noop": share_started >= 0.90,
+                "Q1_proxy_all_runs": share_all >= 0.90,
+                "Q1_proxy_started_runs": share_started >= 0.90,
+                "Q1_status": "unverified_mixed_blocking_counter",
                 "Q2_D_le_25pct_extinction": d <= 0.25 * extinction_median,
                 "Q3_D_ge_infectious_period": d >= 1 / gamma[0],
             }
         )
     table = pd.DataFrame(rows)
-    table["passed"] = table[["Q1_quarantine_not_noop", "Q2_D_le_25pct_extinction", "Q3_D_ge_infectious_period"]].all(axis=1)
-    table["passed_original_q1"] = table[["Q1_original_all_runs", "Q2_D_le_25pct_extinction", "Q3_D_ge_infectious_period"]].all(axis=1)
+    q2_q3 = table["Q2_D_le_25pct_extinction"] & table["Q3_D_ge_infectious_period"]
+    table["passed_proxy_started"] = table["Q1_proxy_started_runs"] & q2_q3
+    table["passed_proxy_all_runs"] = table["Q1_proxy_all_runs"] & q2_q3
+    table["Q1_quarantine_not_noop"] = pd.Series(pd.NA, index=table.index, dtype="boolean")
+    # Do not use DataFrame.all(): its skipna default would turn an unknown Q1 into a pass.
+    table["passed"] = table["Q1_quarantine_not_noop"] & q2_q3
     return table
 
 
 def select_duration(table: pd.DataFrame) -> int | None:
-    passing = table.loc[table["passed"], "quarantine_duration"]
+    """Select only fully verified candidates; a proxy pass or unknown Q1 is insufficient."""
+    # Historical tables used passed=True for the mixed-counter proxy. Reject that schema too.
+    if "Q1_status" not in table:
+        return None
+    verified = table["Q1_status"].eq("verified") & table["passed"].fillna(False)
+    passing = table.loc[verified, "quarantine_duration"]
     return int(passing.min()) if len(passing) else None
 
 

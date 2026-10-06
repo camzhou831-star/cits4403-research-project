@@ -89,13 +89,15 @@ Median 不是整数时按四舍五入（0.5 进位，`floor(x + 0.5)`）取整�
 
 | # | 标准 | 阈值 | 理由 |
 |---|---|---|---|
-| Q1 | Quarantine 不是空操作 | pooled intervention runs 中**隔离实际启动（`intervention_start_day` 非空）的 runs** 里 `blocked_transfers ≥ 1` 的 share ≥ 90%（2026-10-06 看过 Stage 2 数据后修正分母，原定义为全部 intervention runs；见 `decision-log.md`，两种定义的结果都报告） | Q5：`k`、`D` 不能无效 |
+| Q1 | Quarantine is not a no-op | Intended threshold: quarantine-specific blocking in ≥ 90% of eligible intervention runs. **Unverified:** the available whole-run `blocked_transfers` counter does not isolate quarantine. Both historical denominators (all runs / started runs) remain reported as proxies only. | Q5: verify that quarantine actually prevents transfers |
 | Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25%（取 Stage 2 全部 transfer levels 的共享 baseline 中 status = completed 的 runs 合并计算；censored runs 不计入） | Q5：不能“几乎删除整个 network” |
 | Q3 | 至少覆盖一个平均 infectious period | `D ≥ 1 / gamma` | 短于 infectious period 的隔离在机制上难以解释 |
 
-Q1 的局限：模型的 `blocked_transfers` 同时计入“origin 被隔离”和“没有 open 且未满的 neighbour”（含 capacity）两种拦截，不单独区分 quarantine。Stage 1 的 S6 已限制 capacity 拦截占比 ≤ 20%，因此 Q1 主要反映 quarantine；pilot report 需写明这一点。
+Q1 correction after review (2026-10-06): `blocked_transfers` combines quarantine and capacity blocking across the whole run, including days before and after quarantine. A low capacity-blocking fraction per transfer (S6) does not imply that few runs have at least one capacity block. Consequently neither historical proxy verifies Q1. Verification requires a separately defined, tested quarantine-specific counter restricted to the active interval; no such evidence is added in this correction.
 
 选择规则：满足 Q1-Q3 的最小 `D`。Budget 为 `k × D` tank-days，对 random 和 betweenness 相同（D003：`k = 2`）。
+
+Until Q1 is verified, the selector must return no automatically validated duration. `D=14` remains the setting of the already completed formal experiment, not a newly validated Q1-Q3 selection. Q2 and Q3 alone identify 14 among the tested candidates. Keeping this setting avoids changing the experiment in response to its outcomes; it does not repair the missing Q1 evidence. Historical proxy output is retained in `results/pilot/stage2-criteria-legacy-proxy.csv`.
 
 ## 5. 选择规则的实现
 

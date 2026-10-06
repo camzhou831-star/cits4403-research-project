@@ -3,7 +3,7 @@
 Usage:
     python scripts/pilot_select.py stage1    # S1-S6, rules 1-3, D1-D3 -> experiments/config/pilot-stage2-intervention.json
     python scripts/pilot_select.py stage1 --design pilot-stage1-disease-r2   # a rerun on an extended grid (rule 5)
-    python scripts/pilot_select.py stage2    # Q1-Q3 -> selected quarantine duration D
+    python scripts/pilot_select.py stage2    # audit Q1-Q3; exits 3 while quarantine-specific Q1 is unverified
 
 Reads results/summary/<design>.csv and results/raw/<design>.jsonl, prints every criterion for every
 candidate (passing or not) and writes the full tables to results/pilot/ for the pilot report. The script
@@ -89,7 +89,11 @@ def stage2(args: argparse.Namespace) -> int:
     print(table.to_string(index=False))
     d = select_duration(table)
     if d is None:
-        print("STOP: no D candidate meets Q1-Q3", file=sys.stderr)
+        print(
+            "STOP: no fully verified duration. Q1 is unverified: blocked_transfers mixes capacity and "
+            "quarantine blocking over the whole run. Historical proxy results are retained; the existing "
+            "formal design (D=14) is unchanged, not revalidated by this command.", file=sys.stderr,
+        )
         return 3
     print(f"\nselected quarantine_duration D={d} (budget k x D tank-days)")
     return 0

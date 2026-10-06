@@ -1,5 +1,7 @@
 # Pilot Report（2026-10-06）
 
+**Review correction:** Stage 2's whole-run blocked-transfer percentages are historical proxies, not verified quarantine-specific effects. Q1 remains unverified. `D=14` is retained as the completed experiment's setting; it must not be described as passing a fully validated Q1-Q3 gate. See section 7 below.
+
 按 `pilot-protocol.md` §6 第 1 步编写。Pilot 只用于参数冻结、bug discovery 和 runtime estimation，不是假设证据：本报告**不包含任何 random 与 betweenness 的比较**，Stage 2 指标全部是两种策略合并后的结果。
 
 所有判定由 `scripts/pilot_select.py` 按已推送的标准机械计算。逐项表在 `results/pilot/`，原始记录在 `results/raw/`（git-ignored，append-only，未删除任何 run）。偏离协议之处见 `decision-log.md` “Protocol deviations”。
@@ -52,7 +54,7 @@ Response delays 由 40 个 non-minor runs 计算，结果为 **1 / 12 / 33 天**
 
 ## 4. Stage 2：quarantine duration `D`
 
-| D | Runs | 隔离实际启动 | blocked ≥ 1（全部 runs） | blocked ≥ 1（已启动） | Q1 原定义 | Q1 修正后 | Q2（D ≤ 16.25） | Q3（D ≥ 10） |
+| D | Runs | 隔离实际启动 | blocked ≥ 1（全部 runs） | blocked ≥ 1（已启动） | All-runs proxy | Started-runs proxy | Q2（D ≤ 16.25） | Q3（D ≥ 10） |
 |---|---|---|---|---|---|---|---|---|
 | 7 | 1800 | 1516 | 85.3% | 97.3% | fail | pass | pass | fail |
 | **14** | 1800 | 1516 | 85.3% | 97.4% | fail | pass | pass | pass |
@@ -60,11 +62,11 @@ Response delays 由 40 个 non-minor runs 计算，结果为 **1 / 12 / 33 天**
 
 No-intervention `time_to_extinction` median = 65 天，因此 Q2 的上限为 16.25 天。
 
-- **按原定义的 Q1，没有 D 通过。** 未通过的原因是 284 / 1800 个 intervention runs 在 response day 之前已经 extinction，隔离从未启动。这类 runs 只出现在 delay 12 和 33：delay 1 的启动率为 100%，delay 12/33 为 66%-80%。
+- **No D passed the original all-runs proxy threshold.** Of 1,800 intervention runs per duration, 284 ended before quarantine started. They occur at delays 12 and 33. However, 60 of these 284 runs per duration still have blocked transfers, so non-start is not equivalent to zero blocking.
 - 隔离实际启动的 runs 中，没有拦截任何转移的几乎都是 minor outbreak（median attack rate 0.005）。
 - Q1 的分母已修正为“隔离实际启动的 runs”，这是看过 Stage 2 数据后的修正，见 `decision-log.md`。
-- **在任何 Q1 定义下，只有 `D = 14` 同时满足 Q2 和 Q3。** 因此这一修正只影响“能否选出 D”，不影响选出哪个 D。
-- 选定 **D = 14**，budget 为 `k × D = 2 × 14 = 28` tank-days。
+- Only `D=14` meets Q2 and Q3 among the tested durations. This does not establish Q1: both historical percentages use a counter that mixes blocking causes and days outside quarantine.
+- The completed experiment used **D=14**, with a planned budget of `k × D = 28` tank-days. This setting is retained for reporting the existing experiment, not certified as a fully validated Q1-Q3 selection.
 
 ## 5. 对正式实验的影响
 
@@ -80,3 +82,13 @@ Pilot 的 seeds 是交叉的：每个 network 使用同一组 epidemic seeds 900
 例如，§4 中 D = 14 下“隔离从未启动”的 284 个 runs 有 240 个来自 seeds 9003 和 9006：这两个 seeds 在所有 network 上都在第 12 天前 extinction。其余 44 个来自 9002、9005、9009。
 
 参数选择不重做。正式实验改为嵌套 seeds（`formal-nested`），见 `decision-log.md`。
+
+## 7. Q1 counter audit after review (2026-10-06)
+
+`blocked_transfers` sums all daily blocking, including capacity blocking and days outside the quarantine interval. Restricting the denominator to started runs does not isolate the cause or timing of a block. S6 limits the fraction of attempted transfers blocked by capacity; it does not limit the fraction of runs with at least one such event.
+
+For the 1,516 started intervention runs at `D=14`, 1,476 have at least one block (97.3615%). Matching each to its no-intervention baseline by `(network_seed, epidemic_seed, transfer_rate)` gives 1,392 baseline matches with at least one block (91.8206%). These are repeated, matched baselines weighted like the intervention runs, not 1,516 independent baseline simulations. Capacity-only blocking already exceeds the 90% proxy threshold. Among the 284 never-started runs, 60 also have a nonzero counter.
+
+The original table is preserved unchanged as `results/pilot/stage2-criteria-legacy-proxy.csv`. The regenerated `stage2-criteria.csv` labels both old checks as proxies, records `Q1_status=unverified_mixed_blocking_counter`, and leaves the quarantine-specific check unknown. `passed` is unknown for candidates satisfying Q2/Q3 and false when either of those criteria fails. No candidate is automatically selected.
+
+This correction changes neither the model nor the formal design, results or figures. A future validation must define and count quarantine-caused blocking during the active interval, separately from capacity blocking, before asserting that Q1 is satisfied. No new threshold, duration or favourable outcome has been selected in this correction.

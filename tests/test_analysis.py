@@ -143,7 +143,7 @@ def test_stage2_design_is_a_valid_runner_design():
     assert len(design.configs()) == 2 * 1 * 3 * (1 + 3 * 3 * 4)
 
 
-def test_stage2_selects_smallest_passing_duration():
+def test_stage2_proxy_pass_does_not_verify_duration():
     rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0, blocked_transfers=0,
                  time_to_extinction=100, intervention_start_day=np.nan)]
     for d, blocked in ((7, 5), (14, 5), (21, 5), (28, 5)):
@@ -151,8 +151,22 @@ def test_stage2_selects_smallest_passing_duration():
                       time_to_extinction=np.nan, intervention_start_day=1) for s in ("random", "betweenness")]
     table = evaluate_stage2(pd.DataFrame(rows))
     # Q3 needs D >= 1/gamma = 10, Q2 needs D <= 25
-    assert table.set_index("quarantine_duration")["passed"].to_dict() == {7: False, 14: True, 21: True, 28: False}
-    assert select_duration(table) == 14
+    assert table.set_index("quarantine_duration")["passed_proxy_started"].to_dict() == {7: False, 14: True, 21: True, 28: False}
+    assert table["Q1_quarantine_not_noop"].isna().all()
+    assert table.loc[table.quarantine_duration.isin([14, 21]), "passed"].isna().all()
+    assert not table.loc[table.quarantine_duration.isin([7, 28]), "passed"].any()
+    assert select_duration(table) is None
+
+
+def test_select_duration_ignores_unknown_and_uses_smallest_verified_candidate():
+    table = pd.DataFrame({"quarantine_duration": [7, 14, 21, 28],
+                          "Q1_status": ["unverified_mixed_blocking_counter", "verified", "verified", "verified"],
+                          "passed": pd.Series([pd.NA, False, True, True], dtype="boolean")})
+    assert select_duration(table) == 21
+
+
+def test_select_duration_rejects_legacy_proxy_table():
+    assert select_duration(pd.DataFrame({"quarantine_duration": [14], "passed": [True]})) is None
 
 
 def _formal_rows():
@@ -216,7 +230,7 @@ def test_analysis_runs_on_real_runner_output(tmp_path):
     assert not condition_summary(summary).empty
 
 
-def test_q1_counts_only_runs_whose_quarantine_started():
+def test_q1_preserves_both_proxy_denominators_without_claiming_validation():
     rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0, blocked_transfers=0,
                  time_to_extinction=100, intervention_start_day=np.nan)]
     # 8 started runs that all block, 2 runs that went extinct before the response day
@@ -225,9 +239,47 @@ def test_q1_counts_only_runs_whose_quarantine_started():
     rows += [dict(strategy="betweenness", status="completed", gamma=0.1, quarantine_duration=14, blocked_transfers=0,
                   time_to_extinction=5, intervention_start_day=np.nan)] * 2
     (row,) = evaluate_stage2(pd.DataFrame(rows)).to_dict("records")
-    assert row["share_blocked_ge_1_all_runs"] == 0.8 and not row["Q1_original_all_runs"]
-    assert row["share_blocked_ge_1_started"] == 1.0 and row["Q1_quarantine_not_noop"]
-    assert row["passed"] and not row["passed_original_q1"]
+    assert row["share_blocked_ge_1_all_runs"] == 0.8 and not row["Q1_proxy_all_runs"]
+    assert row["share_blocked_ge_1_started"] == 1.0 and row["Q1_proxy_started_runs"]
+    assert row["passed_proxy_started"] and not row["passed_proxy_all_runs"]
+    assert pd.isna(row["Q1_quarantine_not_noop"]) and pd.isna(row["passed"])
+
+
+def test_capacity_blocking_before_quarantine_does_not_validate_q1():
+    # This counter can be positive even though quarantine never started.
+    rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0,
+                 blocked_transfers=5, time_to_extinction=100, intervention_start_day=np.nan)]
+    rows += [dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=14,
+                  blocked_transfers=5, time_to_extinction=5, intervention_start_day=np.nan)] * 10
+    table = evaluate_stage2(pd.DataFrame(rows))
+    row = table.iloc[0]
+    assert row["Q1_proxy_all_runs"] and not row["Q1_proxy_started_runs"]
+    assert row["Q1_status"] == "unverified_mixed_blocking_counter"
+    assert select_duration(table) is None
+
+
+def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, capsys):
+    import argparse
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "pilot_select_q1_test", Path(__file__).resolve().parent.parent / "scripts" / "pilot_select.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0,
+                 blocked_transfers=5, time_to_extinction=100, intervention_start_day=np.nan),
+            dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=14,
+                 blocked_transfers=5, time_to_extinction=100, intervention_start_day=1)]
+    monkeypatch.setattr(module, "_summary", lambda name: pd.DataFrame(rows))
+    monkeypatch.setattr(module, "OUT_DIR", tmp_path)
+    assert module.stage2(argparse.Namespace()) == 3
+    assert "Q1 is unverified" in capsys.readouterr().err
+    saved = pd.read_csv(tmp_path / "stage2-criteria.csv")
+    assert saved["Q1_quarantine_not_noop"].isna().all()
+    assert saved["passed"].isna().all()
+    assert select_duration(saved) is None
 
 
 def test_relative_reduction_is_a_ratio_of_means_not_a_mean_of_ratios():

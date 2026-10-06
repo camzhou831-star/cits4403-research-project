@@ -130,15 +130,15 @@ In the first round ({{pilot1_runs}} runs) none of the {{pilot1_candidates}} `(be
 
 The three response delays are 1 (immediate), the median day on which infection first reaches a second tank, and the median time to peak. They were computed from {{pilot_nonminor_runs}} non-minor outbreaks and gave delays of {{delay_levels}} days. The pilot used the crossed seed design described in Section 2.8 (10 epidemic seeds shared by 5 networks), so these quantities rest on only 10 independent outbreak origins.
 
-**Stage 2** chose *D* from 7, 14 and 21 days. A candidate had to meet three conditions:
+**Stage 2** considered *D* = 7, 14 and 21 days. The intended acceptance criteria were:
 
 - **Q1:** the quarantine blocks at least one transfer in ≥ 90% of runs;
 - **Q2:** *D* ≤ 25% of the median time to extinction;
 - **Q3:** *D* ≥ the mean infectious period.
 
-Under the pre-registered definition of Q1, no candidate passed: only {{pilot_q1_all}} of runs blocked a transfer. The shortfall came from runs that died out before the response day, so the quarantine never started. After seeing these data we corrected Q1 to count only runs in which the quarantine started; this gives {{pilot_q1_started}}.
+Using the whole-run blocked-transfer counter, the original all-runs proxy was {{pilot_q1_all}}, below the 90% threshold. After inspecting the data, the denominator was changed to runs whose quarantine started, giving {{pilot_q1_started}}. However, review found that this counter also includes capacity blocking and events outside the quarantine interval. Neither percentage verifies quarantine-specific Q1, and even a run whose quarantine never starts can contain blocked transfers.
 
-Under either definition, *D* = {{D}} is the only candidate that satisfies Q2 (*D* ≤ {{pilot_q2_limit}}) and Q3, so the correction affects whether a duration can be selected but not which one. This correction is a deviation from the protocol and is recorded in the decision log together with the original result.
+*D* = {{D}} is the only tested candidate satisfying Q2 (*D* ≤ {{pilot_q2_limit}}) and Q3. It was used in the completed formal experiment and is retained as that experiment's setting, not as a fully validated Q1-Q3 selection. The selector now reports Q1 as unverified and refuses automatic selection. Both historical proxy results and this post-hoc correction are preserved in the decision log. Establishing quarantine-specific blocking remains future validation work; no formal parameters or outcomes were changed by this correction.
 
 ### 2.8 Formal experiment
 
@@ -268,9 +268,10 @@ Testing this would require recording, for each quarantined tank, whether it was 
 - **Stylised system.** Turtles, tanks, the disease and the network are all synthetic. Nothing here is calibrated to a real pathogen or facility, and the magnitudes should not be read as predictions.
 - **One budget.** We studied a single quarantine budget (2 tanks for {{D}} days) and a single disease regime (`beta` = {{beta}}, `gamma` = {{gamma}}). Larger budgets, other durations, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run.
 - **Simplified response.** The response delay counts from the introduction of infection, with no detection model. Quarantine blocks transfers only; transmission inside the tank continues, and movement does not depend on disease state.
+- **Duration validation.** Q1 remains unverified because the blocked-transfer counter mixes capacity and quarantine effects over the entire run. Q2 and Q3 support the retained duration among the tested candidates, but do not establish that ≥ 90% of active quarantines prevent a transfer. Future validation must distinguish blocking causes during the active interval.
 - **Statistical precision.** With {{n_networks}} networks and {{formal_blocks_per_rate}} blocks per cell, the intervals are wide relative to the differences between strategies. Of the 18 targeted − random comparisons, we highlight the 2 that exclude 0. With no true difference, about one interval in twenty would exclude 0 by chance, so a single supportive cell among 18 correlated comparisons needs replication.
 - **Post-hoc elements.** Several choices were made after data were seen and are flagged where they occur:
-  - the correction to criterion Q1;
+  - the Q1 denominator change and subsequent recognition that the mixed blocking counter cannot validate Q1;
   - the added transfer level;
   - the nested-seed rerun, and the crossed-versus-nested comparison;
   - the strategy-minus-baseline comparison;
