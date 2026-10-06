@@ -258,7 +258,12 @@ def test_capacity_blocking_before_quarantine_does_not_validate_q1():
     assert select_duration(table) is None
 
 
-def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("cause,missing_column", [(None, None)] + [
+    (cause, missing_column)
+    for cause in ("blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity")
+    for missing_column in (False, True)
+])
+def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, capsys, cause, missing_column):
     import argparse
     import importlib.util
     from pathlib import Path
@@ -272,7 +277,14 @@ def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, cap
                  blocked_transfers=5, time_to_extinction=100, intervention_start_day=np.nan),
             dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=14,
                  blocked_transfers=5, time_to_extinction=100, intervention_start_day=1)]
-    monkeypatch.setattr(module, "_summary", lambda name: pd.DataFrame(rows))
+    summary = pd.DataFrame(rows)
+    if cause is not None:
+        summary = pd.DataFrame(_stage2_rows_with_causes({14: [1] * 10}))
+        if missing_column:
+            summary = summary.drop(columns=[cause])
+        else:
+            summary.loc[1, cause] = np.nan
+    monkeypatch.setattr(module, "_summary", lambda name: summary)
     monkeypatch.setattr(module, "OUT_DIR", tmp_path)
     assert module.stage2(argparse.Namespace()) == 3
     assert "Q1 is unverified" in capsys.readouterr().err
@@ -442,9 +454,18 @@ def test_q1_counts_quarantine_in_blocks_and_selects_smallest_passing_duration():
     assert select_duration(table) == 14
 
 
-def test_q1_stays_unverified_when_any_run_lacks_cause_counters():
-    rows = _stage2_rows_with_causes({14: [1] * 10})
-    rows[1]["blocked_quarantine_out"] = None
-    table = evaluate_stage2(pd.DataFrame(rows))
+@pytest.mark.parametrize("cause", ["blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity"])
+@pytest.mark.parametrize("missing", ["column", "one_value", "all_values"])
+def test_q1_stays_unverified_when_any_run_lacks_cause_counters(cause, missing):
+    summary = pd.DataFrame(_stage2_rows_with_causes({14: [1] * 10}))
+    if missing == "column":
+        summary = summary.drop(columns=[cause])
+    elif missing == "one_value":
+        summary.loc[1, cause] = np.nan
+    else:
+        summary[cause] = np.nan
+    table = evaluate_stage2(summary)
     assert table["Q1_status"].eq("unverified_mixed_blocking_counter").all()
+    assert table["Q1_quarantine_not_noop"].isna().all()
+    assert table["passed"].isna().all()
     assert select_duration(table) is None

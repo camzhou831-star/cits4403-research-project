@@ -53,6 +53,26 @@ def test_quarantined_origin_counts_as_quarantine_out():
     assert day.blocked_quarantine_out == inside
 
 
+def test_quarantine_out_is_rule_attribution_not_additional_prevented_movement():
+    """Origin quarantine wins the rule order even when full neighbours would also block movement."""
+    summaries = []
+    for quarantined in (False, True):
+        sim = Simulation(_config("none"))
+        sim._initialise()
+        for tank in sim.tanks:
+            tank.capacity = tank.occupancy
+        if quarantined:
+            sim.tanks[0].management_state = QUARANTINED
+        counts = sim._movement_stage()
+        assert counts == (sim.n_agents, 0, sim.n_agents)
+        assert sum(sim._blocked_by_cause.values()) == counts[2]
+        summaries.append(dict(sim._blocked_by_cause))
+        if quarantined:
+            assert sim._blocked_by_cause["quarantine_out"] == sim.tanks[0].occupancy > 0
+    assert summaries[0]["quarantine_out"] == 0
+    assert summaries[1]["capacity"] < summaries[0]["capacity"]
+
+
 def _origin_with_neighbours(sim: Simulation) -> tuple[int, list[int]]:
     for tank in sim.tanks:
         neighbours = list(sim.network.neighbours(tank.tank_id))

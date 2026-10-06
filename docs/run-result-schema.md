@@ -91,7 +91,7 @@ Each item in `daily` has the following fields:
 | `attempted_transfers` | integer | Movement attempts generated when an agent's event-keyed movement draw is below `transfer_rate`; every attempt is subsequently accepted or blocked. |
 | `accepted_transfers` | integer | Successful cross-tank movements. |
 | `blocked_transfers` | integer | Attempts blocked because the origin is quarantined or no open neighbouring destination has spare capacity. |
-| `blocked_quarantine_out` | integer | Blocked attempts whose origin tank is quarantined. |
+| `blocked_quarantine_out` | integer | Attempts intercepted at a quarantined origin, the first blocking rule checked. Includes attempts that would also fail if every neighbouring tank were full; not a counterfactual count of additional successful transfers prevented. |
 | `blocked_quarantine_in` | integer | Blocked attempts from an open origin with no eligible destination, where at least one quarantined neighbour has spare capacity. |
 | `blocked_capacity` | integer | All other blocked attempts. The three cause counters sum to `blocked_transfers`. Absent in raw records written before 2026-10-06; the summary table leaves them empty for those. |
 | `affected_tanks_now` | integer | Tanks containing at least one infectious agent at the end of the day. |
@@ -99,6 +99,8 @@ Each item in `daily` has the following fields:
 | `tanks` | array of object | Per-tank `tank_id`, `region_id`, `occupancy`, `S`, `I`, `R`, and `management_state`. |
 
 Daily rows must be ordered by `day`, contain no duplicate day, and satisfy the model invariants for every recorded state.
+
+The cause counters follow rule precedence, not mutually exclusive counterfactual causes. Stage 2 verifies its operational Q1 criterion only when all three cause columns are present and complete in the summary; otherwise Q1 remains unknown.
 
 ## 6. Metrics object
 

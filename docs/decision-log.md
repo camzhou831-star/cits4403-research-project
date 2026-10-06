@@ -136,6 +136,12 @@ Still disclosed as post hoc: the started-runs denominator, and that this measure
 
 Member B review: pending.
 
+### Q1 completeness guard and interpretation (2026-10-07 review follow-up)
+
+The follow-up retains the counter definitions, 90% threshold and duration-selection rule from PR #36. All three cause columns must exist and be non-missing before Q1 is verified; incomplete data leave it unknown and stop automatic duration selection. Regression tests cover missing columns and values, including CLI handling.
+
+Q1 is an operational rule-interception check. A quarantined origin is checked before destination capacity, so its counter includes attempts that would also fail with full neighbours if quarantine were removed. This is not a counterfactual measure of additional transfers prevented or a measure of disease reduction. The protocol, schema, report and speaking notes clarify this distinction after the rerun, without retroactively changing the original definitions or simulated results. Review comments and the follow-up commit record implementation and verification; they do not imply either member has signed the outstanding protocol decisions.
+
 以下决定均在看过 `formal` 和/或 `formal-nested` 的汇总结果之后做出，在报告中逐项标注为 post-hoc。
 
 | # | 决定 | 原因 | 位置 |

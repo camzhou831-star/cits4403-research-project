@@ -89,7 +89,7 @@ Median 不是整数时按四舍五入（0.5 进位，`floor(x + 0.5)`）取整�
 
 | # | 标准 | 阈值 | 理由 |
 |---|---|---|---|
-| Q1 | Quarantine is not a no-op | Quarantine-specific blocking in ≥ 90% of intervention runs whose quarantine started; counters and procedure pre-registered below. The whole-run `blocked_transfers` counter does not isolate quarantine; both historical denominators (all runs / started runs) remain reported as proxies only. | Q5: verify that quarantine actually prevents transfers |
+| Q1 | Quarantine rules intercept attempted movement | At least one attempt attributed to a quarantine rule in ≥ 90% of intervention runs whose quarantine started; counter definitions and threshold below are unchanged. Both historical mixed-counter denominators remain proxies only. | Operational check of rule interception, not proof of additional successful transfers prevented; see the 2026-10-07 clarification below. |
 | Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25%（取 Stage 2 全部 transfer levels 的共享 baseline 中 status = completed 的 runs 合并计算；censored runs 不计入） | Q5：不能“几乎删除整个 network” |
 | Q3 | 至少覆盖一个平均 infectious period | `D ≥ 1 / gamma` | 短于 infectious period 的隔离在机制上难以解释 |
 
@@ -122,6 +122,12 @@ Procedure and pre-specified consequences:
 3. If `D=14` is selected, D004 is recorded as validated by Q1-Q3, with the denominator change still disclosed.
 4. If no `D` passes, `D=14` remains the setting of the completed formal experiment, the report states that Q1 failed and by how much, and the formal experiment is not rerun or changed.
 5. Q2 and Q3 admit only `D=14`, so no other `D` can be selected. Should that nonetheless happen, it is reported and the formal experiment is still not changed.
+
+#### Interpretation and completeness clarification (2026-10-07 review follow-up)
+
+This clarification was added after the rerun; it does not amend the pre-registered counter definitions, threshold or selection rule above. The counters classify attempts by the first blocking rule reached. In particular, `blocked_quarantine_out` includes an attempted departure from a quarantined origin even when every neighbouring tank is full. Removing quarantine would not make that attempt succeed. Q1 therefore verifies operational interception by quarantine rules, not a strict counterfactual effect on successful transfers or on disease outcomes. The recorded 95.7% at D=14 must be interpreted in that limited sense.
+
+All three cause columns must be present and non-missing for every summary row before the evaluator marks Q1 as verified. Missing columns or values leave Q1 unknown and prevent automatic duration selection; the mixed total cannot replace them. The two other acceptance criteria and all completed experiment settings remain unchanged.
 
 ## 5. 选择规则的实现
 

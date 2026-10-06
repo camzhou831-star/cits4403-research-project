@@ -210,7 +210,9 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
 
     Q1 is evaluated only from the blocked-by-cause counters (pilot-protocol section 4, pre-registered
     2026-10-06): share of started runs with ``blocked_quarantine_out + blocked_quarantine_in >= 1``. Raw
-    records written before those counters existed leave Q1 and overall acceptance nullable (unverified).
+    records written before those counters existed, or with any incomplete cause column, leave Q1 and
+    overall acceptance nullable (unverified). The counters identify the first blocking rule reached;
+    Q1 is an operational check, not a counterfactual count of additional transfers prevented.
     """
     gamma = summary["gamma"].unique()
     if len(gamma) != 1:
@@ -219,7 +221,8 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     extinction_median = float(baseline["time_to_extinction"].median())
     rows = []
     interventions = summary[(summary["strategy"] != "none") & (summary["status"] != STATUS_FAILED)]
-    has_causes = "blocked_quarantine_out" in summary and summary["blocked_quarantine_out"].notna().all()
+    cause_columns = ("blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity")
+    has_causes = all(column in summary and summary[column].notna().all() for column in cause_columns)
     for d, df in interventions.groupby("quarantine_duration", sort=True):
         blocking = df["blocked_transfers"] >= 1
         started = df["intervention_start_day"].notna()

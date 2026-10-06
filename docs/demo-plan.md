@@ -37,7 +37,7 @@ Status：draft 2026-10-06，Member A 起草，待 Member B 确认。
 
 ```bash
 source .venv/bin/activate
-python -m pytest -q                       # 167 passed，约 4 秒
+python -m pytest -q                       # Expected: 198 passed, about 4 seconds
 python scripts/demo_final.py              # delay 33：targeted 0.475，random 0.625-0.900；最后一行 yes
 python scripts/demo_final.py --delay 1    # 同一 block，targeted 反而更差 → 为什么需要 100 个 block
 ```

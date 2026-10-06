@@ -97,8 +97,9 @@ def stage2(args: argparse.Namespace) -> int:
         return 3
     if d is None:
         print(
-            "STOP: no fully verified duration. Q1 is unverified: blocked_transfers mixes capacity and "
-            "quarantine blocking over the whole run. Historical proxy results are retained; the existing "
+            "STOP: no fully verified duration. Q1 is unverified: all three cause counters must be present "
+            "and complete; mixed blocked_transfers cannot substitute for missing counters. "
+            "Historical proxy results are retained; the existing "
             "formal design (D=14) is unchanged, not revalidated by this command.", file=sys.stderr,
         )
         return 3

@@ -110,3 +110,9 @@ Started intervention runs (1,516 per D), random and betweenness pooled:
 Selected: **D=14**, the setting the formal experiment already used. By transfer level at D=14 the quarantine share is 90.9% (0.01), 96.2% (0.025) and 99.8% (0.1); Q1 is defined on the pooled share. No-intervention baselines contain no quarantine blocks, as expected; 80.7% of them have at least one capacity block, which is why the mixed counter could not measure Q1.
 
 Table: `results/pilot/stage2-criteria.csv`. The pre-counter table remains in `stage2-criteria-legacy-proxy.csv`.
+
+## 9. Interpretation and input-completeness clarification (2026-10-07)
+
+The section 8 percentages measure attempts intercepted by the first applicable quarantine rule, not a strict counterfactual count of successful transfers prevented. An origin-quarantine count can occur even when all neighbouring tanks are full; without quarantine that attempt would still fail. This clarification preserves the recorded counter definitions, the 90% threshold and D=14 selection under the operational Q1 criterion. It does not claim a causal reduction in movement or infections.
+
+The evaluator now requires all three cause columns to exist and contain no missing values before marking Q1 as verified. Incomplete input remains unverified and cannot select a duration. No pilot or formal result is changed by this guard; the numerical table in section 8 remains applicable under the interpretation above.

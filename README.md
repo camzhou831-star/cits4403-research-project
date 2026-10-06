@@ -18,8 +18,8 @@ This repository holds the research design, model implementation, computational e
 
 | Part | State |
 |---|---|
-| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 183 tests pass. |
-| Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 after Q1 was remeasured with cause-specific blocking counters (95.7% of started runs had a quarantine block). See `docs/pilot-report-2026-10-06.md`. |
+| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
+| Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
 | Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
@@ -85,7 +85,7 @@ Python 3.12, with dependencies pinned in `requirements.txt`.
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt   # or: pip install -r requirements.txt
-python -m pytest -q                  # 183 tests
+python -m pytest -q                  # 198 tests
 
 # pilot (about 4 minutes in total) and parameter selection
 python scripts/run_experiment.py experiments/config/pilot-stage1-disease.json
@@ -102,7 +102,7 @@ python scripts/build_report.py
 
 Raw run records go to `results/raw/*.jsonl`. They are append-only and git-ignored, because they are large and fully regenerable: the scientific draws depend only on the configuration and seeds. Per-run summaries, pilot criterion tables and analysis outputs are committed.
 
-Q1 is evaluated from the blocked-by-cause counters (`blocked_quarantine_out`, `blocked_quarantine_in`, `blocked_capacity`). Raw records written before 6 October 2026 lack them; on such records `pilot_select.py stage2` reports Q1 as unverified and exits 3. The historical mixed-counter table is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
+Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `blocked_quarantine_in`, `blocked_capacity`). All three must be present and complete; otherwise `pilot_select.py stage2` reports Q1 as unverified and exits 3, including for older records without the counters. Origin quarantine is checked before capacity, so Q1 does not establish how many additional transfers would have succeeded without quarantine. The historical mixed-counter table is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
 
 `scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
 

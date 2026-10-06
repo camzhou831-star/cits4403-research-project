@@ -108,7 +108,7 @@ Epidemic draws are *event-keyed*, an implementation of common random numbers [9]
 
 ### 2.6 Verification
 
-The test suite has 183 automated tests, covering:
+The test suite has 198 automated tests, covering:
 
 - the invariants: agent count, `S + I + R = 200`, one tank per agent, capacity, no reinfection, quarantine blocking both directions, and reproducibility under identical seeds;
 - extreme cases, for example `beta = 0`, `gamma = 1`, `transfer_rate = 0` and a full tank;
@@ -134,15 +134,17 @@ The three response delays are 1 (immediate), the median day on which infection f
 
 **Stage 2** considered *D* = 7, 14 and 21 days. The intended acceptance criteria were:
 
-- **Q1:** the quarantine blocks at least one transfer in ≥ 90% of runs;
+- **Q1:** at least one attempted transfer is intercepted by a quarantine rule in ≥ 90% of runs whose quarantine starts (the operational definition and post-hoc denominator change are explained below);
 - **Q2:** *D* ≤ 25% of the median time to extinction;
 - **Q3:** *D* ≥ the mean infectious period.
 
 Under the original definition, which counted every blocked transfer in every run, no candidate passed Q1: 85.3% of runs had a blocked transfer. After inspecting the data we changed the denominator to runs whose quarantine started, giving 97.4%. Review then showed that this counter cannot measure Q1 at all. It also counts transfers blocked because every neighbouring tank was full, and in the no-intervention baselines 80.7% of runs already had such a block.
 
-We therefore added three counters that attribute each blocked transfer to its cause: the origin tank is quarantined; every eligible destination is excluded only because it is quarantined (a quarantined neighbour with space); or capacity. The definitions, the Q1 rule on them, and what would follow from each outcome were committed before the counters were implemented or the pilot rerun. The counters draw no random numbers, and the rerun reproduced every previously recorded value of all 5,550 runs exactly.
+We therefore added three counters that attribute each blocked attempt to the first blocking rule reached: a quarantined origin; an open origin with no eligible destination but at least one quarantined neighbour with space; or remaining capacity/no-neighbour blocking. The definitions, the Q1 rule on them, and what would follow from each outcome were committed before the counters were implemented or the pilot rerun. The counters draw no random numbers, and the rerun reproduced all 27 pre-existing summary columns other than the run identifier, code commit and configuration hash across 5,550 runs exactly.
 
-With these counters, the share of started runs in which quarantine blocked at least one transfer was 91.8% / 95.7% / 96.7% for *D* = 7 / 14 / 21 days, so all candidates meet Q1. For comparison, 90.6% of the same runs at *D* = 14 also had a capacity block. *D* = 14 is the only candidate that also satisfies Q2 (*D* ≤ 16.25) and Q3, and the unchanged selection rule picks it. This is the duration the formal experiment had already used. The margin is narrowest at the lowest transfer level (0.01), where 90.9% of started runs had a quarantine block. The started-runs denominator remains a post-hoc choice.
+With these counters, the share of started runs with at least one attempt attributed to a quarantine rule was 91.8% / 95.7% / 96.7% for *D* = 7 / 14 / 21 days, so all candidates meet the operational Q1 criterion. For comparison, 90.6% of the same runs at *D* = 14 also had an attempt attributed to capacity. *D* = 14 is the only candidate that also satisfies Q2 (*D* ≤ 16.25) and Q3, and the unchanged selection rule picks it. This is the duration the formal experiment had already used. The margin is narrowest at the lowest transfer level (0.01), where 90.9% of started runs had an attempt attributed to quarantine. The started-runs denominator remains a post-hoc choice.
+
+The interpretation was clarified during the 7 October review without changing the counters or threshold: an attempted departure from a quarantined origin is counted even when all neighbours are full. Q1 measures interception by a rule, not whether removing quarantine would have made that particular attempt succeed, and not a causal reduction in infections. All three counter columns must be present and complete before the selector verifies Q1.
 
 ### 2.8 Formal experiment
 
@@ -297,7 +299,7 @@ Testing this would require recording, for each quarantined tank, whether it was 
 - **Stylised system.** Turtles, tanks, the disease and the network are all synthetic. Nothing here is calibrated to a real pathogen or facility, and the magnitudes should not be read as predictions.
 - **One budget.** We studied a single quarantine budget (2 tanks for 14 days) and a single disease regime (`beta` = 0.2, `gamma` = 0.1). Larger budgets, other durations, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run.
 - **Simplified response.** The response delay counts from the introduction of infection, with no detection model. Quarantine blocks transfers only; transmission inside the tank continues, and movement does not depend on disease state.
-- **Duration validation.** Q1 was measured with cause-specific counters only after the formal experiment had run. It was pre-registered before the rerun and confirmed the duration already in use, but a different result could not have changed the completed experiment. At the lowest transfer level the margin above 90% is small.
+- **Duration validation.** The operational Q1 check was measured only after the formal experiment had run. Its rule-attribution counters and threshold were pre-registered before the rerun and confirmed the duration already in use, but a different result could not have changed the completed experiment. Q1 does not measure the additional transfers prevented relative to removing quarantine, because origin-quarantine attribution takes precedence over capacity. At the lowest transfer level the margin above 90% is small.
 - **Statistical precision.** With 20 networks and 100 blocks per cell, the intervals are wide relative to the differences between strategies. Of the 18 targeted − random comparisons, we highlight the 2 that exclude 0. With no true difference, about one interval in twenty would exclude 0 by chance, so a single supportive cell among 18 correlated comparisons needs replication.
 - **Post-hoc elements.** Several choices were made after data were seen and are flagged where they occur:
   - the Q1 denominator change, and the cause-specific blocking counters added after review showed the original counter could not measure Q1;
