@@ -9,7 +9,7 @@
 | D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | 组内（facilitator 未提出异议） | 2026-09-11 | Checkpoint 1（2026-09-07）未对 delay 起点提出修改要求，采用 working proposal（spec §11） |
 | D002 | Tank capacity | 12 | 12 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
 | D003 | Quarantined tank count `k` | 2 | 2 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
-| D004 | Quarantine duration `D` | Select after pilot | 14 (existing experiment setting) | Member A（Member B 待确认） | 2026-10-06 | Q2/Q3 satisfied; quarantine-specific Q1 unverified after counter audit, `pilot-report-2026-10-06.md` §7 |
+| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A（Member B 待确认） | 2026-10-06 | Q1-Q3 met with cause-specific blocking counters (Q1 95.7%), pre-registered before the rerun; `pilot-report-2026-10-06.md` §8 |
 | D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A（Member B 待确认） | 2026-10-06 | Structural audit 候选值；movement pilot 中 S1-S6 在该网络参数下可满足，无需更换 |
 | D006 | `max_days` | 365 | 365 | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal；仍记录 `censored_max_days` 状态 |
 | D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | 组内（facilitator 未提出异议） | 2026-09-11 | 采用 working proposal |
@@ -85,7 +85,7 @@
 | `beta` / `gamma` | 0.2 / 0.1 | Stage 1 第 2 轮 rule 2 |
 | Transfer-rate levels | 0 / 0.01 / 0.025 / 0.1 | Stage 1 第 2 轮 rule 3 |
 | Response-delay levels | 1 / 12 / 33 天 | D1-D3 |
-| `D`（D004） | 14 | Existing experiment setting; Q2/Q3 satisfied, Q1 unverified after counter review |
+| `D`（D004） | 14 | Q1-Q3 with cause-specific counters (2026-10-06 rerun); Q1 denominator still post hoc |
 | `p_in` / `p_out`（D005） | 0.6 / 0.05 | Structural audit + pilot |
 | Capacity / `k` / `max_days` | 12 / 2 / 365 | D002 / D003 / D006（2026-09-11） |
 | Network seeds | 200-219（20 个） | experiment-plan §8：≥ 10 networks；runtime 允许时增加 network 数以稳定按 network 聚类的 bootstrap |
@@ -122,6 +122,19 @@ The Stage 2 counter includes capacity blocking and events before/after the activ
 Both proxy percentages and their historical selection flags remain available for audit. The current evaluator marks quarantine-specific Q1 as unknown; the CLI exits 3 rather than selecting D automatically. Formal parameters, simulations, analysis tables and figures are unchanged. The report retains D=14 as the tested setting and explicitly discloses missing Q1 validation. Establishing quarantine-caused blocking requires a separate definition, counter and tests; this correction does not claim that work has been completed.
 
 Member A review of this correction: pending. No member's sign-off is inferred from this implementation.
+
+### Q1 measured with cause-specific blocking counters (2026-10-06)
+
+Follow-up to the correction above. Order of events, each a separate commit on `experiment/q1-quarantine-blocking`:
+
+1. `pilot-protocol.md` §4 pre-registered three counters partitioning `blocked_transfers` (origin quarantined / only quarantined neighbours with space / capacity), Q1 on the first two, the reproduction check, and the consequence of each outcome. No cause-specific count existed when this was written.
+2. The counters were added to the model, with tests. They draw no randomness.
+3. `pilot-stage2-intervention` was rerun. All 27 pre-existing summary columns (excluding `code_commit`, `run_id`, `configuration_hash`) are identical for all 5550 runs.
+4. Q1 (started runs with ≥ 1 quarantine block) = 91.8% / 95.7% / 96.7% for D = 7 / 14 / 21. The unchanged rule selects **D=14**, matching the formal experiment. Under the pre-registered consequences, D004 is recorded as validated by Q1-Q3.
+
+Still disclosed as post hoc: the started-runs denominator, and that this measurement came after the formal experiment (a failing Q1 could not have changed it). At transfer level 0.01 and D=14 the share is 90.9%, close to the threshold; Q1 is evaluated pooled over levels, as specified. For comparison, 90.6% of the same started runs had a capacity block, and 80.7% of no-intervention baselines had a blocked transfer of any kind.
+
+Member B review: pending.
 
 以下决定均在看过 `formal` 和/或 `formal-nested` 的汇总结果之后做出，在报告中逐项标注为 post-hoc。
 

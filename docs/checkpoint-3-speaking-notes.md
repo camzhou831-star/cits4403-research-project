@@ -13,7 +13,7 @@ Status：draft 2026-10-06，Member A 起草。Member B 的 sections（6-9）是�
 ```bash
 git switch docs/readme-diagram-contribution && git pull   # 合并后改为 main
 source .venv/bin/activate
-python -m pytest -q                   # Expected: 171 passed; mention in Section 8.
+python -m pytest -q                   # Expected: 183 passed; mention in Section 8.
 python scripts/demo_final.py          # 约 1 秒；最后一行应为 "All runs identical ...: yes"
 python scripts/demo_final.py --delay 1
 ```
@@ -62,7 +62,7 @@ python scripts/demo_final.py --delay 1
 >
 > Two. In the first pilot round, no parameter set passed one rule, so we added a transfer level of 0.025 and ran the round again.
 >
-> Three. We changed the denominator of one duration check after seeing the data. Review then found that the counter includes both capacity and quarantine blocks, so it cannot verify that check. Fourteen days meets the other two checks and is the setting we already tested. We keep those results, clearly report the missing validation, and no longer let the script call it a fully validated choice.
+> Three. We changed the denominator of one duration check after seeing the data. Review then found that the counter mixed capacity blocks with quarantine blocks, so it could not measure that check. We wrote down a cause-specific definition first, then added the counters and reran the pilot. Every earlier result came out identical, and quarantine blocked a transfer in about ninety-six percent of runs at fourteen days, so fourteen days now passes all three checks.
 >
 > Four. Our first formal run used the same five epidemic seeds in every network. That made the networks correlated, so the confidence intervals were too narrow. We ran it again with one hundred separate seeds, and we report the new run. We kept the old one and compare the two in the report.
 >
@@ -122,7 +122,7 @@ python scripts/demo_final.py --delay 1
 
 **Show：** `docs/reproduction-2026-10-06.md` 的比对表。
 
-> We have 171 automated tests. They check the invariants, for example that the number of turtles stays two hundred and that no tank goes over capacity, and they check extreme cases. Both of us also traced a small three-tank example by hand and matched it to the code.
+> We have 183 automated tests. They check the invariants, for example that the number of turtles stays two hundred and that no tank goes over capacity, and they check extreme cases. Both of us also traced a small three-tank example by hand and matched it to the code.
 >
 > The invariants are also checked on every day of every run. None of the more than twenty thousand pilot and formal runs failed.
 >
