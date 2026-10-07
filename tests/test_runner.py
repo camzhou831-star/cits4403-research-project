@@ -237,3 +237,15 @@ def test_flatten_gives_one_row_with_block_key_and_model_metrics(tmp_path):
         assert row["final_attack_rate"] == raw["metrics"]["final_attack_rate"]
         assert row["attempted_transfers"] == row["accepted_transfers"] + row["blocked_transfers"]
         assert row["network_hash"] == raw["network"]["network_hash"]
+
+
+def test_nested_epidemic_seeds_are_not_shared_between_networks():
+    design = _design(network_seeds=(0, 1), epidemic_seeds=(7, 8, 9, 10), nested_epidemic_seeds=True)
+    assert design.seed_pairs() == [(0, 7), (0, 8), (1, 9), (1, 10)]
+    pairs = {(c.network_seed, c.epidemic_seed) for c in design.configs()}
+    assert pairs == {(0, 7), (0, 8), (1, 9), (1, 10)}
+    assert _design(network_seeds=(0, 1), epidemic_seeds=(7, 8)).seed_pairs() == [(0, 7), (0, 8), (1, 7), (1, 8)]
+    with pytest.raises(ConfigError, match="divisible"):
+        _design(network_seeds=(0, 1), epidemic_seeds=(7, 8, 9), nested_epidemic_seeds=True)
+    data = dict(_design().to_dict(), nested_epidemic_seeds=True, epidemic_seeds=[7, 8])
+    assert ExperimentDesign.from_dict(data).nested_epidemic_seeds

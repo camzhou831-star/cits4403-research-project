@@ -129,9 +129,34 @@ Git merge conflict 由 branch author 先处理，reviewer 再确认语义没有�
 
 每周更新贡献表：
 
-| Week | Task | Primary owner | Reviewer | Issue/PR | Outcome |
+最近更新：2026-10-06（issue #18）；2026-09-20 首次填写。每一行只写 GitHub 上有记录的证据；“无记录”表示 PR 页面上没有 review 或 comment，不代表没有口头沟通。
+
+| Week | Task | Primary owner | Reviewer / verification | Issue/PR | Outcome |
 |---|---|---|---|---|---|
-| W7 | Non-code research design | Member A / Member B | Cross-review | 待创建 | In progress |
+| W7（1-4 Sep） | Non-code research design package（proposal、spec、assumptions、experiment/validation plans、timeline、risks） | Member A | 两名成员签署 spec（issue #10） | #10 | Done |
+| W8（5-11 Sep） | Python 环境和 pinned requirements | Member A | — | #11 | Done |
+| W8 | M1 baseline SIR、config validation、seed streams | Member A | Member B approve | #12 / PR #19 | Merged |
+| W8 | Checkpoint 1 prediction 和排练稿 | Member B | Member A 合并；按 review 修订（commit 2026-09-07） | PR #20 | Merged |
+| W8 | Checkpoint 1 feedback、D001-D003 / D006-D008 冻结、两层冻结规则 | Member A | 已 @Member B 请求 review；PR 上无 review 记录 | #1-#3、#6-#9 / PR #21 | Merged |
+| W8 | Event-keyed paired draws、正式 V-tests、scenario layouts | Member A | Member B 在 issue #13 记录本地复跑和 update order 检查 | #13 / PR #22（经 PR #23 合入） | Done |
+| W8-W9 | 3-tank hand trace | Member A 编写；Member B 独立重算 | 两名成员在 issue #14 签署 | #14 / PR #24 | Done |
+| W8 | Modular network generator、structural checks、betweenness ranking、structural audit | Member A | Review follow-up 在 commit `ff1ad5b`；PR 上无 review 记录 | #16 / PR #23 | Merged |
+| W9（12-18 Sep） | Run metadata 和 raw-result schema | Member B | Member A 合并；`tests/test_runner.py` 逐字段对照 schema §2 和 `RunRecord` | #15 / PR #25 | Merged 2026-09-20 |
+| W9 | Network-constrained movement 和 capacity | Member B | PR 上无 review 记录（自行合并） | #26 / PR #27 | Merged |
+| W9 | Tank quarantine strategies 和 Checkpoint 2 demo script | Member B | PR 上无 review 记录（自行合并）；Member A 于 2026-09-20 在 `origin/main` 复跑 111 tests 和 demo | #28 / PR #29 | Merged |
+| W10（19-25 Sep） | Batch experiment runner、design files、pilot protocol draft | Member A | Member B 于 2026-10-03 合并；PR 页面无 review 评论；pilot 选择标准的确认仍待 Member B 签署（pilot-protocol §7） | #30 / PR #31 | Merged |
+| W10 | Checkpoint 2 讲稿、贡献表、README gate 更新 | Member A 起草；Member B 负责自己的 sections | Member B approve 并于 2026-10-03 合并 | #18 / PR #32 | Approved；但合入的是 `experiment/batch-runner` 而非 `main`（见下方流程缺口），内容由 PR #35 带回 |
+| W10-W11 | Conceptual system diagram | 原计划 Member B；实际由 Member A 绘制（2026-10-06，`scripts/draw_concept_diagram.py`） | Member A 于 2026-10-06 将 PR #35 合入 PR #34 的分支，PR #35 页面无 review 记录；待 Member B 在 PR #34 中 review | #17 / PR #35 → PR #34 | 随 PR #34 进入 `main` |
+| W11（2-6 Oct） | Pilot 运行（Stage 1 两轮、Stage 2）和 parameter freeze | Member A | Member B 确认待定：pilot 在其签署 protocol 前运行，偏离已记入 decision-log | #4、#5 / PR #34 | In review |
+| W11 | Pilot selection 实现、formal experiment（`formal`，发现 seed 交叉后以 `formal-nested` 重跑）、analysis、figures 1-7 | Member A | Codex CLI 两轮只读验收（ACCEPT WITH FIXES，修复见 PR #34）；待 Member B review | #4、#5 / PR #34 | In review |
+| W11 | 报告初稿（全文，数字由脚本渲染）、文献核对 | Member A | 待 Member B review；3 条文献的 claim fit 待 Member B 交叉核实 | PR #34 | In review |
+| W11 | README 收尾、贡献表更新、找回 PR #32 内容、干净环境复现、Checkpoint 3 讲稿和 demo 计划 | Member A | 同上：经 PR #35 合入 PR #34 的分支；讲稿和 demo 计划在 PR #35 合并后推送，另行合入（merge `6fe077f`）；待 Member B review | #17、#18 / PR #35 → PR #34 | 随 PR #34 进入 `main` |
+
+已知流程缺口（2026-09-20 记录）：PR #27 和 PR #29 由作者自行合并，PR 页面没有跨成员 review，不符合 §5 对 model 变更的 review 要求。补救：Member A 已在 `origin/main` 上复跑完整测试和 demo；从 issue #30 起，model / experiment PR 必须有另一名成员的 GitHub review 记录后才能合并。
+
+已知流程缺口（2026-10-06 记录）：PR #32 叠在 `experiment/batch-runner` 上。PR #31 先把该分支合入 `main`，3 分钟后 PR #32 才合并，结果只合进了 `experiment/batch-runner`，它的内容（Checkpoint 2 讲稿、本贡献表、README 更新）一直没有进入 `main`。补救：PR #35 合并 merge commit `1495833`。以后叠加的 PR 合并前先确认 base 分支仍然存在且指向 `main`。
+
+AI 工具使用记录（2026-10-06 统计，全部分支）：自 2026-09-05 起，Member A 的 39 个提交中有 30 个在 Claude 协助下完成（commit 中带 `Co-Authored-By: Claude` 行）；2026-10-06 的外部验收审查使用 Codex CLI。2026-10-06 之后的提交不再加署名行，此后 Claude 协助的提交无法从 commit 记录中识别，以本说明为准。Member A 对所有提交内容负责，并逐条核实了工具给出的审查意见。
 
 贡献不以 commit 数量单独衡量；model decisions、reviews、experiment verification 和 presentation preparation 同样记录。
 

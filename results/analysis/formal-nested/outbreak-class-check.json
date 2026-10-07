@@ -1,0 +1,16 @@
+{
+  "baseline_runs": 400,
+  "runs_with_hidden_affected_tanks": 5,
+  "of_which_classed_local": [
+    [
+      211,
+      20057,
+      0.025
+    ],
+    [
+      216,
+      20082,
+      0.01
+    ]
+  ]
+}

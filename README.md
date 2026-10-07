@@ -2,7 +2,7 @@
 
 ## Bridge Transfers and Quarantine in a Captive Turtle Farm
 
-This repository holds the research design, model implementation, computational experiments, analysis and final presentation for the CITS4403 Research Project. The project uses fully synthetic data to study disease spread and movement restrictions in a modular tank housing system. It is a **stylised explanatory model**: it does not predict any real turtle disease and uses no real turtle-farm customer data.
+This repository holds the research design, model implementation, computational experiments, analysis and report for the CITS4403 Research Project. The project uses fully synthetic data to study disease spread and movement restrictions in a modular tank housing system. It is a **stylised explanatory model**: it does not predict any real turtle disease and uses no real turtle-farm customer data.
 
 ## Team
 
@@ -11,11 +11,32 @@ This repository holds the research design, model implementation, computational e
 | Member A | Cam Zhou | `camzhou831-star` | To be confirmed by the team |
 | Member B | Wenhao Zhang | `Winston-2hang` | To be confirmed by the team |
 
-- Deadline: Friday 9 October 2026, 23:59.
-- Current stage: **code stage (M1 baseline merged; M2 intervention / experiment runner in progress)**.
-- Implementation status: **`turtlefarm/` implements the minimal SIR baseline, the modular network, network-constrained movement and tank quarantine strategies; the experiment runner and formal experiment results do not exist yet.**
-- Checkpoint 1 is complete and the facilitator requested no changes; D001-D003 and D006-D008 adopted the working proposals as final values, D004/D005 will be decided after the pilot (see `docs/decision-log.md`).
-- The shared GitHub repository is set up; all changes reach `main` through a feature branch and PR review.
+- Deadline: Friday 9 October 2026. The lecture slides give 1:59pm AWST, while earlier planning used 23:59; the exact time and the submission format must be confirmed on LMS.
+- Demonstration: Week 12.
+
+## Status (6 October 2026)
+
+| Part | State |
+|---|---|
+| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
+| Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
+| Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
+| Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
+| Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
+| Review | Two read-only acceptance rounds by Codex CLI (ACCEPT WITH FIXES; fixes applied). Member B review and sign-offs pending (PR #34). |
+
+Deviations from our own protocol are disclosed in `docs/decision-log.md` (sections "Protocol deviations" and "Analysis decisions made after the formal results") and in the report. The most important are:
+
+- the pilot ran before Member B signed the protocol;
+- the Stage 1 transfer grid was extended after the first round failed;
+- Q1's denominator was changed after the Stage 2 data were seen; review then showed the mixed blocked-transfer counter could not measure Q1, so cause-specific counters were pre-registered, added, and the Stage 2 pilot rerun (outcomes unchanged; Q1 met);
+- the first formal run crossed epidemic seeds with networks and was rerun with nested seeds.
+
+### Main findings (details and uncertainty in the report)
+
+- **Transfer rate** controls whether outbreaks stay local. Between transfer rates 0.01 and 0.025, most outbreaks change from staying in one region to crossing regions.
+- **Quarantine** of 2 tanks for 14 days has a modest effect. Its effect does not shrink with a later response for highest-betweenness selection, but it does for random selection. This is a descriptive pattern, not a tested result.
+- **Targeted versus random:** under this budget, targeted quarantine did not beat random quarantine in general. Only one of nine transfer-rate × delay conditions shows an interval excluding zero.
 
 ## Proposed system
 
@@ -52,83 +73,87 @@ The project uses a discrete-time agent-based model (ABM) on a fixed tank-transfe
 
 The full specification is in [docs/model-specification.md](docs/model-specification.md).
 
-## Current stage and gates
+![Conceptual system diagram](docs/figures/concept-diagram.png)
 
-**Gates already met (entering the code stage, 2026-09-11)**
+*Conceptual diagram (schematic, no simulated data): regions, bridge tanks, S/I/R agents, open and quarantined tanks, and the daily update order. Regenerate with `python scripts/draw_concept_diagram.py`.*
 
-1. Checkpoint 1 is complete and the facilitator requested no changes;
-2. D001-D003 and D006-D008 are frozen; D004/D005 have frozen semantics and numeric values pending the pilot (two-layer freeze rule, `docs/model-specification.md` section 18);
-3. both members signed off the model specification (issue #10);
-4. the GitHub collaborator accepted the invitation, and PR #19 has a cross-member review;
-5. the official rubric / submission format has not been released; this is recorded in `docs/decision-log.md` and will be checked again on 3-8 October.
+## Reproducing the results
 
-**Must be met before merging M2 (movement / intervention / experiment runner)**
-
-- formal tests V001-V005, V011, V012, V101, V103 and V104 pass (issue #13);
-- the hand trace matches the event log and is signed by both members (issue #14);
-- the paired-randomness scheme (event-keyed draws) is written into specification section 16 and implemented (`turtlefarm/rng.py`);
-- the run metadata / failure record schema is frozen (issue #15).
-
-**Must be met before the formal experiment**
-
-- the pilot is complete, and `beta`, `gamma`, `D`, `p_in`/`p_out`, levels and seed lists are frozen and recorded;
-- V001-V012, V101-V110 and the fairness audit all pass (`docs/validation-plan.md` section 10).
-
-## Environment
-
-Python 3.12, with dependencies pinned in `requirements.txt`. Both members use the same versions so that same-seed results are comparable.
+Python 3.12, with dependencies pinned in `requirements.txt`.
 
 ```bash
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt   # or: pip install -r requirements.txt
-python -c "import numpy, networkx, pandas, matplotlib, pytest; print('ok')"
+python -m pytest -q                  # 198 tests
+
+# pilot (about 4 minutes in total) and parameter selection
+python scripts/run_experiment.py experiments/config/pilot-stage1-disease.json
+python scripts/run_experiment.py experiments/config/pilot-stage1-disease-r2.json
+python scripts/pilot_select.py stage1 --design pilot-stage1-disease-r2 --force   # rewrites the committed Stage 2 design
+python scripts/run_experiment.py experiments/config/pilot-stage2-intervention.json
+python scripts/pilot_select.py stage2  # selects D=14
+
+# formal experiment (about 2 minutes), analysis, figures and report
+python scripts/run_experiment.py experiments/config/formal-nested.json
+python scripts/analyse_results.py formal-nested
+python scripts/build_report.py
 ```
 
-`.venv/` is listed in `.gitignore` and is not committed.
+Raw run records go to `results/raw/*.jsonl`. They are append-only and git-ignored, because they are large and fully regenerable: the scientific draws depend only on the configuration and seeds. Per-run summaries, pilot criterion tables and analysis outputs are committed.
+
+Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `blocked_quarantine_in`, `blocked_capacity`). All three must be present and complete; otherwise `pilot_select.py stage2` reports Q1 as unverified and exits 3, including for older records without the counters. Origin quarantine is checked before capacity, so Q1 does not establish how many additional transfers would have succeeded without quarantine. The historical mixed-counter table is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
+
+`scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
 
 ## Documentation map
 
 | File | Purpose |
 |---|---|
+| `report/report.md` | **Report draft** (generated; edit `report/report.template.md`) |
 | `docs/research-proposal.md` | System, motivation, research questions, contribution and scope |
 | `docs/model-specification.md` | Consistent model specification that can be implemented independently |
 | `docs/assumptions.md` | Numbered assumptions, their impact and sensitivity needs |
 | `docs/experiment-plan.md` | Main experiment, paired design, replication, analysis and figure plan |
 | `docs/validation-plan.md` | Invariants, extreme cases and validation evidence plan |
-| `docs/checkpoint-1-brief.md` | Brief for the 10-minute facilitator meeting |
-| `docs/checkpoint-1-speaking-notes.md` | 3-4 minute English speaking notes for both members |
-| `docs/collaboration-plan.md` | Communication, GitHub workflow, review and contribution record |
-| `docs/timeline.md` | Must/should/optional schedule up to the deadline |
-| `docs/risk-register.md` | Risks, triggers, owners and mitigation |
-| `docs/facilitator-questions.md` | Questions to confirm at checkpoints |
-| `docs/literature-plan.md` | Literature search directions and inclusion criteria |
-| `docs/consistency-review.md` | Cross-document consistency review and pending decisions |
-| `docs/decision-log.md` | Final decisions D001-D008, facilitator feedback record and specification sign-off |
-| `docs/week-plan-2026-09-05.md` | Weekly execution checklist for the 5-11 September baseline model |
-| `docs/checkpoint-1-prediction.md` | Checkpoint 1 rehearsal: predicted questions, prepared answers and follow-up actions |
-| `docs/checkpoint-1-rehearsal-member-b.md` | Member B's Checkpoint 1 rehearsal script (Chinese-English, 2026-09-07) |
-| `docs/hand-trace-3tank.md` | M1 hand-trace fixture: 3 tanks / 6 agents / 3 days, checked against `tests/test_hand_trace.py` |
-| `docs/network-audit-2026-09-11.md` | Structural audit of the modular network generator (16 p_in/p_out combinations x 10 seeds), D005 candidate values |
+| `docs/pilot-protocol.md` | Two-stage pilot design and selection criteria, written before any pilot data |
+| `docs/pilot-report-2026-10-06.md` | Pilot results, every candidate's criteria, selected parameters |
+| `docs/decision-log.md` | Decisions D001-D008, parameter freeze, protocol deviations, post-hoc analysis decisions, review record |
+| `docs/run-result-schema.md` | Field contract of a raw run record (`turtlefarm.run.v1`) |
+| `docs/collaboration-plan.md` | Communication, GitHub workflow, review rules and the evidence-based contribution record |
+| `docs/figures/concept-diagram.png` | Conceptual system diagram (issue #17) |
+| `docs/network-audit-2026-09-11.md` | Structural audit of the network generator, D005 candidate values |
+| `docs/hand-trace-3tank.md` | Hand-traced 3-tank scenario, checked against `tests/test_hand_trace.py` |
+| `docs/checkpoint-1-*.md`, `docs/checkpoint-2-speaking-notes.md` | Checkpoint briefs, speaking notes and rehearsals |
+| `docs/timeline.md`, `docs/risk-register.md`, `docs/facilitator-questions.md`, `docs/literature-plan.md`, `docs/consistency-review.md`, `docs/week-plan-2026-09-05.md` | Planning records |
+
+| Script | Purpose |
+|---|---|
+| `scripts/run_experiment.py` | Run a design from `experiments/config/*.json`; raw JSONL plus a per-run summary table |
+| `scripts/pilot_select.py` | Apply the pre-registered pilot selection rules; writes the Stage 2 design |
+| `scripts/analyse_results.py` | Tables and figures 1-7 for a formal design |
+| `scripts/build_report.py` | Render `report/report.md` from the template and result files |
+| `scripts/draw_concept_diagram.py` | Draw the conceptual diagram |
 | `scripts/audit_network.py` | Re-run the network structural audit |
-| `scripts/create_github_issues.sh` | Create milestones, labels and the first issues (supports `--dry-run`) |
+| `scripts/demo_checkpoint2.py` | Checkpoint 2 demonstration (one seed block, not a result) |
+| `scripts/create_github_issues.sh` | Create milestones, labels and the first issues |
 
 ## Repository structure
 
 ```text
-turtlefarm/    model implementation (SIR; event-keyed draws; modular network; movement; quarantine)
-tests/         V-numbered invariant, extreme-case, paired-draw and hand-trace tests
-scripts/       repository bootstrap helpers
-experiments/   parameter configurations and runners (to be created in M2)
-results/       raw run records, summaries and selected figures (to be created after pilot)
+turtlefarm/    model (SIR, event-keyed draws, network, movement, quarantine), batch runner, analysis
+tests/         invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
+scripts/       experiment, pilot selection, analysis, report and diagram scripts
+experiments/   experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
+results/       raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures)
+report/        report template and generated report
+docs/          design, decisions, protocols, reports and figures
 ```
-
-## Experiment and result records
-
-Every future run records at least the model version / commit hash, complete configuration, network seed, epidemic seed, policy seed, network instance, strategy, response delay, quarantine budget, run status, stop reason, error information and all predefined output metrics.
-
-Anomalous or failed runs must not be deleted silently. Raw results and cleaned analysis tables are stored separately and must be reproducible from the configuration, seeds and code version.
 
 ## Academic integrity boundary
 
 The earlier `turtle-farm` project provides domain inspiration only. This project does not copy that project, the CITS4403 Lab Notebook, assessed work from CITS4012, CITS1401 or CITS5501, or restricted third-party code. The model, synthetic data, rules, experiments, analysis and text are all designed anew for this project.
+
+## Use of AI tools
+
+Most of Member A's commits were written with Claude (Claude Code). Commits up to 6 October 2026 carry a `Co-Authored-By: Claude` line; later commits do not carry the line, and AI assistance continued. Codex CLI was used for read-only acceptance reviews. Every suggestion was checked by a team member before being kept, and the team is responsible for all content. Counts are recorded in `docs/collaboration-plan.md` section 8.

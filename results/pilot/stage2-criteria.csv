@@ -1,0 +1,4 @@
+quarantine_duration,runs,runs_quarantine_started,share_blocked_ge_1_all_runs,share_blocked_ge_1_started,baseline_extinction_median,Q1_proxy_all_runs,Q1_proxy_started_runs,Q1_status,share_quarantine_block_ge_1_started,share_quarantine_block_ge_1_all_runs,share_capacity_block_ge_1_started,Q1_quarantine_not_noop,Q2_D_le_25pct_extinction,Q3_D_ge_infectious_period,passed_proxy_started,passed_proxy_all_runs,passed
+7,1800,1516,0.8527777777777777,0.9729551451187335,65.0,False,True,verified,0.9182058047493403,0.7733333333333333,0.9069920844327177,True,True,False,False,False,False
+14,1800,1516,0.8533333333333334,0.9736147757255936,65.0,False,True,verified,0.9571240105540897,0.8061111111111111,0.9056728232189973,True,True,True,True,False,True
+21,1800,1516,0.8533333333333334,0.9736147757255936,65.0,False,True,verified,0.9670184696569921,0.8144444444444444,0.8977572559366754,True,False,True,False,False,False

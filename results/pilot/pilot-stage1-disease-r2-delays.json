@@ -1,0 +1,12 @@
+{
+  "levels": [
+    1,
+    12,
+    33
+  ],
+  "valid": true,
+  "d2_median_raw": 12.0,
+  "d3_median_raw": 33.0,
+  "non_minor_runs": 40,
+  "reason": null
+}

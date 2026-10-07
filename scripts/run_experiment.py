@@ -34,7 +34,7 @@ def main() -> int:
 
     design = ExperimentDesign.from_json(args.design)
     configs = design.configs()
-    blocks = len(design.network_seeds) * len(design.epidemic_seeds) * len(design.transfer_rates)
+    blocks = len(design.seed_pairs()) * len(design.transfer_rates)
     print(f"design {design.name!r}: {len(configs)} runs in {blocks} paired blocks")
     if args.dry_run:
         return 0
