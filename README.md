@@ -18,8 +18,8 @@ This repository holds the research design, model implementation, computational e
 
 | Part | State |
 |---|---|
-| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 171 tests pass. |
-| Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). Quarantine-specific Q1 is unverified; the duration selector now stops rather than treating the historical mixed-blocking proxy as validation. See `docs/pilot-report-2026-10-06.md`. |
+| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
+| Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
 | Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
@@ -29,7 +29,7 @@ Deviations from our own protocol are disclosed in `docs/decision-log.md` (sectio
 
 - the pilot ran before Member B signed the protocol;
 - the Stage 1 transfer grid was extended after the first round failed;
-- Q1's denominator was changed after the Stage 2 data were seen; later review established that the mixed blocked-transfer counter cannot verify quarantine-specific Q1;
+- Q1's denominator was changed after the Stage 2 data were seen; review then showed the mixed blocked-transfer counter could not measure Q1, so cause-specific counters were pre-registered, added, and the Stage 2 pilot rerun (outcomes unchanged; Q1 met);
 - the first formal run crossed epidemic seeds with networks and was rerun with nested seeds.
 
 ### Main findings (details and uncertainty in the report)
@@ -85,14 +85,14 @@ Python 3.12, with dependencies pinned in `requirements.txt`.
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt   # or: pip install -r requirements.txt
-python -m pytest -q                  # 171 tests
+python -m pytest -q                  # 198 tests
 
 # pilot (about 4 minutes in total) and parameter selection
 python scripts/run_experiment.py experiments/config/pilot-stage1-disease.json
 python scripts/run_experiment.py experiments/config/pilot-stage1-disease-r2.json
 python scripts/pilot_select.py stage1 --design pilot-stage1-disease-r2 --force   # rewrites the committed Stage 2 design
 python scripts/run_experiment.py experiments/config/pilot-stage2-intervention.json
-python scripts/pilot_select.py stage2  # expected exit 3: Q1 unverified; writes proxy audit, selects no D
+python scripts/pilot_select.py stage2  # selects D=14
 
 # formal experiment (about 2 minutes), analysis, figures and report
 python scripts/run_experiment.py experiments/config/formal-nested.json
@@ -102,9 +102,9 @@ python scripts/build_report.py
 
 Raw run records go to `results/raw/*.jsonl`. They are append-only and git-ignored, because they are large and fully regenerable: the scientific draws depend only on the configuration and seeds. Per-run summaries, pilot criterion tables and analysis outputs are committed.
 
-The Stage 2 exit code is deliberate: do not interpret it as a failed simulation or bypass it to claim a fully validated duration. The separate formal-reproduction commands use the existing committed design (`D=14`); they do not depend on a new Stage 2 selection. Historical proxy selection is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
+Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `blocked_quarantine_in`, `blocked_capacity`). All three must be present and complete; otherwise `pilot_select.py stage2` reports Q1 as unverified and exits 3, including for older records without the counters. Origin quarantine is checked before capacity, so Q1 does not establish how many additional transfers would have succeeded without quarantine. The historical mixed-counter table is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
 
-`scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 reproduction check predates the Q1 correction: its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`. The current Stage 2 command writes the corrected audit table and deliberately stops without selecting a duration.
+`scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
 
 ## Documentation map
 

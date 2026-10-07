@@ -41,6 +41,10 @@ class DailyRecord:
     attempted_transfers: int
     accepted_transfers: int
     blocked_transfers: int
+    # Partition of blocked_transfers by cause (pilot-protocol section 4, quarantine-specific Q1)
+    blocked_quarantine_out: int
+    blocked_quarantine_in: int
+    blocked_capacity: int
     affected_tanks_now: int  # tanks with at least one I agent at end of day
     affected_tanks_ever: int
     tanks: list[dict[str, Any]]  # per-tank occupancy / S / I / R / management_state
@@ -115,6 +119,7 @@ class Simulation:
         self.selected_tanks: list[int] = []
         self.intervention_start_day: int | None = None
         self.intervention_activated = False
+        self._blocked_by_cause = {"quarantine_out": 0, "quarantine_in": 0, "capacity": 0}  # last movement stage
         self.network: TransferNetwork | None = None
         self.initialised = False
 
@@ -240,6 +245,7 @@ class Simulation:
         processing_order = sorted(movement_draws, key=lambda agent_id: (movement_draws[agent_id], agent_id))
 
         attempted = accepted = blocked = 0
+        self._blocked_by_cause = {"quarantine_out": 0, "quarantine_in": 0, "capacity": 0}
         for agent_id in processing_order:
             if movement_draws[agent_id] >= self.cfg.transfer_rate:
                 continue
@@ -249,6 +255,7 @@ class Simulation:
             origin = self.tanks[agent.tank_id]
             if origin.management_state != OPEN:
                 blocked += 1
+                self._blocked_by_cause["quarantine_out"] += 1
                 continue
 
             destinations = [
@@ -259,6 +266,15 @@ class Simulation:
             ]
             if not destinations:
                 blocked += 1
+                # Counterfactual: would a quarantined neighbour with space have been eligible if open?
+                if any(
+                    self.tanks[tank_id].management_state != OPEN
+                    and self.tanks[tank_id].occupancy < self.tanks[tank_id].capacity
+                    for tank_id in self.network.neighbours(origin.tank_id)
+                ):
+                    self._blocked_by_cause["quarantine_in"] += 1
+                else:
+                    self._blocked_by_cause["capacity"] += 1
                 continue
 
             destination_draw = self.draws.uniform("movement_destination", self.day, agent_id)
@@ -349,7 +365,19 @@ class Simulation:
                 raise InvariantError(f"agent {ag.agent_id} has disease_state {st!r}, expected one of {DISEASE_STATES}")
         return s, i, r
 
-    def _record(self, *, new_infections: int, recoveries: int, attempted: int, accepted: int, blocked: int) -> None:
+    def _record(
+        self,
+        *,
+        new_infections: int,
+        recoveries: int,
+        attempted: int,
+        accepted: int,
+        blocked: int,
+        causes: dict[str, int] | None = None,
+    ) -> None:
+        causes = causes or {"quarantine_out": 0, "quarantine_in": 0, "capacity": 0}
+        if sum(causes.values()) != blocked:
+            raise InvariantError(f"blocked-transfer causes {causes} do not sum to {blocked}")
         s, i, r = self._counts()
         tank_rows = []
         affected_now = 0
@@ -387,6 +415,9 @@ class Simulation:
                 attempted_transfers=attempted,
                 accepted_transfers=accepted,
                 blocked_transfers=blocked,
+                blocked_quarantine_out=causes["quarantine_out"],
+                blocked_quarantine_in=causes["quarantine_in"],
+                blocked_capacity=causes["capacity"],
                 affected_tanks_now=affected_now,
                 affected_tanks_ever=len(self.ever_affected),
                 tanks=tank_rows,
@@ -440,6 +471,7 @@ class Simulation:
             attempted=attempted,
             accepted=accepted,
             blocked=blocked,
+            causes=self._blocked_by_cause,
         )
 
     def run(self) -> RunRecord:

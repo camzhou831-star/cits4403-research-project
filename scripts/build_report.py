@@ -97,6 +97,16 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     d = int(fixed["quarantine_duration"])
     v["pilot_q1_all"] = pct(st2.loc[d, "share_blocked_ge_1_all_runs"])
     v["pilot_q1_started"] = pct(st2.loc[d, "share_blocked_ge_1_started"])
+    v["pilot_q1_quarantine"] = pct(st2.loc[d, "share_quarantine_block_ge_1_started"])
+    v["pilot_capacity_started"] = pct(st2.loc[d, "share_capacity_block_ge_1_started"])
+    v["pilot_q1_quarantine_range"] = " / ".join(pct(x) for x in st2["share_quarantine_block_ge_1_started"])
+    v["pilot_d_candidates"] = " / ".join(str(x) for x in st2.index)
+    s3 = pd.read_csv(ROOT / "results" / "summary" / "pilot-stage2-intervention.csv")
+    v["pilot_baseline_blocked"] = pct((s3.loc[s3["strategy"] == "none", "blocked_transfers"] >= 1).mean())
+    started = s3[(s3["strategy"] != "none") & (s3["quarantine_duration"] == d) & s3["intervention_start_day"].notna()]
+    lowest = started[started["transfer_rate"] == started["transfer_rate"].min()]
+    v["pilot_q1_lowest_rate"] = f"{lowest['transfer_rate'].iloc[0]:g}"
+    v["pilot_q1_quarantine_lowest_rate"] = pct(((lowest["blocked_quarantine_out"] + lowest["blocked_quarantine_in"]) >= 1).mean())
     v["pilot_extinction_median"] = f"{st2.loc[d, 'baseline_extinction_median']:g}"
     v["pilot_q2_limit"] = f"{0.25 * st2.loc[d, 'baseline_extinction_median']:g}"
     delays = json.loads((ROOT / "results" / "pilot" / "pilot-stage1-disease-r2-delays.json").read_text(encoding="utf-8"))

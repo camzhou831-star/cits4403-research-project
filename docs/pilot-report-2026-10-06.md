@@ -1,6 +1,6 @@
 # Pilot Report（2026-10-06）
 
-**Review correction:** Stage 2's whole-run blocked-transfer percentages are historical proxies, not verified quarantine-specific effects. Q1 remains unverified. `D=14` is retained as the completed experiment's setting; it must not be described as passing a fully validated Q1-Q3 gate. See section 7 below.
+**Review correction:** Stage 2's whole-run blocked-transfer percentages in section 4 are historical proxies, not quarantine-specific effects (section 7). Q1 was then remeasured with pre-registered cause-specific counters, and `D=14` meets Q1-Q3 (section 8).
 
 按 `pilot-protocol.md` §6 第 1 步编写。Pilot 只用于参数冻结、bug discovery 和 runtime estimation，不是假设证据：本报告**不包含任何 random 与 betweenness 的比较**，Stage 2 指标全部是两种策略合并后的结果。
 
@@ -92,3 +92,27 @@ For the 1,516 started intervention runs at `D=14`, 1,476 have at least one block
 The original table is preserved unchanged as `results/pilot/stage2-criteria-legacy-proxy.csv`. The regenerated `stage2-criteria.csv` labels both old checks as proxies, records `Q1_status=unverified_mixed_blocking_counter`, and leaves the quarantine-specific check unknown. `passed` is unknown for candidates satisfying Q2/Q3 and false when either of those criteria fails. No candidate is automatically selected.
 
 This correction changes neither the model nor the formal design, results or figures. A future validation must define and count quarantine-caused blocking during the active interval, separately from capacity blocking, before asserting that Q1 is satisfied. No new threshold, duration or favourable outcome has been selected in this correction.
+
+## 8. Q1 with cause-specific blocking counters (2026-10-06)
+
+Definitions, rule and consequences were committed in `pilot-protocol.md` §4 before the counters existed. The model now records, per day, `blocked_quarantine_out` (origin quarantined), `blocked_quarantine_in` (no eligible destination, but a quarantined neighbour has space) and `blocked_capacity` (everything else); they sum to `blocked_transfers`.
+
+Reproduction check: the Stage 2 pilot was rerun (5550 runs, 110 s). All 27 pre-existing summary columns other than `code_commit`, `run_id` and `configuration_hash` are identical, matched on the condition key.
+
+Started intervention runs (1,516 per D), random and betweenness pooled:
+
+| D | ≥ 1 quarantine block | ≥ 1 capacity block | Q1 (≥ 90%) | Q2 | Q3 | Pass |
+|---|---|---|---|---|---|---|
+| 7 | 91.8% | 90.7% | pass | pass | fail | fail |
+| **14** | **95.7%** | 90.6% | pass | pass | pass | **pass** |
+| 21 | 96.7% | 89.8% | pass | fail | pass | fail |
+
+Selected: **D=14**, the setting the formal experiment already used. By transfer level at D=14 the quarantine share is 90.9% (0.01), 96.2% (0.025) and 99.8% (0.1); Q1 is defined on the pooled share. No-intervention baselines contain no quarantine blocks, as expected; 80.7% of them have at least one capacity block, which is why the mixed counter could not measure Q1.
+
+Table: `results/pilot/stage2-criteria.csv`. The pre-counter table remains in `stage2-criteria-legacy-proxy.csv`.
+
+## 9. Interpretation and input-completeness clarification (2026-10-07)
+
+The section 8 percentages measure attempts intercepted by the first applicable quarantine rule, not a strict counterfactual count of successful transfers prevented. An origin-quarantine count can occur even when all neighbouring tanks are full; without quarantine that attempt would still fail. This clarification preserves the recorded counter definitions, the 90% threshold and D=14 selection under the operational Q1 criterion. It does not claim a causal reduction in movement or infections.
+
+The evaluator now requires all three cause columns to exist and contain no missing values before marking Q1 as verified. Incomplete input remains unverified and cannot select a duration. No pilot or formal result is changed by this guard; the numerical table in section 8 remains applicable under the interpretation above.

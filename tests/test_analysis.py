@@ -258,7 +258,12 @@ def test_capacity_blocking_before_quarantine_does_not_validate_q1():
     assert select_duration(table) is None
 
 
-def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("cause,missing_column", [(None, None)] + [
+    (cause, missing_column)
+    for cause in ("blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity")
+    for missing_column in (False, True)
+])
+def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, capsys, cause, missing_column):
     import argparse
     import importlib.util
     from pathlib import Path
@@ -272,7 +277,14 @@ def test_stage2_cli_stops_and_writes_unverified_audit(tmp_path, monkeypatch, cap
                  blocked_transfers=5, time_to_extinction=100, intervention_start_day=np.nan),
             dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=14,
                  blocked_transfers=5, time_to_extinction=100, intervention_start_day=1)]
-    monkeypatch.setattr(module, "_summary", lambda name: pd.DataFrame(rows))
+    summary = pd.DataFrame(rows)
+    if cause is not None:
+        summary = pd.DataFrame(_stage2_rows_with_causes({14: [1] * 10}))
+        if missing_column:
+            summary = summary.drop(columns=[cause])
+        else:
+            summary.loc[1, cause] = np.nan
+    monkeypatch.setattr(module, "_summary", lambda name: summary)
     monkeypatch.setattr(module, "OUT_DIR", tmp_path)
     assert module.stage2(argparse.Namespace()) == 3
     assert "Q1 is unverified" in capsys.readouterr().err
@@ -406,3 +418,54 @@ def test_error_bars_tolerate_bounds_a_rounding_error_past_the_mean(tmp_path):
     ])
     module.plot_metric_vs_transfer(cond, "affected_tanks", tmp_path / "fig.png")
     assert (tmp_path / "fig.png").exists()
+
+
+def _stage2_rows_with_causes(quarantine_blocks_by_d):
+    rows = [dict(strategy="none", status="completed", gamma=0.1, quarantine_duration=0, blocked_transfers=4,
+                 blocked_quarantine_out=0, blocked_quarantine_in=0, blocked_capacity=4,
+                 time_to_extinction=100, intervention_start_day=np.nan)]
+    for d, q_blocks in quarantine_blocks_by_d.items():
+        for i, q in enumerate(q_blocks):
+            rows.append(dict(strategy="random", status="completed", gamma=0.1, quarantine_duration=d,
+                             blocked_transfers=q + 2, blocked_quarantine_out=q, blocked_quarantine_in=0,
+                             blocked_capacity=2, time_to_extinction=np.nan, intervention_start_day=1))
+    return rows
+
+
+def test_q1_uses_quarantine_counters_and_ignores_capacity_blocks():
+    # Every run has capacity blocks, so the mixed proxy passes; only 8/10 have a quarantine block.
+    table = evaluate_stage2(pd.DataFrame(_stage2_rows_with_causes({14: [1] * 8 + [0] * 2})))
+    row = table.iloc[0]
+    assert row["Q1_status"] == "verified"
+    assert row["Q1_proxy_started_runs"] and row["share_capacity_block_ge_1_started"] == 1.0
+    assert row["share_quarantine_block_ge_1_started"] == 0.8
+    assert row["Q1_quarantine_not_noop"] == False  # noqa: E712 - nullable boolean
+    assert row["passed"] == False  # noqa: E712
+    assert select_duration(table) is None
+
+
+def test_q1_counts_quarantine_in_blocks_and_selects_smallest_passing_duration():
+    rows = _stage2_rows_with_causes({7: [1] * 10, 14: [1] * 10, 28: [1] * 10})
+    for row in rows:
+        if row["quarantine_duration"] == 14:  # inbound blocks alone also satisfy Q1
+            row["blocked_quarantine_in"], row["blocked_quarantine_out"] = row["blocked_quarantine_out"], 0
+    table = evaluate_stage2(pd.DataFrame(rows))
+    assert table.set_index("quarantine_duration")["passed"].tolist() == [False, True, False]  # Q3, Q2
+    assert select_duration(table) == 14
+
+
+@pytest.mark.parametrize("cause", ["blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity"])
+@pytest.mark.parametrize("missing", ["column", "one_value", "all_values"])
+def test_q1_stays_unverified_when_any_run_lacks_cause_counters(cause, missing):
+    summary = pd.DataFrame(_stage2_rows_with_causes({14: [1] * 10}))
+    if missing == "column":
+        summary = summary.drop(columns=[cause])
+    elif missing == "one_value":
+        summary.loc[1, cause] = np.nan
+    else:
+        summary[cause] = np.nan
+    table = evaluate_stage2(summary)
+    assert table["Q1_status"].eq("unverified_mixed_blocking_counter").all()
+    assert table["Q1_quarantine_not_noop"].isna().all()
+    assert table["passed"].isna().all()
+    assert select_duration(table) is None

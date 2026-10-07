@@ -89,7 +89,7 @@ Median 不是整数时按四舍五入（0.5 进位，`floor(x + 0.5)`）取整�
 
 | # | 标准 | 阈值 | 理由 |
 |---|---|---|---|
-| Q1 | Quarantine is not a no-op | Intended threshold: quarantine-specific blocking in ≥ 90% of eligible intervention runs. **Unverified:** the available whole-run `blocked_transfers` counter does not isolate quarantine. Both historical denominators (all runs / started runs) remain reported as proxies only. | Q5: verify that quarantine actually prevents transfers |
+| Q1 | Quarantine rules intercept attempted movement | At least one attempt attributed to a quarantine rule in ≥ 90% of intervention runs whose quarantine started; counter definitions and threshold below are unchanged. Both historical mixed-counter denominators remain proxies only. | Operational check of rule interception, not proof of additional successful transfers prevented; see the 2026-10-07 clarification below. |
 | Q2 | Quarantine 不覆盖整个 epidemic | `D` ≤ 选定 regime 下 no-intervention `time_to_extinction` median 的 25%（取 Stage 2 全部 transfer levels 的共享 baseline 中 status = completed 的 runs 合并计算；censored runs 不计入） | Q5：不能“几乎删除整个 network” |
 | Q3 | 至少覆盖一个平均 infectious period | `D ≥ 1 / gamma` | 短于 infectious period 的隔离在机制上难以解释 |
 
@@ -98,6 +98,36 @@ Q1 correction after review (2026-10-06): `blocked_transfers` combines quarantine
 选择规则：满足 Q1-Q3 的最小 `D`。Budget 为 `k × D` tank-days，对 random 和 betweenness 相同（D003：`k = 2`）。
 
 Until Q1 is verified, the selector must return no automatically validated duration. `D=14` remains the setting of the already completed formal experiment, not a newly validated Q1-Q3 selection. Q2 and Q3 alone identify 14 among the tested candidates. Keeping this setting avoids changing the experiment in response to its outcomes; it does not repair the missing Q1 evidence. Historical proxy output is retained in `results/pilot/stage2-criteria-legacy-proxy.csv`.
+
+#### Quarantine-specific Q1 (pre-registered 2026-10-06, before the counter exists or the pilot is rerun)
+
+This section is committed before any model change and before `pilot-stage2-intervention` is rerun. Nobody has seen a quarantine-specific blocking count when it is written. The historical proxy results above are already known.
+
+Classification of every blocked transfer attempt, in the order the movement stage checks them:
+
+| Counter | Condition |
+|---|---|
+| `blocked_quarantine_out` | The origin tank is `QUARANTINED`. |
+| `blocked_quarantine_in` | The origin is `OPEN`, no neighbour is an eligible destination, and at least one neighbour is `QUARANTINED` with `occupancy < capacity`. Had quarantine not applied, that neighbour would have been eligible. |
+| `blocked_capacity` | Every other blocked attempt: all neighbours are full or there are none, regardless of their management state. |
+
+The three counters partition `blocked_transfers` on every day. Quarantine counters can be nonzero only while a tank is quarantined, so they are restricted to the active interval by construction. Adding them must not change any simulated trajectory: all random draws are event-keyed and the counters do not draw.
+
+Q1 (quarantine is not a no-op): among intervention runs (random and betweenness pooled, status not `failed`) in which quarantine started (`intervention_start_day` not null), the share with `blocked_quarantine_out + blocked_quarantine_in ≥ 1` is ≥ 90%. The started-runs denominator was itself chosen after seeing data (see decision log); the all-runs share is reported alongside it.
+
+Procedure and pre-specified consequences:
+
+1. Rerun `pilot-stage2-intervention` with the new counters. Every pre-existing summary column except `code_commit`, `run_id` (a fresh UUID per run) and `configuration_hash` must be identical to the committed summary, matched on the condition key (`network_seed`, `epidemic_seed`, `policy_seed`, `transfer_rate`, `response_delay`, `strategy`, `quarantine_duration`). `configuration_hash` changes because the parameter freeze (`f4eac85`) emptied `provisional_fields` after the pilot ran; with the old list restored, all 5550 hashes match. If not, stop: the counters changed the model, and no Q1 result is used.
+2. Run `pilot_select.py stage2`. The selection rule is unchanged: the smallest `D` meeting Q1-Q3.
+3. If `D=14` is selected, D004 is recorded as validated by Q1-Q3, with the denominator change still disclosed.
+4. If no `D` passes, `D=14` remains the setting of the completed formal experiment, the report states that Q1 failed and by how much, and the formal experiment is not rerun or changed.
+5. Q2 and Q3 admit only `D=14`, so no other `D` can be selected. Should that nonetheless happen, it is reported and the formal experiment is still not changed.
+
+#### Interpretation and completeness clarification (2026-10-07 review follow-up)
+
+This clarification was added after the rerun; it does not amend the pre-registered counter definitions, threshold or selection rule above. The counters classify attempts by the first blocking rule reached. In particular, `blocked_quarantine_out` includes an attempted departure from a quarantined origin even when every neighbouring tank is full. Removing quarantine would not make that attempt succeed. Q1 therefore verifies operational interception by quarantine rules, not a strict counterfactual effect on successful transfers or on disease outcomes. The recorded 95.7% at D=14 must be interpreted in that limited sense.
+
+All three cause columns must be present and non-missing for every summary row before the evaluator marks Q1 as verified. Missing columns or values leave Q1 unknown and prevent automatic duration selection; the mixed total cannot replace them. The two other acceptance criteria and all completed experiment settings remain unchanged.
 
 ## 5. 选择规则的实现
 
