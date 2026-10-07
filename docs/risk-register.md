@@ -1,33 +1,33 @@
 # Risk Register
 
-Likelihood/impact 使用 Low / Medium / High。Owner 为主要跟进者，不表示只有该成员负责。
+Likelihood/impact use Low / Medium / High. The owner is the main person following up, not the only member responsible.
 
 | ID | Risk | Likelihood | Impact | Mitigation | Owner | Trigger |
 |---|---|---|---|---|---|---|
-| R001 | Bridge tank 定义不清 | Medium | High | 使用 pre-outbreak normalized betweenness；记录 ties；facilitator 确认 | A | 两人无法独立选出同一 targeted tanks |
-| R002 | Network 过于对称，所有 betweenness 接近或相同 | Medium | High | stochastic modular generator、structure rejection criteria、跨 seeds | A | 多数 networks 出现大量 centrality ties |
-| R003 | 所有 experiments 都不传播 | Medium | High | pilot 检查 beta/gamma/transfer regime；透明记录选择 | A+B | no-intervention 多数 run 只有 initial case |
-| R004 | 所有 experiments 都完全感染 | Medium | High | pilot 避免 saturated regime；不为支持假设调参 | A+B | 多数 conditions attack rate 接近 1 |
-| R005 | 参数组合过多 | High | High | 主实验只保留 3 factors；其他只做 limited sensitivity | B | estimated runs/runtime 超过 timeline |
-| R006 | 缺少真实 disease calibration | High | Medium | 明确 stylised explanatory model；不用现实单位外推 | A | 文档开始使用“真实风险/建议”表述 |
-| R007 | 把模型错误解释为现实预测 | Medium | High | 每份对外材料写 limitation；claims cross-review | Both | report/presentation 出现“证明真实龟场” |
-| R008 | Centrality strategy 使用未来信息 | Low | High | selector 只接收 pre-outbreak network；provenance and review | A reviewer B | selected tanks 随 epidemic outcome 变化 |
-| R009 | Intervention budget 比较不公平 | Medium | High | assert same k/start/duration/network/seed；paired audit | B reviewer A | strategies 的 cost/config 不一致 |
-| R010 | 两人 Git 贡献不平衡 | Medium | High | issues、PR reviews、weekly contribution table、early escalation | Both | 一人连续 2 周无可见 contribution |
-| R011 | 无法复现实验 | Medium | High | explicit seeds、config hash、commit hash、fresh rerun | B reviewer A | same config/seed gives different result |
-| R012 | 直接复用旧 assessed/restricted code | Low | High | new implementation、PR integrity checklist、source inventory | Both | PR 含旧 coursework/vendor code |
-| R013 | Report、code、figures、demo 结果不一致 | Medium | High | single frozen result set、cross-file consistency check | Both | 同一 metric 在材料中数值不同 |
-| R014 | 后续 rubric/submission requirements 变化 | Medium | High | facilitator/LMS check、assign owner、update docs promptly | B | official requirements newly published |
-| R015 | Response delay 含义不清 | High | High | Checkpoint 明确提问；实现前冻结 introduction vs detection | A | 文件对 delay 起点表述不一致 |
-| R016 | Capacity 导致大部分 transfer 被阻止 | Medium | Medium | pilot 记录 attempted/accepted ratio；调整 fixed capacity once | A | accepted/attempted rate 长期接近 0 |
-| R017 | Time horizon 太短，censoring 过多 | Low | Medium | pilot 检查；透明 time-to-event handling | B | censored runs 超过 working 5% trigger |
-| R018 | Random policy variance 掩盖 policy comparison | Medium | Medium | multiple policy seeds 或 nested variance summary | B | random strategy CI 主要由 tank choice 驱动 |
-| R019 | Outcome-driven pilot tuning | Medium | High | 预先写 pilot criteria；保留全部尝试；双人批准 freeze | Both | 参数因“不支持假设”被更换 |
-| R020 | 模型开发挤压分析和报告时间 | Medium | High | MVP gate；10 月 3 日 feature freeze；先删 optional | Both | must-have implementation 晚于 9 月 18 日 |
+| R001 | Unclear definition of a bridge tank | Medium | High | Use pre-outbreak normalized betweenness; record ties; obtain facilitator confirmation | A | The two members cannot independently select the same targeted tanks |
+| R002 | Network is too symmetric, with all betweenness values close or identical | Medium | High | Stochastic modular generator, structure rejection criteria, multiple seeds | A | Most networks have many centrality ties |
+| R003 | Infection does not spread in any experiment | Medium | High | Check the beta/gamma/transfer regime in the pilot; document choices transparently | A+B | Most no-intervention runs have only the initial case |
+| R004 | All experiments infect the entire population | Medium | High | Avoid a saturated regime in the pilot; do not tune parameters to support the hypothesis | A+B | Attack rate is close to 1 in most conditions |
+| R005 | Too many parameter combinations | High | High | Keep only 3 factors in the main experiment; use limited sensitivity checks for others | B | Estimated runs/runtime exceed the timeline |
+| R006 | No real disease calibration | High | Medium | State that this is a stylised explanatory model; do not extrapolate using real-world units | A | Documents start using claims about "real risks/recommendations" |
+| R007 | Model is misinterpreted as a real-world prediction | Medium | High | State limitations in every external document; cross-review claims | Both | Report/presentation claims to "prove something about real turtle farms" |
+| R008 | Centrality strategy uses future information | Low | High | Selector receives only the pre-outbreak network; provenance and review | A reviewer B | Selected tanks change with epidemic outcomes |
+| R009 | Unfair intervention-budget comparison | Medium | High | Assert same k/start/duration/network/seed; paired audit | B reviewer A | Strategies have inconsistent cost/config |
+| R010 | Unequal Git contributions between the two members | Medium | High | Issues, PR reviews, weekly contribution table, early escalation | Both | One member has no visible contribution for 2 consecutive weeks |
+| R011 | Experiments cannot be reproduced | Medium | High | Explicit seeds, config hash, commit hash, fresh rerun | B reviewer A | same config/seed gives different result |
+| R012 | Direct reuse of old assessed/restricted code | Low | High | New implementation, PR integrity checklist, source inventory | Both | PR contains old coursework/vendor code |
+| R013 | Inconsistent results across report, code, figures and demo | Medium | High | Single frozen result set, cross-file consistency check | Both | The same metric has different values in different materials |
+| R014 | Later changes to rubric/submission requirements | Medium | High | Facilitator/LMS check, assign owner, update docs promptly | B | official requirements newly published |
+| R015 | Unclear meaning of response delay | High | High | Ask explicitly at the Checkpoint; freeze introduction vs detection before implementation | A | Documents disagree on the starting point of the delay |
+| R016 | Capacity blocks most transfers | Medium | Medium | Record attempted/accepted ratio in the pilot; adjust fixed capacity once | A | Accepted/attempted rate remains close to 0 |
+| R017 | Time horizon is too short, causing excessive censoring | Low | Medium | Check in the pilot; handle time-to-event data transparently | B | Censored runs exceed the working 5% trigger |
+| R018 | Random policy variance obscures policy comparison | Medium | Medium | Multiple policy seeds or a nested variance summary | B | Random strategy CI is driven mainly by tank choice |
+| R019 | Outcome-driven pilot tuning | Medium | High | Write pilot criteria in advance; retain all attempts; require both members to approve the freeze | Both | Parameters are changed because they "do not support the hypothesis" |
+| R020 | Model development reduces time for analysis and reporting | Medium | High | MVP gate; feature freeze on 3 October; remove optional work first | Both | Must-have implementation extends beyond 18 September |
 
 ## Escalation order
 
-1. 先保护 research validity、academic integrity 和 reproducibility。
-2. 再保护 must-have primary experiment。
-3. 删除 optional extension，而不是减少公平比较或隐藏失败。
-4. 若 teammate availability 或 official requirements 造成重大影响，尽早联系 facilitator/unit coordinator。
+1. Protect research validity, academic integrity and reproducibility first.
+2. Then protect the must-have primary experiment.
+3. Remove optional extensions rather than weaken fair comparisons or hide failures.
+4. If teammate availability or official requirements have a major impact, contact the facilitator/unit coordinator early.

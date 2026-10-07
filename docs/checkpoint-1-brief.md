@@ -1,6 +1,6 @@
 # Checkpoint 1 Brief
 
-适用于 Weeks 7-8 的 5-10 分钟 facilitator meeting。建议团队陈述 3-4 分钟，保留其余时间提问。
+For the 5-10 minute facilitator meeting in Weeks 7-8. Aim for a 3-4 minute team presentation, leaving the remaining time for questions.
 
 ## Project title
 
@@ -28,23 +28,23 @@ Within-tank contact can create local transmission. A small amount of movement be
 
 ## Model structure
 
-- 200 synthetic agents；20 tanks；4 regions of 5 tanks。
-- Agent disease states: `S / I / R` only。
-- Tank management states: `open / quarantined` only。
-- Tank network: static, modular, undirected permitted-transfer graph。
-- One time step: one day。
-- Same-tank transmission uses complete mixing。
-- Cross-tank movement follows network edges and capacity constraints。
-- Quarantine blocks movement into and out of selected tanks, but internal transmission continues。
+- 200 synthetic agents; 20 tanks; 4 regions of 5 tanks.
+- Agent disease states: `S / I / R` only.
+- Tank management states: `open / quarantined` only.
+- Tank network: static, modular, undirected permitted-transfer graph.
+- One time step: one day.
+- Same-tank transmission uses complete mixing.
+- Cross-tank movement follows network edges and capacity constraints.
+- Quarantine blocks movement into and out of selected tanks, but internal transmission continues.
 
 ## Daily update rules
 
-1. Activate or release quarantine at the start of the day。
-2. Process cross-tank movements subject to network, quarantine and capacity。
-3. Calculate within-tank infections from a fixed snapshot。
-4. Calculate recoveries。
-5. Apply SIR changes synchronously。
-6. Record outputs and check extinction。
+1. Activate or release quarantine at the start of the day.
+2. Process cross-tank movements subject to network, quarantine and capacity.
+3. Calculate within-tank infections from a fixed snapshot.
+4. Calculate recoveries.
+5. Apply SIR changes synchronously.
+6. Record outputs and check extinction.
 
 ## Baseline and intervention strategies
 
@@ -64,39 +64,39 @@ Targeted selection uses only betweenness computed from the pre-outbreak transfer
 
 ### Independent variables
 
-- cross-tank transfer rate：4 preliminary levels；
-- response delay：3 preliminary levels；
-- intervention strategy：3 strategies。
+- cross-tank transfer rate: 4 preliminary levels;
+- response delay: 3 preliminary levels;
+- intervention strategy: 3 strategies.
 
 Numeric levels will be selected after pilot checks, not invented in advance.
 
 ### Controlled variables
 
-Population、tank number、capacity、initial infections、`beta`、`gamma`、network generation rule、quarantine count and duration。
+Population, tank number, capacity, initial infections, `beta`, `gamma`, network generation rule, quarantine count and duration.
 
 ### Main outputs
 
-- final attack rate；
-- number of affected tanks；
-- peak infected population；
-- time to extinction。
+- final attack rate;
+- number of affected tanks;
+- peak infected population;
+- time to extinction.
 
-辅助记录 time to peak、intervention cost 和 relative reduction vs random quarantine。
+Also record time to peak, intervention cost and relative reduction vs random quarantine.
 
 ### Repetition and pairing
 
-- multiple network seeds；
-- multiple epidemic seeds per network；
-- random-policy seeds for random tank choice；
-- preliminary target: at least 30-50 replicates per condition；
-- same network and epidemic seed across strategies。
+- multiple network seeds;
+- multiple epidemic seeds per network;
+- random-policy seeds for random tank choice;
+- preliminary target: at least 30-50 replicates per condition;
+- same network and epidemic seed across strategies.
 
 ## Independent investigation
 
-- Combine modular network structure with agent-level SIR dynamics。
-- Compare response timing and transfer intensity rather than only one simulation。
-- Compare random and structural intervention under equal cost。
-- Separate network, epidemic and random-policy variance。
+- Combine modular network structure with agent-level SIR dynamics.
+- Compare response timing and transfer intensity rather than only one simulation.
+- Compare random and structural intervention under equal cost.
+- Separate network, epidemic and random-policy variance.
 
 ## Academic integrity boundary
 
@@ -104,19 +104,19 @@ The previous `turtle-farm` project only provides domain inspiration. We will not
 
 ## Current completion
 
-- Shared private GitHub repository exists。
-- Research questions and hypothesis are defined。
-- Model specification, assumptions, experiment plan, validation plan, collaboration plan, timeline and risks are documented。
+- Shared private GitHub repository exists.
+- Research questions and hypothesis are defined.
+- Model specification, assumptions, experiment plan, validation plan, collaboration plan, timeline and risks are documented.
 - **No model code has been written and no experiment has been run.**
 - **Prototype result to be added after the baseline model is implemented.**
 
 ## Next two weeks
 
-1. Obtain facilitator feedback and freeze pending definitions。
-2. Both members approve the model specification。
-3. Implement and validate the smallest baseline SIR model。
-4. Add modular network movement only after baseline invariants pass。
-5. Prepare pilot configurations without generating formal results prematurely。
+1. Obtain facilitator feedback and freeze pending definitions.
+2. Both members approve the model specification.
+3. Implement and validate the smallest baseline SIR model.
+4. Add modular network movement only after baseline invariants pass.
+5. Prepare pilot configurations without generating formal results prematurely.
 
 ## Questions for facilitator
 
