@@ -284,5 +284,10 @@ def flatten(raw: dict[str, Any]) -> dict[str, Any]:
         "accepted_transfers": sum(d["accepted_transfers"] for d in raw["daily"]),
         "blocked_transfers": sum(d["blocked_transfers"] for d in raw["daily"]),
     }
+    # Blocked-by-cause counters exist only in raw records written after they were added; older raw files
+    # (formal, formal-nested, Stage 1 pilots) leave these columns empty rather than guessing a split.
+    for cause in ("blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity"):
+        has_cause = bool(raw["daily"]) and all(cause in d for d in raw["daily"])
+        row[cause] = sum(d[cause] for d in raw["daily"]) if has_cause else None
     row.update(raw["metrics"])
     return row

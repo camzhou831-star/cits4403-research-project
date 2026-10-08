@@ -206,9 +206,13 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     """Criteria Q1-Q3 per D candidate. Uses pooled intervention runs and the shared baselines only.
 
     The legacy whole-run blocked counter mixes capacity and quarantine blocking, including days outside
-    quarantine. Keep both historical proxy denominators for audit, but neither verifies quarantine-specific
-    Q1. Q1 and overall acceptance are nullable (unverified), not an automatic duration-selection gate.
-    A future causal blocking measure requires a separately documented definition and validation.
+    quarantine. Both historical proxy denominators are kept for audit, but neither verifies Q1.
+
+    Q1 is evaluated only from the blocked-by-cause counters (pilot-protocol section 4, pre-registered
+    2026-10-06): share of started runs with ``blocked_quarantine_out + blocked_quarantine_in >= 1``. Raw
+    records written before those counters existed, or with any incomplete cause column, leave Q1 and
+    overall acceptance nullable (unverified). The counters identify the first blocking rule reached;
+    Q1 is an operational check, not a counterfactual count of additional transfers prevented.
     """
     gamma = summary["gamma"].unique()
     if len(gamma) != 1:
@@ -217,11 +221,25 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     extinction_median = float(baseline["time_to_extinction"].median())
     rows = []
     interventions = summary[(summary["strategy"] != "none") & (summary["status"] != STATUS_FAILED)]
+    cause_columns = ("blocked_quarantine_out", "blocked_quarantine_in", "blocked_capacity")
+    has_causes = all(column in summary and summary[column].notna().all() for column in cause_columns)
     for d, df in interventions.groupby("quarantine_duration", sort=True):
         blocking = df["blocked_transfers"] >= 1
         started = df["intervention_start_day"].notna()
         share_all = float(blocking.mean())
         share_started = float(blocking[started].mean()) if started.any() else 0.0
+        q1: dict[str, object] = {"Q1_status": "unverified_mixed_blocking_counter"}
+        if has_causes:
+            quarantine_block = (df["blocked_quarantine_out"] + df["blocked_quarantine_in"]) >= 1
+            share_q = float(quarantine_block[started].mean()) if started.any() else 0.0
+            q1 = {
+                "Q1_status": "verified",
+                "share_quarantine_block_ge_1_started": share_q,
+                "share_quarantine_block_ge_1_all_runs": float(quarantine_block.mean()),
+                "share_capacity_block_ge_1_started": float((df["blocked_capacity"][started] >= 1).mean())
+                if started.any() else 0.0,
+                "Q1_quarantine_not_noop": share_q >= 0.90,
+            }
         rows.append(
             {
                 "quarantine_duration": int(d),
@@ -232,7 +250,7 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
                 "baseline_extinction_median": extinction_median,
                 "Q1_proxy_all_runs": share_all >= 0.90,
                 "Q1_proxy_started_runs": share_started >= 0.90,
-                "Q1_status": "unverified_mixed_blocking_counter",
+                **q1,
                 "Q2_D_le_25pct_extinction": d <= 0.25 * extinction_median,
                 "Q3_D_ge_infectious_period": d >= 1 / gamma[0],
             }
@@ -241,7 +259,10 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     q2_q3 = table["Q2_D_le_25pct_extinction"] & table["Q3_D_ge_infectious_period"]
     table["passed_proxy_started"] = table["Q1_proxy_started_runs"] & q2_q3
     table["passed_proxy_all_runs"] = table["Q1_proxy_all_runs"] & q2_q3
-    table["Q1_quarantine_not_noop"] = pd.Series(pd.NA, index=table.index, dtype="boolean")
+    if has_causes:
+        table["Q1_quarantine_not_noop"] = table["Q1_quarantine_not_noop"].astype("boolean")
+    else:
+        table["Q1_quarantine_not_noop"] = pd.Series(pd.NA, index=table.index, dtype="boolean")
     # Do not use DataFrame.all(): its skipna default would turn an unknown Q1 into a pass.
     table["passed"] = table["Q1_quarantine_not_noop"] & q2_q3
     return table

@@ -1,6 +1,6 @@
 # Clean-environment reproduction (2026-10-06)
 
-**Historical record:** this reproduction predates the Q1 review correction. Numerical proxy results remain reproducible, but they do not verify quarantine-specific blocking. The current `pilot_select.py stage2` intentionally exits 3 without selecting a duration; `stage2-criteria-legacy-proxy.csv` preserves the table used in this historical check. Formal parameters and results are unchanged.
+**Historical record:** this reproduction predates the blocked-by-cause counters. Its Stage 2 criterion table is preserved as `stage2-criteria-legacy-proxy.csv`. The later Stage 2 rerun with the counters reproduced every previously recorded summary value (`pilot-report-2026-10-06.md` §8). Formal parameters and results are unchanged.
 
 Purpose: check that the committed results and report can be regenerated from a fresh clone, with nothing reused from the working copy.
 
