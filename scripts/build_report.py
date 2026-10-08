@@ -20,41 +20,20 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path[:0] = [str(ROOT / "src"), str(ROOT)]  # src/: the turtlefarm package; root: utils/
 
 import pandas as pd
 
+from utils.formatting import ci, excludes_zero, f2, f3, pct, rate_key
+
 from turtlefarm.analysis import DIFF_TOLERANCE
+from turtlefarm.config import SimulationConfig
 
 FORMAL = "formal-nested"
 CROSSED = "formal"
 PILOTS = ("pilot-stage1-disease", "pilot-stage1-disease-r2", "pilot-stage2-intervention")
 ANALYSIS = ROOT / "results" / "analysis"
 METRIC_NAMES = {"final_attack_rate": "Final attack rate", "affected_tanks": "Affected tanks"}
-
-
-def f2(x: float) -> str:
-    return f"{x:.2f}"
-
-
-def f3(x: float) -> str:
-    return f"{x:.3f}"
-
-
-def pct(x: float, digits: int = 1) -> str:
-    return f"{100 * x:.{digits}f}%"
-
-
-def ci(lo: float, hi: float, fmt=f3) -> str:
-    return f"[{fmt(lo)}, {fmt(hi)}]"
-
-
-def rate_key(rate: float) -> str:
-    return f"{rate:g}".replace(".", "p")
-
-
-def excludes_zero(lo: float, hi: float) -> bool:
-    return lo > 0 or hi < 0
 
 
 def collect() -> tuple[dict[str, str], dict[str, str]]:
@@ -79,6 +58,15 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
         runs_per_block=str(1 + len(design["response_delays"]) * (1 + len(design["policy_seeds"]))),
     )
     v["mean_infectious_days"] = f"{1 / fixed['gamma']:g}"
+    defaults = SimulationConfig()  # fixed structure of the main design (D001-D003, D006)
+    v.update(
+        n_agents=str(defaults.n_agents), n_tanks=str(defaults.n_tanks), n_regions=str(defaults.n_regions),
+        capacity=str(defaults.capacity), initial_per_tank=str(defaults.initial_per_tank),
+        initial_infected=str(defaults.initial_infected), k=str(defaults.k), max_days=str(defaults.max_days),
+        network_max_attempts=str(defaults.network_max_attempts),
+    )
+    v["free_places"] = str(defaults.capacity - defaults.initial_per_tank)
+    v["k_share"] = pct(defaults.k / defaults.n_tanks, 0)
     v["budget"] = str(2 * fixed["quarantine_duration"])
 
     # ---- pilot
@@ -111,6 +99,27 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     v["pilot_q2_limit"] = f"{0.25 * st2.loc[d, 'baseline_extinction_median']:g}"
     delays = json.loads((ROOT / "results" / "pilot" / "pilot-stage1-disease-r2-delays.json").read_text(encoding="utf-8"))
     v["pilot_nonminor_runs"] = str(delays["non_minor_runs"])
+
+    # ---- exploratory mechanism analysis (scripts/mechanism_analysis.py; post hoc)
+    mech = json.loads((ANALYSIS / FORMAL / "mechanism.json").read_text(encoding="utf-8"))
+    v["mech_bridges"] = f"{mech['between_region_edges_mean']:.1f}"
+    v["mech_cov_targeted"] = pct(mech["bridge_coverage_targeted_mean"], 0)
+    v["mech_cov_random"] = pct(mech["bridge_coverage_random_mean"], 0)
+    v["mech_cut_targeted"] = pct(mech["disconnects_targeted_share"], 0)
+    v["mech_cut_random"] = pct(mech["disconnects_random_share"], 0)
+    v["mech_rate"] = f"{mech['focus_rate']:g}"
+    v["mech_never_cross"] = pct(mech["never_crossed_share"], 0)
+    v["mech_cross_median"] = f"{mech['first_cross_day_median']:g}"
+    v["mech_cross_q1"] = f"{mech['first_cross_day_q1']:g}"
+    v["mech_cross_q3"] = f"{mech['first_cross_day_q3']:g}"
+    for delay, t in mech["timing_by_delay"].items():
+        v[f"mech_before_d{delay}"] = pct(t["crossed_before_start"], 0)
+        v[f"mech_window_d{delay}"] = pct(t["crossed_during_window"], 0)
+        v[f"mech_after_d{delay}"] = pct(t["crossed_after_window"], 0)
+    focus = mech["selected_already_infected"][f"{mech['focus_rate']:g}"]
+    for delay, arms in focus.items():
+        v[f"mech_infected_targeted_d{delay}"] = pct(arms["betweenness"], 0)
+        v[f"mech_infected_random_d{delay}"] = pct(arms["random"], 0)
 
     # ---- networks of the formal design
     nets = pd.read_csv(ANALYSIS / FORMAL / "networks.csv")

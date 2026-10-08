@@ -21,14 +21,14 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path[:0] = [str(ROOT / "src"), str(ROOT), str(ROOT / "scripts")]
 
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.patches import FancyBboxPatch
 
-from analyse_results import _network_layout
+from utils.network_layout import network_layout
 from demo_animation import ARM_COLOURS, DPI, FPS, GRID, H, INK, MUTED, OUT_DIR, QUAR, W, anim_frame, run_block, save
 
 PY = sys.executable
@@ -234,7 +234,7 @@ def main() -> int:
     demo_lines = [line for line in demo if line.strip()][2:9] + [demo[-1]]
 
     arms, info = run_block()
-    pos = _network_layout(info["network"]["edges"], info["network"]["regions"])
+    pos = network_layout(info["network"]["edges"], info["network"]["regions"])
     last_day = max(len(r.daily) - 1 for _, _, r in arms)
 
     slides = {

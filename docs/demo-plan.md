@@ -16,15 +16,15 @@ Each person must be able to explain every row below using the code: what it does
 
 | Topic | Location | Author (PR) | Key points | Tests |
 |---|---|---|---|---|
-| Daily order | `turtlefarm/model.py` `step()` | Cam (#19) | management → movement → transmission → recovery → commit; why disease states update synchronously | `tests/test_invariants.py`, `tests/test_hand_trace.py` |
+| Daily order | `src/turtlefarm/model.py` `step()` | Cam (#19) | management → movement → transmission → recovery → commit; why disease states update synchronously | `tests/test_invariants.py`, `tests/test_hand_trace.py` |
 | Transmission and recovery | `model.py` `_transmission_and_recovery()`, `_commit()` | Cam (#19) | `1-(1-beta)^I`; newly infected agents do not transmit on the same day | `tests/test_extreme_cases.py` (`beta=0`, `gamma=1`) |
 | Movement | `model.py` `_movement_stage()` | Wenhao (#27) | Random order, immediate capacity and quarantine checks, two causes of blocked transfers | `tests/test_movement.py` |
 | Quarantine selection and timing | `model.py` `_select_intervention_tanks()`, `_management_update()` | Wenhao (#29) | Uses only the pre-outbreak network; half-open interval `[start, start+D)`; equal budget | `tests/test_quarantine.py` |
-| Network | `turtlefarm/network.py` `generate_network()`, `rank_by_betweenness()` | Cam (#23) | `p_in` / `p_out`, 4 acceptance rules, ties broken by tank id | `tests/test_network.py` |
-| Paired random numbers | `turtlefarm/rng.py` | Cam (#22/#23) | Every strategy receives identical draws under the same seed; these are common random numbers | `tests/test_paired_draws.py` |
-| Batch runs | `turtlefarm/runner.py` `ExperimentDesign.configs()`, `run_design()` | Cam (#31, #34) | Block structure, shared baseline, nested seeds, append-only records | `tests/test_runner.py` |
+| Network | `src/turtlefarm/network.py` `generate_network()`, `rank_by_betweenness()` | Cam (#23) | `p_in` / `p_out`, 4 acceptance rules, ties broken by tank id | `tests/test_network.py` |
+| Paired random numbers | `src/turtlefarm/rng.py` | Cam (#22/#23) | Every strategy receives identical draws under the same seed; these are common random numbers | `tests/test_paired_draws.py` |
+| Batch runs | `src/turtlefarm/runner.py` `ExperimentDesign.configs()`, `run_design()` | Cam (#31, #34) | Block structure, shared baseline, nested seeds, append-only records | `tests/test_runner.py` |
 | Result-record format | `docs/run-result-schema.md` | Wenhao (#25) | Fields recorded for each run and how failures are recorded | `tests/test_runner.py` |
-| Analysis | `turtlefarm/analysis.py` `paired_differences()`, `cluster_bootstrap_ratio()` | Cam (#34) | Why resampling is by network; why relative reduction uses a ratio of means | `tests/test_analysis.py` |
+| Analysis | `src/turtlefarm/analysis.py` `paired_differences()`, `cluster_bootstrap_ratio()` | Cam (#34) | Why resampling is by network; why relative reduction uses a ratio of means | `tests/test_analysis.py` |
 
 **Practice** (each person should do this at least once, preferably setting questions for each other):
 

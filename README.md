@@ -18,7 +18,7 @@ This repository holds the research design, model implementation, computational e
 
 | Part | State |
 |---|---|
-| Model (`turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
+| Model (`src/turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
 | Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
@@ -169,16 +169,24 @@ python -m jupyter nbconvert --execute --to notebook \
 
 ## Repository structure
 
+The layout follows the structure required by the project specification (`src/`, `utils/`, `data/`, `notebooks/`, `requirements.txt`, `README.md`), with tests, scripts, experiment designs, results, the report and documentation alongside.
+
 ```text
-turtlefarm/    model (SIR, event-keyed draws, network, movement, quarantine), batch runner, analysis
-tests/         invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
-scripts/       experiment, pilot selection, analysis, report and diagram scripts
-experiments/   experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
-notebooks/     executable model walkthrough, result comparisons and figures
-results/       raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures)
-report/        report template and generated report
-docs/          design, decisions, protocols, reports and figures
+src/turtlefarm/  main code: SIR within tanks, event-keyed draws, network, movement, quarantine, batch runner, analysis
+utils/           helper functions used by the scripts: network layout for figures, report number formatting
+data/            no external dataset; README explains where the synthetic inputs and outputs live
+notebooks/       executable model walkthrough, result comparisons and figures
+requirements.txt dependencies (requirements-notebook.txt adds the notebook tools)
+README.md        this overview, setup and usage
+tests/           invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
+scripts/         command-line entry points: experiments, pilot selection, analysis, report, PDF, figures, demo video
+experiments/     experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
+results/         raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures), demo/
+report/          report template, generated report and PDF
+docs/            design, decisions, protocols, reports and figures
 ```
+
+Scripts add `src/` and the repository root to the import path themselves, and `pytest` reads the same paths from `pyproject.toml`, so no package installation step is needed.
 
 ## Academic integrity boundary
 

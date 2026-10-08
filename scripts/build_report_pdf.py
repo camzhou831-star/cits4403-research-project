@@ -46,6 +46,7 @@ pre { font-size: 9pt; background: none; }
 a { color: #000; }
 p > em:only-child { font-size: 10pt; }
 p:has(+ table) { break-after: avoid; }
+h1, h2, h3 { break-after: avoid; }
 """
 
 FIGURE = re.compile(r"^!\[[^\]]*\]\([^)]*\)\s*\n+\*Figure [^\n]*\*\s*$", re.MULTILINE)
