@@ -225,6 +225,7 @@ All results can be regenerated from the repository:
 ```bash
 python scripts/run_experiment.py experiments/config/formal-nested.json
 python scripts/analyse_results.py formal-nested
+python scripts/mechanism_analysis.py
 python scripts/build_report.py
 ```
 
