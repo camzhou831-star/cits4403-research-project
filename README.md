@@ -108,8 +108,33 @@ Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `b
 
 ## Documentation map
 
+### Project notebook
+
+[notebooks/project-walkthrough.ipynb](notebooks/project-walkthrough.ipynb) explains the model rules and parameters, runs a paired example, shows daily updates, and presents the formal results with network-cluster confidence intervals. It includes saved tables and figures, so it can also be read without running the cells.
+
+To run it, install the notebook tools in the project environment:
+
+```bash
+source .venv/bin/activate
+uv pip install -r requirements-notebook.txt   # or: python -m pip install -r requirements-notebook.txt
+python -m jupyterlab notebooks/project-walkthrough.ipynb
+```
+
+In VS Code, open the notebook and select the project's `.venv` Python interpreter using the Jupyter extension. In either editor, choose **Restart Kernel and Run All**. Run the notebook from within the repository so it can find the package and result files.
+
+The notebook runs five example simulations and recalculates the displayed statistics from committed summaries. It does not run a new formal batch or write to the model, configurations, result tables or report. Its setup instructions and parameter cells are included in the notebook.
+
+For a command-line check that preserves the saved notebook:
+
+```bash
+python -m jupyter nbconvert --execute --to notebook \
+  --ExecutePreprocessor.timeout=180 \
+  --output-dir=results/tmp/notebook-check notebooks/project-walkthrough.ipynb
+```
+
 | File | Purpose |
 |---|---|
+| `notebooks/project-walkthrough.ipynb` | Runnable model walkthrough and formal-result analysis, with saved outputs |
 | `report/report.md` | **Report draft** (generated; edit `report/report.template.md`) |
 | `docs/research-proposal.md` | System, motivation, research questions, contribution and scope |
 | `docs/model-specification.md` | Consistent model specification that can be implemented independently |
@@ -145,6 +170,7 @@ turtlefarm/    model (SIR, event-keyed draws, network, movement, quarantine), ba
 tests/         invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
 scripts/       experiment, pilot selection, analysis, report and diagram scripts
 experiments/   experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
+notebooks/     executable model walkthrough, result comparisons and figures
 results/       raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures)
 report/        report template and generated report
 docs/          design, decisions, protocols, reports and figures
