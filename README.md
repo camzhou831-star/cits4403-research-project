@@ -152,6 +152,8 @@ python -m jupyter nbconvert --execute --to notebook \
 | `docs/network-audit-2026-09-11.md` | Structural audit of the network generator, D005 candidate values |
 | `docs/network-audit-2026-10-08.md` | Retrospective 30-seed audit, complete grid and the C4 tie limitation |
 | `docs/model-walkthrough.md` | Ten-minute daily-update and invariant walkthrough guide; actual session record pending (#18) |
+| `docs/demo-plan.md` | Week 12 demonstration: requirements, run of show, live run, code walkthrough map, likely questions |
+| `docs/demo-video.md` | Backup video for the demonstration |
 | `docs/hand-trace-3tank.md` | Hand-traced 3-tank scenario, checked against `tests/test_hand_trace.py` |
 | `docs/checkpoint-1-*.md`, `docs/checkpoint-2-speaking-notes.md` | Checkpoint briefs, speaking notes and rehearsals |
 | `docs/timeline.md`, `docs/risk-register.md`, `docs/facilitator-questions.md`, `docs/literature-plan.md`, `docs/consistency-review.md`, `docs/week-plan-2026-09-05.md` | Planning records |
@@ -162,6 +164,11 @@ python -m jupyter nbconvert --execute --to notebook \
 | `scripts/pilot_select.py` | Apply the pre-registered pilot selection rules; writes the Stage 2 design |
 | `scripts/analyse_results.py` | Tables and figures 1-7 for a formal design |
 | `scripts/build_report.py` | Render `report/report.md` from the template and result files |
+| `scripts/build_report_pdf.py` | Render `report/report.pdf` (A4, 11pt, 1-inch margins) and check the five-page limit |
+| `scripts/mechanism_analysis.py` | Exploratory position and timing measures for report Section 4.4 (`mechanism.json`) |
+| `scripts/demo_final.py` | Live demonstration: rerun one paired block and check it against the stored records |
+| `scripts/make_presentation_assets.py` | Slide images that are not report figures: timing chart and example animation |
+| `scripts/make_demo_video.py` | 3-minute backup video of the demonstration |
 | `scripts/draw_concept_diagram.py` | Draw the conceptual diagram |
 | `scripts/audit_network.py` | Re-run the network structural audit |
 | `scripts/demo_checkpoint2.py` | Checkpoint 2 demonstration (one seed block, not a result) |
