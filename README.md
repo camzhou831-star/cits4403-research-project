@@ -11,7 +11,7 @@ This repository holds the research design, model implementation, computational e
 | Member A | Cam Zhou | `camzhou831-star` | To be confirmed by the team |
 | Member B | Wenhao Zhang | `Winston-2hang` | To be confirmed by the team |
 
-- Deadline: Friday 9 October 2026. The lecture slides give 1:59pm AWST, while earlier planning used 23:59; the exact time and the submission format must be confirmed on LMS.
+- Deadline: Friday 9 October 2026, 11:59pm AWST (Week 1 lecture slides, Assessment table). Submission: the report, through Turnitin on LMS.
 - Demonstration: Week 12.
 
 ## Status (8 October 2026)
@@ -22,8 +22,8 @@ This repository holds the research design, model implementation, computational e
 | Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
-| Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
-| Review | PRs #34 and #36 merged on 7 October. Recorded Q1 reviews do not replace the outstanding protocol and parameter confirmations. Issues #4, #5 and #18 remain open. |
+| Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. PDF (`report/report.pdf`, A4, 11pt, 1-inch margins) built by `scripts/build_report_pdf.py`, which checks the five-page limit of the rubric. |
+| Review | PRs #34 and #36 merged on 7 October; #37 (demo video), #39 (notebook) and #42 (five-page report) on 8 October. Recorded Q1 reviews do not replace the outstanding protocol and parameter confirmations. Issues #4, #5 and #18 remain open. |
 | Decision follow-up | D=14 criterion table reproduced from the recorded Stage 2 runs. The expanded 30-seed network check passes C1 but has one C4 rank-2 tie; both tied tanks are selected. See `docs/network-audit-2026-10-08.md`. |
 
 Deviations from our own protocol are disclosed in `docs/decision-log.md` (sections "Protocol deviations" and "Analysis decisions made after the formal results") and in the report. The most important are:
@@ -110,8 +110,33 @@ Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `b
 
 ## Documentation map
 
+### Project notebook
+
+[notebooks/project-walkthrough.ipynb](notebooks/project-walkthrough.ipynb) explains the model rules and parameters, runs a paired example, shows daily updates, and presents the formal results with network-cluster confidence intervals. It includes saved tables and figures, so it can also be read without running the cells.
+
+To run it, install the notebook tools in the project environment:
+
+```bash
+source .venv/bin/activate
+uv pip install -r requirements-notebook.txt   # or: python -m pip install -r requirements-notebook.txt
+python -m jupyterlab notebooks/project-walkthrough.ipynb
+```
+
+In VS Code, open the notebook and select the project's `.venv` Python interpreter using the Jupyter extension. In either editor, choose **Restart Kernel and Run All**. Run the notebook from within the repository so it can find the package and result files.
+
+The notebook runs five example simulations and recalculates the displayed statistics from committed summaries. It does not run a new formal batch or write to the model, configurations, result tables or report. Its setup instructions and parameter cells are included in the notebook.
+
+For a command-line check that preserves the saved notebook:
+
+```bash
+python -m jupyter nbconvert --execute --to notebook \
+  --ExecutePreprocessor.timeout=180 \
+  --output-dir=results/tmp/notebook-check notebooks/project-walkthrough.ipynb
+```
+
 | File | Purpose |
 |---|---|
+| `notebooks/project-walkthrough.ipynb` | Runnable model walkthrough and formal-result analysis, with saved outputs |
 | `report/report.md` | **Report draft** (generated; edit `report/report.template.md`) |
 | `docs/research-proposal.md` | System, motivation, research questions, contribution and scope |
 | `docs/model-specification.md` | Consistent model specification that can be implemented independently |
@@ -149,6 +174,7 @@ turtlefarm/    model (SIR, event-keyed draws, network, movement, quarantine), ba
 tests/         invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
 scripts/       experiment, pilot selection, analysis, report and diagram scripts
 experiments/   experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
+notebooks/     executable model walkthrough, result comparisons and figures
 results/       raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures)
 report/        report template and generated report
 docs/          design, decisions, protocols, reports and figures
