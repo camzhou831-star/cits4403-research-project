@@ -11,7 +11,7 @@ This repository holds the research design, model implementation, computational e
 | Member A | Cam Zhou | `camzhou831-star` | To be confirmed by the team |
 | Member B | Wenhao Zhang | `Winston-2hang` | To be confirmed by the team |
 
-- Deadline: Friday 9 October 2026. The lecture slides give 1:59pm AWST, while earlier planning used 23:59; the exact time and the submission format must be confirmed on LMS.
+- Deadline: Friday 9 October 2026, 11:59pm AWST (Week 1 lecture slides, Assessment table). Submission: the report, through Turnitin on LMS.
 - Demonstration: Week 12.
 
 ## Status (6 October 2026)
@@ -22,7 +22,7 @@ This repository holds the research design, model implementation, computational e
 | Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
-| Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
+| Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. PDF (`report/report.pdf`, A4, 11pt, 1-inch margins) built by `scripts/build_report_pdf.py`, which checks the five-page limit of the rubric. |
 | Review | Two read-only acceptance rounds by Codex CLI (ACCEPT WITH FIXES; fixes applied). Member B review and sign-offs pending (PR #34). |
 
 Deviations from our own protocol are disclosed in `docs/decision-log.md` (sections "Protocol deviations" and "Analysis decisions made after the formal results") and in the report. The most important are:
