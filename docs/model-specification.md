@@ -1,14 +1,14 @@
 # Model Specification
 
-本文档是规范性模型。D001-D003、D006-D008 已于 2026-09-11 冻结（见 `decision-log.md`）；仍标注 `Candidate value, frozen after pilot` 的项目（D004 quarantine duration、D005 network parameters、`beta`、`gamma`）按 §18 的两层冻结规则处理。两名成员应能依据本文件独立实现出相同行为。
+This document is the normative model specification. D001-D003 and D006-D008 were frozen on 2026-09-11. The completed formal experiment uses `beta=0.2`, `gamma=0.1`, `D=14`, `p_in=0.6` and `p_out=0.05`, selected on 2026-10-06. Member B's retrospective confirmation and the protocol deviations remain recorded in `decision-log.md`; the numerical settings are not awaiting implementation. Both members should be able to implement the same behaviour independently from this document.
 
 ## 1. Model type, purpose and time
 
-- 类型：discrete-time stochastic agent-based model（离散时间随机 ABM）。
-- 网络：static modular tank-transfer network。
-- 用途：解释 transfer rate、response delay 和 quarantine selection 如何共同改变合成系统中的传播。
-- 定位：**a stylised explanatory model**，不是现实预测模型。
-- 一个 simulation step 表示 one day；初始状态为 `t = 0`，每日更新产生 `t + 1` 状态。
+- Type: discrete-time stochastic agent-based model.
+- Network: static modular tank-transfer network.
+- Purpose: explain how transfer rate, response delay and quarantine selection jointly change spread in a synthetic system.
+- Framing: **a stylised explanatory model**, not a model for real-world prediction.
+- One simulation step represents one day; the initial state is `t = 0`, and each daily update produces the state at `t + 1`.
 
 ## 2. Entities
 
@@ -16,289 +16,293 @@
 
 | Field | Meaning |
 |---|---|
-| `agent_id` | 运行内唯一 ID |
-| `tank_id` | 当前所在的唯一 tank |
-| `disease_state` | `S`、`I` 或 `R` |
-| `state_entered_day` | 进入当前疾病状态的日数 |
-| `ever_infected` | 是否曾进入 `I`，用于 final attack rate |
+| `agent_id` | Unique ID within a run |
+| `tank_id` | The single tank currently occupied by the agent |
+| `disease_state` | `S`, `I` or `R` |
+| `state_entered_day` | Day on which the agent entered its current disease state |
+| `ever_infected` | Whether the agent has ever entered `I`, used for final attack rate |
 
-MVP 不设置个体 `Q` 状态。S、I、R agents 均可能转移，除非所在或目标 tank 的 quarantine 阻止移动。
+The MVP has no individual `Q` state. S, I and R agents may all move unless quarantine at the origin or destination tank blocks movement.
 
 ### 2.2 Tank
 
 | Field | Meaning |
 |---|---|
-| `tank_id` | 0-19 的唯一 ID |
-| `region_id` | 0-3，每区 5 个 tanks |
-| `capacity` | 最大 agents 数量 |
-| `management_state` | `open` 或 `quarantined` |
-| `quarantine_start_day` | 未隔离时为空 |
-| `quarantine_end_day` | 未隔离时为空；采用半开区间 `[start, end)` |
+| `tank_id` | Unique ID from 0-19 |
+| `region_id` | 0-3, with 5 tanks per region |
+| `capacity` | Maximum number of agents |
+| `management_state` | `open` or `quarantined` |
+| `quarantine_start_day` | Empty when not quarantined |
+| `quarantine_end_day` | Empty when not quarantined; uses the half-open interval `[start, end)` |
 
-Quarantined tank 内部传播和恢复继续发生；只禁止跨缸转入和转出。
+Transmission and recovery continue inside a quarantined tank; only transfers into and out of the tank are prohibited.
 
 ## 3. Transfer network
 
 ### 3.1 Graph definition
 
-- 20 个 tank nodes，分为 4 个 modules，每个 module 5 个 nodes。
-- 网络为 undirected、unweighted、simple graph。
-- edge 表示两个 tanks 之间允许直接转移。
-- 网络在一次 run 中固定；agent movement 随时间发生。
-- 同区域 edge probability `p_in` 高于跨区域 `p_out`。
-- 生成后网络必须 connected，且至少存在跨区域 edges。
-- 禁止完全图、完全均匀随机混合和人为完全对称的模块复制。
+- 20 tank nodes divided into 4 modules of 5 nodes each.
+- The network is an undirected, unweighted, simple graph.
+- An edge means direct transfers between two tanks are permitted.
+- The network is fixed within a run; agent movement occurs over time.
+- Within-region edge probability `p_in` exceeds cross-region probability `p_out`.
+- The generated network must be connected and contain cross-region edges.
+- Complete graphs, fully uniform random mixing and artificially identical, symmetric copies of modules are prohibited.
 
 ### 3.2 Generation procedure
 
-1. 按固定 tank IDs 建立 4 个 regions。
-2. 对同区域 node pairs，以 `p_in` 独立生成 edges。
-3. 对不同区域 node pairs，以较低的 `p_out` 独立生成 edges。
-4. 若网络不 connected、没有跨区域 edge 或违反预先定义的结构检查，则从同一 network seed 确定性产生下一次尝试，并记录 attempt index。预先定义的结构检查（2026-09-11 具体化，`turtlefarm/network.py`）：(a) connected；(b) 至少一条跨区域 edge；(c) 不是完全图；(d) 所有 node 的 betweenness 不全相等。确定性约定（2026-09-11 冻结）：每次 attempt 由 `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))` 派生，按 `itertools.combinations(range(20), 2)` 字典序对全部 190 个 node pair 各抽一个 uniform；被拒绝的原因逐条记录；100 次内无 attempt 通过则 run 记为 `failed` 并保留全部拒绝原因。
-5. 保存 adjacency list、region assignment、network seed、attempt index、network hash、平均度、density、clustering coefficient、modularity、diameter 和 node betweenness。
+1. Create 4 regions using fixed tank IDs.
+2. Generate edges independently with probability `p_in` for node pairs in the same region.
+3. Generate edges independently with the lower probability `p_out` for node pairs in different regions.
+4. If the network is disconnected, has no cross-region edge or fails a predefined structural check, deterministically generate the next attempt from the same network seed and record the attempt index. The predefined structural checks (specified on 2026-09-11 in `turtlefarm/network.py`) are: (a) connected; (b) at least one cross-region edge; (c) not a complete graph; (d) node betweenness values are not all equal. Deterministic convention (frozen on 2026-09-11): each attempt uses `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))`, drawing one uniform value for each of the 190 node pairs in the lexicographic order of `itertools.combinations(range(20), 2)`. Every rejection reason is recorded. If no attempt passes within 100 attempts, the run is marked `failed` and all rejection reasons are retained.
+5. Save the adjacency list, region assignment, network seed, attempt index, network hash, mean degree, density, clustering coefficient, modularity, diameter and node betweenness.
 
-`p_in`、`p_out` 和结构接受阈值：**Candidate value, frozen after structural pilot（D005，issue #5）**。生成算法和接受规则（本节 1-5 条）已冻结，只有数值待定。工作方案是由 pilot 选出能稳定产生 connected modular graphs、又不过度固定单一 bridge tank 的参数。Structural audit（`docs/network-audit-2026-09-11.md`）给出的候选值为 `p_in = 0.6`、`p_out = 0.05`。手工指定 bridge edges 可解释性强但 network-instance variance 低；纯 stochastic block model 的方差更自然，但可能需要 rejection criteria。
+The formal experiment uses **`p_in = 0.6`, `p_out = 0.05` (D005, selected 2026-10-06)** with the generation and acceptance rules above. The original structural audit compared 16 parameter pairs and preferred the lowest within-region density among its three passing candidates. The movement pilot supported retaining that setting. Member B's retrospective confirmation is pending in `decision-log.md`.
+
+The follow-up in `network-audit-2026-10-08.md` finds that all 30 checked networks generate within the retry limit, but one has an exact tie at rank 2 under the original C4 criterion. Both tied tanks are selected for `k=2`. This limitation does not change the runtime acceptance or tie-breaking rules, and must not be described as all C1-C5 criteria passing on the expanded sample. Manual bridge edges would be easier to prescribe but would reduce network-instance variation; they are not used here.
 
 ## 4. Betweenness centrality
 
-- 使用 outbreak 前生成并保存的完整 transfer network。
-- MVP 使用 unweighted normalized node betweenness centrality。
-- 对 node `v`，计算所有其他 source-target pairs 的 shortest paths 中经过 `v` 的比例。
-- centrality 在 outbreak 前计算一次，run 中不更新。
-- ranking ties 定义为计算出的 normalised betweenness **精确相等**（不使用容差），使用较小 `tank_id` 优先，保证 deterministic selection；tie 的 tank 集合写入 run metadata。
-- 网络对象在生成后不可变（tuple / read-only mapping），selector 只能读取 network、`k` 和 policy seed，不得接收 simulation 状态。
-- 不允许使用未来 infection、future movements、future affected tanks 或结果选择 targeted tanks。
+- Use the complete transfer network generated and saved before the outbreak.
+- The MVP uses unweighted normalized node betweenness centrality.
+- For node `v`, calculate the proportion of shortest paths between all other source-target pairs that pass through `v`.
+- Calculate centrality once before the outbreak; do not update it during a run.
+- Ranking ties mean **exactly equal** calculated normalised betweenness values (no tolerance). Prefer the smaller `tank_id` to ensure deterministic selection, and record the sets of tied tanks in run metadata.
+- The network object is immutable after generation (tuple / read-only mapping). The selector may read only the network, `k` and policy seed; it must not receive simulation state.
+- Future infection, future movements, future affected tanks and outcomes must not be used to select targeted tanks.
 
-Weighted 或 dynamic betweenness 不属于 MVP。
+Weighted or dynamic betweenness is outside the MVP.
 
 ## 5. Disease states
 
 | State | Definition | Allowed transition |
 |---|---|---|
-| `S` | 从未感染且可被感染 | `S -> I` |
-| `I` | 当前具有传染性 | `I -> R` |
-| `R` | 已恢复并在本次 run 内免疫 | 无 |
+| `S` | Never infected and susceptible to infection | `S -> I` |
+| `I` | Currently infectious | `I -> R` |
+| `R` | Recovered and immune for the remainder of the run | None |
 
-- 不存在 `I -> S` 或 `R -> S/I`。
-- Newly infected agents 在当日结束时进入 `I`，从下一天开始传播和参与 recovery draw。
+- There is no `I -> S` or `R -> S/I` transition.
+- Newly infected agents enter `I` at the end of the day and begin transmitting and participating in recovery draws the following day.
 
 ## 6. Initialisation
 
 ### 6.1 Population and initial infection
 
-- 200 agents；初始每 tank 10 agents。
-- 初始状态：199 `S`、1 `I`、0 `R`。
-- 使用 epidemic seed 从 200 agents 中均匀选择 initial infected agent。
-- 三种 strategies 在同一 paired block 使用相同 initial agent 和 location。
-- initial location 不根据 centrality 或 future results 选择；只作为诊断变量记录。
+- 200 agents, initially 10 per tank.
+- Initial state: 199 `S`, 1 `I`, 0 `R`.
+- Use the epidemic seed to select the initial infected agent uniformly from the 200 agents.
+- All three strategies use the same initial agent and location within a paired block.
+- The initial location is not selected using centrality or future results; it is recorded only as a diagnostic variable.
 
 ### 6.2 Capacity
 
-主实验中所有 tanks 使用同一 fixed capacity。确切值：**capacity = 12，**Frozen 2026-09-11（D002，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）****。
+All tanks use the same fixed capacity in the main experiment. Exact value: **capacity = 12, Frozen 2026-09-11 (D002; the team adopted the working proposal after Checkpoint 1; see `decision-log.md`)**.
 
-- 理由：initial occupancy = 10 时有有限移动空间。
-- 更高 capacity 会减少 blocked transfers；异质 capacity 会引入混杂，只适合作 sensitivity analysis。
+- Rationale: with initial occupancy = 10, there is limited room for movement.
+- Higher capacity reduces blocked transfers; heterogeneous capacity introduces confounding and is suitable only for sensitivity analysis.
 
 ## 7. Within-tank transmission
 
-Movement stage 后，对 tank `j` 计算当前 infectious count `I_j(t)`。对其中每个 susceptible agent：
+After the movement stage, calculate the current infectious count `I_j(t)` in tank `j`. For each susceptible agent in that tank:
 
 ```text
 P(S -> I) = 1 - (1 - beta) ^ I_j(t)
 ```
 
-这表示每个 infectious agent 对 susceptible agent 产生独立每日感染机会，实现 complete mixing within each tank。
+Each infectious agent contributes an independent daily opportunity to infect a susceptible agent, implementing complete mixing within each tank.
 
-- `beta` 在主实验固定。
-- `I_j(t) = 0` 时感染概率为 0。
-- susceptible agents 独立抽样。
-- Newly infected agents 不在同日继续感染其他 agents。
-- `beta` 的 baseline value 由 pilot 选择，使无干预条件既不总是立即消失，也不总是完全感染；不得为支持假设而挑值。
+- `beta` is fixed in the main experiment.
+- Infection probability is 0 when `I_j(t) = 0`.
+- Draws for susceptible agents are independent.
+- Newly infected agents do not infect other agents on the same day.
+- The pilot selects the baseline value of `beta` so that no-intervention outbreaks do not always die out immediately or always infect everyone; values must not be selected to support the hypothesis.
 
 ## 8. Recovery
 
-- 每个在当日 transmission stage 开始前已为 `I` 的 agent，以固定每日概率 `gamma` 转为 `R`。
-- Recovery 在 transmission calculation 后抽样，因此 agent 在恢复当天仍可传播。
-- Newly infected agents 当天不参与 recovery draw。
-- `gamma` 在主实验固定，具体值由 pilot 确定并记录。
+- Each agent already in `I` before the day's transmission stage changes to `R` with fixed daily probability `gamma`.
+- Recovery is sampled after transmission is calculated, so an agent can still transmit on the day it recovers.
+- Newly infected agents do not participate in recovery draws on the same day.
+- `gamma` is fixed in the main experiment; its value is determined by the pilot and recorded.
 
 ## 9. Cross-tank movement
 
 ### 9.1 Transfer-rate definition
 
-`cross-tank transfer rate` 是每个 agent 每天尝试一次跨缸移动的概率 `mu`。
+The `cross-tank transfer rate` is the probability `mu` that each agent attempts one cross-tank movement per day.
 
 ### 9.2 Eligibility and update
 
-agent 只有在 origin tank 为 `open`，且至少一个相邻 tank 为 `open` 并有 spare capacity 时才能完成移动。
+An agent can complete a movement only if its origin tank is `open` and at least one neighbouring tank is `open` with spare capacity.
 
-- 当日开始时，每个 agent 取得 event-keyed movement draw；按 draw 升序（精确相同时按 `agent_id` 升序）形成 randomized asynchronous processing order。
-- 同一个 movement draw 小于 `mu` 时记为一次 attempt；每个 agent 每天最多一次 attempt。
-- 处理 attempt 时即时检查 origin、相邻 tank 的 management state 和 capacity；origin 被隔离或没有合格 destination 时记为 blocked。
-- 将合格 neighbouring tank 按 `tank_id` 升序排列，并使用该 agent 当日的 `movement_destination` draw 均匀选择一个 destination。
-- 接受后立即更新 location 和两个 tanks 的 occupancy。
-- 无合格 destination 时留在原 tank，并记录 blocked/no-destination event。
-- disease state 不影响 movement probability；这是明确的模型简化。
+- At the start of each day, every agent receives an event-keyed movement draw. Ascending draw order (ascending `agent_id` for exact ties) defines the randomized asynchronous processing order.
+- An attempt is recorded when that same movement draw is less than `mu`; each agent makes at most one attempt per day.
+- When processing an attempt, immediately check the origin and neighbouring tanks' management states and capacities. Record the attempt as blocked if the origin is quarantined or no destination is eligible.
+- Sort eligible neighbouring tanks by ascending `tank_id` and use the agent's `movement_destination` draw for that day to select a destination uniformly.
+- On acceptance, immediately update the location and both tanks' occupancies.
+- If no destination is eligible, the agent stays in its original tank and a blocked/no-destination event is recorded.
+- Disease state does not affect movement probability; this is an explicit model simplification.
 
 ## 10. Capacity constraint
 
-- 任何时刻 `occupancy(tank) <= capacity(tank)`。
-- movement 使用当前 occupancy 即时检查。
-- 不允许暂时超容量再事后修正。
-- 初始化必须满足 capacity。
+- At all times, `occupancy(tank) <= capacity(tank)`.
+- Movement checks the current occupancy immediately.
+- Temporarily exceeding capacity and correcting it afterwards is prohibited.
+- Initialisation must respect capacity.
 
 ## 11. Response delay and quarantine trigger
 
-MVP 不建立 detection process。工作定义：
+The MVP does not model a detection process. Working definition:
 
 ```text
 response delay d = intervention activation day measured from outbreak introduction at t = 0
 ```
 
-- `d = 0`：第一个 movement stage 前激活。
-- `d > 0`：day `d` 的 movement stage 前激活。
-- intervention 只触发一次。
+- `d = 0`: activate before the first movement stage.
+- `d > 0`: activate before the movement stage on day `d`.
+- The intervention triggers only once.
 
-实现中的 day `0` 是不执行 movement 的初始快照，第一个 movement stage 记录为 day `1`。因此实际记录的 `intervention_start_day = max(1, d)`；`d = 0` 和 `d = 1` 都在第一个 movement stage 前激活。主实验 delay levels 不应同时包含这两个语义重复的值。
+In the implementation, day `0` is the initial snapshot with no movement; the first movement stage is recorded as day `1`. The recorded value is therefore `intervention_start_day = max(1, d)`; both `d = 0` and `d = 1` activate before the first movement stage. Main-experiment delay levels should not include both of these semantically duplicate values.
 
-**Delay 起点：从 outbreak introduction（`t = 0`）计算，**Frozen 2026-09-11（D001，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）**。** 替代方案 first observed infection 需要 observation model 或额外 detection assumption，会扩大范围；本项目把 delay 解释为 detection plus administrative response 的合并抽象。
+**Delay origin: measured from outbreak introduction (`t = 0`), Frozen 2026-09-11 (D001; the team adopted the working proposal after Checkpoint 1; see `decision-log.md`).** The alternative, first observed infection, requires an observation model or an additional detection assumption and would expand the scope. This project interprets delay as a combined abstraction of detection and administrative response.
 
-被选 tanks 在 `[start_day, start_day + D)` 为 `quarantined`，day `start_day + D` 恢复 `open`。Duration `D` 在主实验固定，具体值为 **Candidate value, frozen after pilot（D004，issue #4）**。语义（half-open interval、只触发一次、按 tank-days 计 cost）已冻结；实现时 `D` 是普通配置数值，在 config 中标注 provisional。
+Selected tanks are `quarantined` during `[start_day, start_day + D)` and return to `open` on day `start_day + D`. The main experiment fixes **`D=14` (D004, selected 2026-10-06)**. Of the 7/14/21-day candidates, only 14 meets Q1-Q3; the criterion table was reproduced on 2026-10-08. See `decision-log.md` for the alternatives, post-hoc Q1 qualifications and pending Member B confirmation. The half-open interval, one-time trigger and tank-day cost are unchanged. The implementation's provisional-field list is empty for the formal experiment; that metadata does not establish team sign-off.
 
 ## 12. Intervention strategies
 
-设 intervention 隔离 `k` 个 tanks，持续 `D` days。
+An intervention quarantines `k` tanks for `D` days.
 
 ### No intervention
 
-- 不改变 tank states；cost = 0。
-- response delay 无实际作用。报告可在同一 transfer/network/epidemic block 内共享 baseline，避免重复相同 runs。
+- Tank states do not change; cost = 0.
+- Response delay has no effect. Reporting may share a baseline within the same transfer/network/epidemic block to avoid duplicating identical runs.
 
 ### Random tank quarantine
 
-- 从 20 tanks 中均匀、无放回选 `k` 个。
-- 选择只用 `policy_seed`，不读取 infection state 或 future movement。
-- run 开始时生成并记录选择，response day 才激活。
+- Select `k` of the 20 tanks uniformly without replacement.
+- Selection uses only `policy_seed`; it does not read infection state or future movement.
+- Generate and record the selection at the start of the run, but activate it only on the response day.
 
 ### Highest-betweenness tank quarantine
 
-- 根据 outbreak 前 network 的 betweenness 排名选前 `k` 个。
-- ties 按 `tank_id` 升序。
-- 不使用 epidemic state 或 future information。
-- 与 random strategy 同日开始并持续同一 `D`。
+- Select the top `k` tanks by betweenness in the pre-outbreak network.
+- Break ties by ascending `tank_id`.
+- Do not use epidemic state or future information.
+- Start on the same day as the random strategy and use the same duration `D`.
 
 ### Budget fairness
 
-Random 和 targeted strategies 必须具有相同 `k`、start day、`D`、network instance、epidemic seed、disease parameters 和 movement parameters。唯一主要区别是 tank selection method。
+Random and targeted strategies must use the same `k`, start day, `D`, network instance, epidemic seed, disease parameters and movement parameters. Their only main difference is the tank selection method.
 
 ```text
 intervention cost = number of quarantined tanks × quarantine duration
                   = k × D tank-days
 ```
 
-`k`：**2 个 tanks，Frozen 2026-09-11（D003，见 `decision-log.md`）**。理由：避免 intervention 覆盖大部分 20-node 网络。
+`k`: **2 tanks, Frozen 2026-09-11 (D003, see `decision-log.md`)**. Rationale: avoid an intervention covering most of the 20-node network.
 
 ## 13. Daily update order
 
-1. **Management update**：按 response delay 激活或按 duration 解除 quarantine。
-2. **Movement stage**：randomized asynchronous movement；quarantine 和 capacity 即时生效。
-3. **Transmission snapshot**：冻结 movement 后 membership 和 disease states。
-4. **Transmission draws**：生成 pending `S -> I` transitions。
-5. **Recovery draws**：为 snapshot 中原有 `I` 生成 pending `I -> R` transitions。
-6. **Synchronous disease commit**：同时应用 infection and recovery transitions。
-7. **Record outputs**。
-8. **Check stopping condition**。
+1. **Management update**: activate quarantine according to response delay or release it according to duration.
+2. **Movement stage**: randomized asynchronous movement; quarantine and capacity apply immediately.
+3. **Transmission snapshot**: freeze post-movement membership and disease states.
+4. **Transmission draws**: generate pending `S -> I` transitions.
+5. **Recovery draws**: generate pending `I -> R` transitions for agents already in `I` in the snapshot.
+6. **Synchronous disease commit**: apply infection and recovery transitions simultaneously.
+7. **Record outputs**.
+8. **Check stopping condition**.
 
-因此 movement 为 randomized asynchronous，disease updates 为 synchronous。该顺序在主实验固定；若时间允许，可做小规模 update-order sensitivity analysis。
+Movement is therefore randomized asynchronous, while disease updates are synchronous. This order is fixed in the main experiment; a small update-order sensitivity analysis may be conducted if time permits.
 
 ## 14. Stopping conditions
 
-正常停止条件为第一次出现：
+Normal stopping occurs at the first observation of:
 
 ```text
 total infected population I(t) = 0
 ```
 
-安全 horizon `max_days`：**365 days，**Frozen 2026-09-11（D006，Checkpoint 1 后组内采纳 working proposal，见 `decision-log.md`）****。达到 horizon 仍有 infection 时：
+Safety horizon `max_days`: **365 days, Frozen 2026-09-11 (D006; the team adopted the working proposal after Checkpoint 1; see `decision-log.md`)**. If infection remains at the horizon:
 
-- 标记 `censored_max_days`；
-- 不伪造 extinction time；
-- 保留完整记录；
-- 在 time-to-extinction 分析中单独处理。
+- Mark the run `censored_max_days`;
+- Do not fabricate an extinction time;
+- Retain the complete record;
+- Handle it separately in time-to-extinction analysis.
 
-非法状态、不变量失败或异常以 `failed` 结束，不算正常 extinction。
+An invalid state, invariant failure or exception ends the run as `failed`, not as normal extinction.
 
 ## 15. Output recording rules
 
 ### 15.1 Daily outputs
 
-- day；S/I/R population；
-- 每个 tank 的 occupancy、S/I/R 和 management state；
-- attempted、accepted、blocked transfers；
-- new infections、recoveries 和 current affected tanks。
+- day; S/I/R population;
+- occupancy, S/I/R and management state for each tank;
+- attempted, accepted and blocked transfers;
+- new infections, recoveries and current affected tanks.
 
 ### 15.2 Run metadata
 
-- complete configuration and code commit；
-- network、epidemic、policy seeds；
-- network attempt index、adjacency list 和 centralities；
-- selected tanks、start day、duration、budget；
-- run status、stop reason 和 error details。
+- complete configuration and code commit;
+- network, epidemic and policy seeds;
+- network attempt index, adjacency list and centralities;
+- selected tanks, start day, duration and budget;
+- run status, stop reason and error details.
 
 ### 15.3 Metrics
 
 | Metric | Definition | Research link |
 |---|---|---|
-| Final attack rate | `ever_infected agents / 200`，包含 initial case | primary final outbreak size |
-| Number of affected tanks | run 中曾至少出现一个 `I` agent 的不同 tanks 数，包含 initial tank | primary cross-tank spread |
-| Peak infected population | 包含 `t=0` 的 daily snapshots 中最大 `I(t)` | outbreak burden/dynamics |
-| Time to extinction | 从 `t=0` 到 first `I(t)=0`；censored 不填虚值 | outbreak duration |
-| Time to peak | 第一次达到 peak 的 day | auxiliary dynamics |
+| Final attack rate | `ever_infected agents / 200`, including the initial case | primary final outbreak size |
+| Number of affected tanks | Number of distinct tanks that have contained at least one `I` agent during the run, including the initial tank | primary cross-tank spread |
+| Peak infected population | Maximum `I(t)` across daily snapshots, including `t=0` | outbreak burden/dynamics |
+| Time to extinction | Time from `t=0` to the first `I(t)=0`; do not insert fictitious values for censored runs | outbreak duration |
+| Time to peak | First day the peak is reached | auxiliary dynamics |
 | Intervention cost | `k × D` tank-days | fairness/resource use |
 | Relative reduction vs random | `(Y_random - Y_targeted) / Y_random` | secondary comparison |
 
-若 `Y_random = 0`，relative reduction 记为 undefined，而不是 0。
+If `Y_random = 0`, record relative reduction as undefined, not 0.
 
 ## 16. Random-number and seed management
 
 | Seed | Controls |
 |---|---|
 | `network_seed` | topology and regeneration attempts |
-| `epidemic_seed` | initial case、movement、transmission、recovery（event-keyed，见下） |
+| `epidemic_seed` | initial case, movement, transmission, recovery (event-keyed; see below) |
 | `policy_seed` | random quarantine selection only |
 
-为保持 paired comparison，epidemic randomness 使用 **event-keyed draws**（2026-09-11 决定，取代"独立 substreams"方案；实现见 `turtlefarm/rng.py`）：
+To preserve paired comparisons, epidemic randomness uses **event-keyed draws** (decided on 2026-09-11, replacing the "independent substreams" proposal; see `turtlefarm/rng.py` for the implementation):
 
-- 对每个 process ∈ {movement, movement_destination, transmission, recovery}，每天 `t` 由 `SeedSequence(epidemic_seed, spawn_key=(process, t))` 派生一个 generator，生成长度为 `n_agents` 的 uniform 数组；agent `a` 在该 process、该天消耗的 draw 固定是数组第 `a` 位。
-- movement draw 同时作为 agent 当日的 processing priority 和 attempt draw；`movement_destination` draw 通过 `floor(u × m)` 映射到按 `tank_id` 排序的 `m` 个当前合格 destinations。此约定避免增加第三条随机流，并完全规定 asynchronous movement 的 replay 行为。
-- 因此 `(process, day, agent)` 的 draw 只依赖 epidemic seed，不依赖当天有多少 agent 被暴露、也不依赖之前的历史。某策略避免了一次暴露，不会使其他 agent 或之后任何一天的 draw 错位。
-- 独立 substreams（每个 process 一个顺序流）不满足这一性质：暴露集合改变会使同一流的 draw index 漂移，random 与 targeted 策略名义配对、实际不配对。
-- Initialisation 使用单独的 `spawn_key=(0,)` generator，只在选 initial case 时消耗一次；policy seed 单独成流，只用于 random tank selection。
-- 暴露判断本身不消耗 draw：`S` agent 在同缸 `I_j = 0` 时不读取 transmission draw；当天新感染者不读取 recovery draw。
-- Draw source 是可替换接口：hand trace 用显式 draw 表（`TableDraws`）替代 seed 派生，表中缺失的 draw 一旦被读取即失败，用于证明"未被消耗"的规则。
+- For each process ∈ {movement, movement_destination, transmission, recovery}, derive a generator on each day `t` using `SeedSequence(epidemic_seed, spawn_key=(process, t))` and generate a uniform array of length `n_agents`. Agent `a` always consumes array entry `a` for that process and day.
+- The movement draw serves as both the agent's processing priority and attempt draw for that day. The `movement_destination` draw maps via `floor(u × m)` to the `m` currently eligible destinations sorted by `tank_id`. This convention avoids adding a third random stream and fully specifies replay behaviour for asynchronous movement.
+- The draw for `(process, day, agent)` therefore depends only on the epidemic seed, not on how many agents are exposed that day or on prior history. A policy preventing one exposure does not shift the draws for other agents or later days.
+- Independent substreams (one sequential stream per process) do not have this property: changing the exposed set shifts draw indices within a stream, making random and targeted strategies paired in name only.
+- Initialisation uses a separate `spawn_key=(0,)` generator, consumed once when selecting the initial case. The policy seed has its own stream, used only for random tank selection.
+- Checking exposure does not itself consume a draw: an `S` agent does not read a transmission draw when `I_j = 0` in its tank, and newly infected agents do not read a recovery draw that day.
+- The draw source is a replaceable interface. The hand trace replaces seed derivation with an explicit draw table (`TableDraws`); reading a draw missing from the table fails immediately, testing the rules for draws that must not be consumed.
 
-相同 configuration 和 seeds 必须得到相同结果。
+Identical configurations and seeds must produce identical results.
 
 ## 17. Prohibition on future information
 
-Intervention selection 禁止使用 future infection states、future transfers、future affected tanks、final metrics 或 run 中重算的 disease-informed centrality。Targeted selection 只使用 pre-outbreak fixed network；random selection 只使用 policy seed。
+Intervention selection must not use future infection states, future transfers, future affected tanks, final metrics or disease-informed centrality recalculated during the run. Targeted selection uses only the fixed pre-outbreak network; random selection uses only the policy seed.
 
 ## 18. Decision status and two-layer freeze rule
 
 | ID | Item | Status | Value / rule |
 |---|---|---|---|
-| D001 | Response-delay origin | Frozen 2026-09-11 | From introduction at `t = 0`（§11） |
-| D002 | Fixed capacity | Frozen 2026-09-11 | 12（§6.2） |
-| D003 | Quarantined tank count `k` | Frozen 2026-09-11 | 2（§12） |
-| D004 | Quarantine duration `D` | Semantics frozen；value after pilot | §11；issue #4 |
-| D005 | `p_in` / `p_out` / acceptance thresholds | Algorithm frozen；values after structural pilot | §3；issue #5 |
-| D006 | `max_days` | Frozen 2026-09-11 | 365（§14） |
-| D007 | No-intervention reporting | Frozen 2026-09-11 | Shared baseline per block（experiment-plan §3） |
-| D008 | Headline outcome | Frozen 2026-09-11 | Attack rate + affected tanks co-primary（§15.3） |
+| D001 | Response-delay origin | Frozen 2026-09-11 | From introduction at `t = 0` (§11) |
+| D002 | Fixed capacity | Frozen 2026-09-11 | 12 (§6.2) |
+| D003 | Quarantined tank count `k` | Frozen 2026-09-11 | 2 (§12) |
+| D004 | Quarantine duration `D` | Selected 2026-10-06; Member B confirmation pending | 14 days; §11; issue #4 |
+| D005 | `p_in` / `p_out` / acceptance thresholds | Selected 2026-10-06; confirmation and expanded-audit C4 limitation pending | 0.6 / 0.05; unchanged runtime checks in §3; issue #5 |
+| D006 | `max_days` | Frozen 2026-09-11 | 365 (§14) |
+| D007 | No-intervention reporting | Frozen 2026-09-11 | Shared baseline per block (experiment-plan §3) |
+| D008 | Headline outcome | Frozen 2026-09-11 | Attack rate + affected tanks co-primary (§15.3) |
 
-**两层冻结规则（2026-09-11 起生效，取代原"所有决定必须在代码实现前冻结"）：**
+**Two-layer freeze rule (effective from 2026-09-11, replacing the requirement that "all decisions must be frozen before code implementation"):**
 
-1. **语义冻结（实现前）**：状态定义、更新顺序、传播/恢复/移动/隔离规则、seed 派生方式、输出字段。以上全部已冻结。M2 实现只能依据本文件，不得在实现中另作语义选择。
-2. **数值冻结（正式实验前）**：`beta`、`gamma`、`D`、`p_in`/`p_out`、transfer-rate levels、delay levels、replication counts 在 19-25 Sep pilot 后冻结，记录在 `decision-log.md` 和 experiment config。在此之前这些字段是普通配置数值，由代码自动标注为 provisional 并写入 run metadata；pilot 结果不作为假设证据。
+1. **Semantic freeze (before implementation)**: state definitions, update order, transmission/recovery/movement/quarantine rules, seed derivation and output fields. All are frozen. M2 implementation must follow this document without making additional semantic choices.
+2. **Numerical freeze (before formal experiments)**: `beta`, `gamma`, `D`, `p_in`/`p_out`, transfer-rate levels, delay levels and replication counts are frozen after the 19-25 Sep pilot and recorded in `decision-log.md` and the experiment config. Until then, these fields are ordinary configuration values, automatically marked provisional by the code and written to run metadata; pilot results are not hypothesis evidence.
 
-任何语义变更仍按 `consistency-review.md` §6 触发跨文档更新。
+Any semantic change still triggers cross-document updates under `consistency-review.md` §6.
+
+The rule above records the intended workflow. The pilot actually ran in October before Member B signed the protocol, and the 30-seed structural follow-up was completed after the formal experiment. These departures remain in the decision log; current documentation does not backdate approval or move the checks before execution.

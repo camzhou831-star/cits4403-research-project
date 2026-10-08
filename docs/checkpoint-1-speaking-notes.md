@@ -1,5 +1,7 @@
 # Checkpoint 1 Speaking Notes
 
+Historical speaking notes. References to decisions still awaiting the pilot describe Checkpoint 1, not current progress. The completed formal experiment uses `D=14`, `p_in=0.6` and `p_out=0.05`; the [decision log](decision-log.md) records the evidence, pending confirmations and retrospective network-audit limitation. The original script is retained below.
+
 Approximate speaking time: 3-4 minutes. Leave the remaining meeting time for facilitator questions.
 
 ## Speaker A

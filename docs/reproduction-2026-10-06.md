@@ -35,7 +35,7 @@ Runtimes on this machine were 33 s, 41 s and 111 s for the three pilot stages, a
 1. **Crash in `analyse_results.py formal` (fixed).** Figure 2 raised `'yerr' must not contain negative values`. When every value in a cell is identical, for example one affected tank at transfer rate 0, the cluster-bootstrap bound can differ from the mean by about 1e-16. That made the error-bar length slightly negative.
 
    - **How it was missed.** The crash first occurred during the round-2 review fixes. It went unnoticed because the command's output was filtered through `grep`, which hid the traceback.
-   - **Effect.** In the committed `results/analysis/formal/` (the crossed-seed run, used only in report §3.5), figures 2-3 were stale and three summary files were missing. The tables used by the report were written before the crash and are correct.
+   - **Effect.** In the committed `results/analysis/formal/` (the crossed-seed run, used only in report Appendix D), figures 2-3 were stale and three summary files were missing. The tables used by the report were written before the crash and are correct.
    - **Fix.** Error-bar lengths are clipped at 0. A regression test was added that fails without the fix. All outputs were regenerated.
    - **Not affected.** `formal-nested`, the reported experiment.
 

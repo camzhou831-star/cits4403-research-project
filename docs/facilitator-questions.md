@@ -1,6 +1,6 @@
 # Facilitator Questions
 
-按 meeting 优先级排列。建议先说明当前 working decision，再请 facilitator 判断。
+Ordered by meeting priority. State the current working decision before asking for the facilitator's assessment.
 
 ## Project suitability
 
@@ -65,10 +65,10 @@ cost = number of quarantined tanks × quarantine duration
 
 ## Decisions to record immediately after meeting
 
-- response-delay definition；
-- primary headline metric；
-- independent-investigation adequacy；
-- network and centrality scope；
-- quarantine count/duration guidance；
-- expected replication/statistical evidence；
-- any newly released rubric/submission requirements。
+- response-delay definition;
+- primary headline metric;
+- independent-investigation adequacy;
+- network and centrality scope;
+- quarantine count/duration guidance;
+- expected replication/statistical evidence;
+- any newly released rubric/submission requirements.

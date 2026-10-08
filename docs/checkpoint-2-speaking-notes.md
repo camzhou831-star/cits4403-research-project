@@ -1,30 +1,30 @@
 # Checkpoint 2 Speaking Notes
 
-Status：draft 2026-09-20，Member A 起草；Member B 的 sections（8-16）来自组内讲稿，待 Member B 确认或修改。
+Status: draft 2026-09-20, drafted by Member A; Member B's sections (8-16) come from the team's speaking script and await Member B's confirmation or revision.
 
-汇报内容：模型主要组件、实验计划、当前进展、问题和下一步。总时长约 8-10 分钟，每人 4-5 分钟，中间只交接一次。
+Coverage: main model components, experiment plan, current progress, issues and next steps. Total duration is about 8-10 minutes, with 4-5 minutes per member and one handover.
 
-> 官方 Checkpoint 2 要求和 rubric 在仓库中没有记录（README “Current stage and gates” 第 5 条）。会前在 LMS 核对一次；若要求不同，先改本文件。
+> The official Checkpoint 2 requirements and rubric are not recorded in the repository (README, "Current stage and gates", item 5). Check the LMS before the meeting; if the requirements differ, update this file first.
 
-行号核对基准：`main` @ `37a7fe3` 之后 `turtlefarm/config.py`、`entities.py`、`network.py`、`model.py`、`docs/experiment-plan.md` 和 README 第 1-37 行均未改动。在 GitHub 网页上打开文件后按 `y` 可把链接固定到当前 commit。
+Line-number reference: `turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md` and README lines 1-37 have not changed since `main` @ `37a7fe3`. After opening a file on GitHub, press `y` to pin the link to the current commit.
 
-## 会前检查
+## Before the meeting
 
 ```bash
-git switch main && git pull          # 本地落后时行号会对不上
-python -m pytest -q                  # 记下通过数，Section 10 要念
-python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
+git switch main && git pull          # Line numbers will differ if the local checkout is behind.
+python -m pytest -q                  # Note the passing test count to read in Section 10.
+python scripts/demo_checkpoint2.py   # Confirm the demo runs; about 1 second.
 ```
 
-提前打开的 tabs：`README.md`（网页上用 `?plain=1` 才显示行号）、`turtlefarm/config.py`、`entities.py`、`network.py`、`model.py`、`docs/experiment-plan.md`、一个已进入仓库目录并激活 `.venv` 的终端。
+Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show line numbers), `turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md`, and a terminal in the repository directory with `.venv` activated.
 
 ---
 
-# Member A — Cam（Sections 1-7）
+# Member A — Cam (Sections 1-7)
 
-## 1. 开场与研究问题（约 40 秒）
+## 1. Opening and research questions (about 40 seconds)
 
-**Show：** `README.md` 第 20-37 行（第 20-27 行是中文，主要停在第 29-37 行的英文研究问题）。
+**Show:** `README.md` lines 20-37 (lines 20-27 are in Chinese; focus on the English research questions in lines 29-37).
 
 > Good morning. Today we will show our model, our experiment plan, our progress, and our open issues.
 >
@@ -36,25 +36,25 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > Our second question is: with the same budget, is it better to quarantine the high-betweenness tanks, or random tanks?
 
-## 2. 仓库结构（约 20 秒）
+## 2. Repository structure (about 20 seconds)
 
-**Show：** 仓库首页，依次指 `turtlefarm`、`scripts`、`tests`、`docs`。
+**Show:** The repository home page, pointing to `turtlefarm`, `scripts`, `tests` and `docs` in order.
 
 > The repository has four parts. `turtlefarm` is the model code. `scripts` has demos and checking tools. `tests` checks that the code is correct. `docs` has the model specification, the experiment plan, and our decisions.
 >
 > I will start with the model code.
 
-## 3. 参数（约 60 秒）
+## 3. Parameters (about 60 seconds)
 
-**Show：** `turtlefarm/config.py` 第 13 行。
+**Show:** `turtlefarm/config.py` line 13.
 
 > We have three strategies: no quarantine, random quarantine, and highest-betweenness quarantine.
 
-**Show：** 第 17-26 行。
+**Show:** Lines 17-26.
 
 > The system has 200 turtles, 20 tanks, 4 regions, and one infected turtle at the start. Each tank starts with 10 turtles and can hold 12. The quarantine picks 2 tanks. A run stops after 365 days at most.
 
-**Show：** 第 46-71 行。
+**Show:** Lines 46-71.
 
 > Beta is the chance of infection inside a tank. Gamma is the chance of recovery each day.
 >
@@ -64,13 +64,13 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > The three seeds make every run repeatable.
 
-**Show：** 第 78 行（`PROVISIONAL_FIELDS`）。
+**Show:** Line 78 (`PROVISIONAL_FIELDS`).
 
 > Some values are not final yet: beta, gamma, quarantine duration, `p_in` and `p_out`. We will fix them after the pilot, not from one demo run.
 
-## 4. Agent 和 Tank（约 25 秒）
+## 4. Agent and Tank (about 25 seconds)
 
-**Show：** `turtlefarm/entities.py` 第 7-31 行。
+**Show:** `turtlefarm/entities.py` lines 7-31.
 
 > This file defines our two entities.
 >
@@ -78,25 +78,25 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > A tank knows its region, its capacity, whether it is open or quarantined, when the quarantine starts and ends, and which turtles are inside.
 
-## 5. 网络（约 50 秒）
+## 5. Network (about 50 seconds)
 
-**Show：** `turtlefarm/network.py` 顶部。
+**Show:** The top of `turtlefarm/network.py`.
 
 > Tanks are the nodes of a fixed network. A link means turtles can move between those two tanks.
 >
 > Links are common inside a region and rare between regions. So the network has clusters, and a few tanks act as bridges between regions.
 
-**Show：** 第 51-69 行（`structural_rejection_reason`）。
+**Show:** Lines 51-69 (`structural_rejection_reason`).
 
 > We reject a network if it is not connected, if it has no link between regions, if every tank is linked to every other tank, or if all tanks have the same betweenness. These checks make sure that "bridge tank" really means something.
 
-**Show：** 第 127-132 行（`ranking` / `top_k`）。
+**Show:** Lines 127-132 (`ranking` / `top_k`).
 
 > We rank tanks by betweenness before the outbreak starts. The targeted strategy takes the top `k`. It only uses the network. It never uses information about the future outbreak.
 
-## 6. 每日运行规则（约 90 秒）
+## 6. Daily update rules (about 90 seconds)
 
-**Show：** `turtlefarm/model.py` 第 429-443 行（`step()`），逐行指第 431-437 行。
+**Show:** `turtlefarm/model.py` lines 429-443 (`step()`), pointing to lines 431-437 one by one.
 
 > This function is one simulated day.
 >
@@ -104,7 +104,7 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > The `run()` method below just calls `step()` again and again, until no turtle is infectious or we reach the maximum number of days.
 
-**Show：** 第 224-275 行（`_movement_stage`），可指第 244 行和第 254-259 行。
+**Show:** Lines 224-275 (`_movement_stage`); you can point to line 244 and lines 254-259.
 
 > For movement, each turtle gets a random number. If it is smaller than the transfer rate, the turtle tries to move.
 >
@@ -112,7 +112,7 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > If the turtle's own tank is quarantined, or there is no valid destination, the move is blocked.
 
-**Show：** 第 277-307 行（`_transmission_and_recovery`），指第 296 行 `p = 1.0 - (1.0 - cfg.beta) ** i_j`。
+**Show:** Lines 277-307 (`_transmission_and_recovery`), pointing to line 296, `p = 1.0 - (1.0 - cfg.beta) ** i_j`.
 
 > For infection and recovery, we first take a snapshot of who is infectious today.
 >
@@ -122,17 +122,17 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > Because we use the snapshot, a turtle infected today cannot infect others or recover until tomorrow.
 
-## 7. 交接
+## 7. Handover
 
 > That is how the model is built and how one day works. Wenhao will now explain the quarantine strategies, the outputs, the tests, the experiment plan, and our progress.
 
 ---
 
-# Member B — Wenhao（Sections 8-16）
+# Member B — Wenhao (Sections 8-16)
 
-## 8. 隔离策略
+## 8. Quarantine strategies
 
-**Show：** `turtlefarm/model.py` 第 173-187 行。
+**Show:** `turtlefarm/model.py` lines 173-187.
 
 > I will first explain how the intervention strategies are implemented.
 >
@@ -142,7 +142,7 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > Under the targeted strategy, it selects the `k` tanks with the highest pre-outbreak betweenness centrality.
 
-**Show：** 第 194-216 行。
+**Show:** Lines 194-216.
 
 > At the start of each simulated day, the model updates the management state.
 >
@@ -150,9 +150,9 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > Quarantine prevents movement into and out of the selected tanks. However, transmission can still occur among turtles already inside the same tank.
 
-## 8b. 功能演示（约 30 秒）
+## 8b. Functionality demo (about 30 seconds)
 
-**Do：** 在终端运行 `python scripts/demo_checkpoint2.py`，指 “PAIRED STRATEGY COMPARISON” 表和 “BETWEENNESS QUARANTINE TIMELINE”。
+**Do:** Run `python scripts/demo_checkpoint2.py` in the terminal and point to the "PAIRED STRATEGY COMPARISON" table and "BETWEENNESS QUARANTINE TIMELINE".
 
 > This script runs the three strategies on the same network and the same epidemic seed.
 >
@@ -160,23 +160,23 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > This is a single seeded run. It shows that the components work together. It is not a scientific result, and we do not draw any conclusion about the strategies from it.
 
-不要念或解读表中的 attack rate 数值；若被问到，重复最后一句。
+Do not read out or interpret the attack rate values in the table; if asked, repeat the last sentence.
 
-## 9. 结果记录
+## 9. Result recording
 
-**Show：** `turtlefarm/model.py` 第 33 行（`DailyRecord`）。
+**Show:** `turtlefarm/model.py` line 33 (`DailyRecord`).
 
 > The model records a daily result containing the S, I, and R counts, new infections, recoveries, attempted movements, accepted movements, blocked movements, affected tanks, and per-tank states.
 
-**Show：** 第 495-514 行（`compute_metrics`）。
+**Show:** Lines 495-514 (`compute_metrics`).
 
 > At the end of a run, it calculates final attack rate, number of affected tanks, peak infected population, time to peak, time to extinction, total simulated days, and intervention cost.
 >
 > These are the measurements required for our later experiment.
 
-## 10. 验证和测试
+## 10. Validation and testing
 
-**Show：** Explorer 中展开 `tests/`。
+**Show:** Expand `tests/` in Explorer.
 
 > The tests are not the formal experiment. They verify that the implementation follows the model specification.
 >
@@ -186,13 +186,13 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > The current test suite contains [N] passing tests.
 
-`[N]` 以会前 `python -m pytest -q` 的输出为准：`main` @ `37a7fe3` 为 111；issue #30 合入后为 136。若 facilitator 要求证明，现场运行并说：
+Use the output of `python -m pytest -q` before the meeting for `[N]`: it is 111 at `main` @ `37a7fe3`, and 136 after issue #30 is merged. If the facilitator asks for evidence, run it live and say:
 
 > All tests pass. This supports implementation correctness, but it is not evidence for our research hypothesis.
 
-## 11. 实验计划
+## 11. Experiment plan
 
-**Show：** `docs/experiment-plan.md` 第 9-18 行。
+**Show:** `docs/experiment-plan.md` lines 9-18.
 
 > Our formal experiment varies three independent variables.
 >
@@ -204,15 +204,15 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > The final numerical levels will be selected after the pilot.
 
-**Show：** 第 51-68 行。
+**Show:** Lines 51-68.
 
 > Our two primary outcomes are final attack rate and the number of affected tanks.
 >
 > Supporting outcomes include peak infected population and time to extinction. We will also record intervention cost and paired differences between random and targeted quarantine.
 
-## 12. 重复实验和公平比较
+## 12. Replication and fair comparison
 
-**Show：** 第 70-109 行。
+**Show:** Lines 70-109.
 
 > Because this is a stochastic model, one run is not enough.
 >
@@ -224,9 +224,9 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > This allows us to use paired comparisons.
 
-## 13. Pilot 计划
+## 13. Pilot plan
 
-**Show：** 第 111-141 行；若 issue #30 已合入，再打开 `docs/pilot-protocol.md` §3 的标准表。
+**Show:** Lines 111-141; if issue #30 has been merged, also open the criteria table in `docs/pilot-protocol.md` §3.
 
 > Before the formal experiment, we will run a pilot.
 >
@@ -238,19 +238,19 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > The formal experiment is expected to use at least ten network seeds and five epidemic seeds per network. The final number will depend on runtime and observed variance.
 
-## 14. 当前进展
+## 14. Current progress
 
-**Show：** `README.md` 第 14-18 行。
+**Show:** `README.md` lines 14-18.
 
 > Our current progress is as follows.
 >
 > We have implemented the baseline SIR model, modular network generation, network-constrained movement, quarantine strategies, daily recording, stopping rules, and reproducible random draws. These components are on the main branch and the test suite passes.
 >
-> This week we also implemented the batch experiment runner, which writes one raw record per run in a fixed schema, and we drafted the pilot protocol. [若 issue #30 尚未合入，改说 "are under review in a pull request"。]
+> This week we also implemented the batch experiment runner, which writes one raw record per run in a fixed schema, and we drafted the pilot protocol. [If issue #30 has not yet been merged, say "are under review in a pull request" instead.]
 >
 > The pilot itself, final parameter freezing, the formal experiment, statistical analysis, and final figures have not yet been completed.
 
-## 15. 遇到的问题
+## 15. Issues encountered
 
 > We have encountered three main issues.
 >
@@ -262,9 +262,9 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 >
 > Therefore, Issues 4 and 5 remain open intentionally. Closing them before the pilot would mean choosing values without sufficient evidence.
 
-若被问到协作流程：`collaboration-plan.md` §8 如实记录了 PR #27、#29 没有跨成员 review 记录，以及补救措施。
+If asked about the collaboration process: `collaboration-plan.md` §8 records that PR #27 and #29 have no cross-member review records, along with the remedial actions.
 
-## 16. 下一步和结尾
+## 16. Next steps and closing
 
 > Our next step is to confirm the pilot criteria together, run the pilot, and record all candidate settings, including the ones we reject.
 >
@@ -278,19 +278,19 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 
 ---
 
-# 问答分工
+# Question-and-answer responsibilities
 
-| Member A（Cam） | Member B（Wenhao） |
+| Member A (Cam) | Member B (Wenhao) |
 |---|---|
-| 为什么使用 ABM | 三种隔离策略 |
-| 网络如何生成；`p_in` / `p_out` | 为什么比较 random 和 targeted |
-| Betweenness centrality | 公平预算 |
-| 移动规则 | network / epidemic / policy seeds |
-| 感染公式 | 重复实验数量 |
-| 每日更新顺序 | Pilot 目的；输出指标 |
-| 为什么新感染者当天不康复 | 为什么 issues #4、#5 仍然开放；当前进展和下一步 |
+| Why use an ABM | The three quarantine strategies |
+| Network generation; `p_in` / `p_out` | Why compare random and targeted quarantine |
+| Betweenness centrality | Equal budgets |
+| Movement rules | network / epidemic / policy seeds |
+| Infection formula | Number of replicates |
+| Daily update order | Pilot purpose; output metrics |
+| Why newly infected turtles cannot recover on the same day | Why issues #4 and #5 remain open; current progress and next steps |
 
-## Member A 的准备答复
+## Member A's prepared answers
 
 **Why an agent-based model?**
 
@@ -320,19 +320,19 @@ python scripts/demo_checkpoint2.py   # 确认 demo 能跑，约 1 秒
 
 > Without the snapshot, the result would depend on the order we loop over the turtles. A turtle could also be infected and recover in the same day, which makes no sense. The snapshot makes the update fair and order-independent.
 
-## 不确定时
+## When unsure
 
 > We have not fixed this value yet. It will be decided after the pilot, and it is recorded as an open issue.
 
 > I will let my teammate answer this, because this part belongs to his section.
 
-# 向 facilitator 提的问题
+# Questions for the facilitator
 
-会后把答复和日期写入 `decision-log.md`（research-plan “Decision process”）。前三个会直接影响 pilot 和分析。
+After the meeting, record the answers and date in `decision-log.md` (research-plan, "Decision process"). The first three questions directly affect the pilot and analysis.
 
-1. **参数选择依据。** Beta and gamma have no real turtle data behind them. Is it acceptable to choose them from a no-intervention pilot so that outbreaks show useful variation, as long as the criteria are written down before we look at any data?
-2. **统计方法。** For random versus targeted quarantine we use paired runs with the same seeds. Are paired differences with confidence intervals enough, or do you expect a formal test?
-3. **负面结果。** If targeted quarantine turns out not to be better than random, is a negative result acceptable as long as the analysis is sound?
-4. **重复次数。** We plan at least 10 networks times 5 epidemic seeds per condition. Is that enough, or should we justify it with a variance check?
-5. **Rubric。** Has the final rubric been released? How much weight goes on model validation compared with experiment results?
-6. **模型简化。** We use one network size and only S, I, R states. Is that acceptable as a stated limitation, or should we add a sensitivity check?
+1. **Basis for parameter selection.** Beta and gamma have no real turtle data behind them. Is it acceptable to choose them from a no-intervention pilot so that outbreaks show useful variation, as long as the criteria are written down before we look at any data?
+2. **Statistical methods.** For random versus targeted quarantine we use paired runs with the same seeds. Are paired differences with confidence intervals enough, or do you expect a formal test?
+3. **Negative results.** If targeted quarantine turns out not to be better than random, is a negative result acceptable as long as the analysis is sound?
+4. **Number of replicates.** We plan at least 10 networks times 5 epidemic seeds per condition. Is that enough, or should we justify it with a variance check?
+5. **Rubric.** Has the final rubric been released? How much weight goes on model validation compared with experiment results?
+6. **Model simplifications.** We use one network size and only S, I, R states. Is that acceptable as a stated limitation, or should we add a sensitivity check?

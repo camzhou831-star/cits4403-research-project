@@ -1,35 +1,37 @@
-# Network Structural Audit（issue #16，risk R002，D005 candidates）
+# Network Structural Audit (issue #16, risk R002, D005 candidates)
 
-日期：2026-09-11（2026-09-11 review 后修订措辞并增加 cross-path 指标）。生成器：`turtlefarm/network.py`；脚本：`scripts/audit_network.py --seeds 10 --k 2`。
+Historical audit. The [2026-10-08 follow-up](network-audit-2026-10-08.md) extends the sample to 30 seeds after the formal experiment. The selected 0.6/0.05 setting passes C1 but has one rank-2 tie under C4; both tied tanks are selected. The original 10-seed results and selection rationale below are retained unchanged.
 
-**这是 structural pilot，不涉及疫情模拟，不是假设证据。** 目的只有两个：确认生成器在候选参数下稳定产生 connected、modular、betweenness 排名非平凡的网络（spec §3、§4；R002），并为 D005 给出候选数值。数值在 19-25 Sep pilot 后冻结。
+Date: 2026-09-11 (wording revised and cross-path metrics added after the 2026-09-11 review). Generator: `turtlefarm/network.py`; script: `scripts/audit_network.py --seeds 10 --k 2`.
 
-## 1. Accepted-structure rules（spec §3.2 step 4 的具体化）
+**This is a structural pilot, with no epidemic simulation, and is not hypothesis evidence.** It has only two purposes: confirm that the generator reliably produces connected, modular networks with non-trivial betweenness rankings under the candidate parameters (spec §3, §4; R002), and propose candidate values for D005. Values will be frozen after the 19-25 Sep pilot.
 
-每次 attempt 按固定 pair 顺序（`itertools.combinations(range(20), 2)` 字典序）独立抽 edge（同区 `p_in`，跨区 `p_out`），generator 为 `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))`。以下任一不满足即拒绝并尝试下一 attempt（原因逐条记录进 run metadata；100 次内无 attempt 通过则抛 `NetworkGenerationError`，异常对象携带完整拒绝记录）：
+## 1. Accepted-structure rules (specifying spec §3.2 step 4)
 
-1. connected；
-2. 至少一条跨区域 edge；
-3. 不是完全图；
-4. 所有 node 的 betweenness 不全相等（排除环形等完全对称结构）。
+Each attempt independently samples edges (within-region `p_in`, cross-region `p_out`) in a fixed pair order (lexicographic order of `itertools.combinations(range(20), 2)`) using `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))`. Failure to meet any of the following rules rejects the network and starts the next attempt. Each rejection reason is recorded in run metadata; if no attempt passes within 100 attempts, `NetworkGenerationError` is raised with the complete rejection record in the exception object:
 
-Betweenness 为 unweighted、exact（非抽样）normalised node betweenness（networkx）；排名 tie 定义为计算值**精确相等**，按 `tank_id` 升序打破（V110）。`tie_groups` 和 `tie_ids_at_rank(k)` 用同一规则，写入 metadata。网络 hash（regions + edges 的 SHA-256 前 16 位）写入 run metadata，用于 V010 追溯；seed 0 的 golden hash 由 `tests/test_network.py::test_golden_hash_literal` 锁定。
+1. Connected;
+2. At least one cross-region edge;
+3. Not a complete graph;
+4. Node betweenness values are not all equal (excluding fully symmetric structures such as rings).
 
-## 2. Selection criteria（在看表之前写下）
+Betweenness is unweighted, exact (not sampled), normalised node betweenness (networkx). Ranking ties mean **exactly equal** calculated values and are broken by ascending `tank_id` (V110). `tie_groups` and `tie_ids_at_rank(k)` use the same rule and are recorded in metadata. The network hash (the first 16 characters of the SHA-256 of regions + edges) is recorded in run metadata for V010 traceability; the golden hash for seed 0 is locked by `tests/test_network.py::test_golden_hash_literal`.
 
-候选 (p_in, p_out) 需要同时满足：
+## 2. Selection criteria (written before inspecting the table)
 
-| # | 标准 | 阈值 | 理由 |
+Candidate (p_in, p_out) pairs must satisfy all of the following:
+
+| # | Criterion | Threshold | Rationale |
 |---|---|---|---|
-| C1 | 10 个 seed 全部在 100 次内接受，且平均重试 ≤ 1 | 稳定性 | 避免 network-seed 列表里出现不可生成的 seed |
-| C2 | modularity ≥ 0.45 | 模块性 | 研究动机是"少数桥连接原本分离的区域" |
-| C3 | 跨区 edge 平均 5-10 条 | 桥数量 | 太少则 cross-group spread 极罕见，太多则接近均匀混合 |
-| C4 | rank-1 betweenness ≥ 4 × 中位数，且 rank-2 无 tie | R002 | targeted 策略要有可辨识目标 |
-| C5 | rank-1 tank 承载 ≥ 40% 的跨区 shortest paths | bridge 语义 | validation-plan §8："高 betweenness 应与跨 region shortest paths 有清楚结构关系" |
+| C1 | All 10 seeds accepted within 100 attempts, with mean retries ≤ 1 | Stability | Avoid seeds in the network-seed list for which generation fails |
+| C2 | modularity ≥ 0.45 | Modularity | The research motivation is "a few bridges connect otherwise separated regions" |
+| C3 | Mean cross-region edge count of 5-10 | Bridge count | Too few makes cross-group spread extremely rare; too many approaches uniform mixing |
+| C4 | rank-1 betweenness ≥ 4 × median, with no rank-2 tie | R002 | The targeted strategy needs identifiable targets |
+| C5 | rank-1 tank carries ≥ 40% of cross-region shortest paths | Bridge interpretation | validation-plan §8: "high betweenness should have a clear structural relationship with cross-region shortest paths" |
 
-## 3. Grid audit，network seeds 0-9
+## 3. Grid audit, network seeds 0-9
 
-列说明：`failed` = 100 次内无法接受的 seed 数；`mean/max_attempt` = 被接受的 attempt 序号（0 表示首次即接受，等于之前被拒次数）；`inter_edges` = 跨区 edge 数；`modularity` 按 4 个 region 划分计算；`bc_top1/top2/median` = betweenness 第 1、第 2 名和中位数的跨 seed 均值；`distinct_bc` = 不同 betweenness 值个数；`tie_at_k` = 第 k=2 名有精确并列的 seed 数；`top1_is_bridge` = 第 1 名 tank 拥有跨区 edge 的 seed 数；`top1_xpath / top2_xpath` = 跨区 node pair 的 shortest paths 中经过第 1 / 第 2 名 tank（作为中间节点）的平均比例。
+Column definitions: `failed` = number of seeds not accepted within 100 attempts; `mean/max_attempt` = index of the accepted attempt (0 means acceptance on the first attempt and equals the number of prior rejections); `inter_edges` = cross-region edge count; `modularity` is calculated using the partition into 4 regions; `bc_top1/top2/median` = means across seeds of rank-1, rank-2 and median betweenness; `distinct_bc` = number of distinct betweenness values; `tie_at_k` = number of seeds with an exact tie at rank k=2; `top1_is_bridge` = number of seeds where the rank-1 tank has a cross-region edge; `top1_xpath / top2_xpath` = mean share of shortest paths between cross-region node pairs that pass through the rank-1 / rank-2 tank as an intermediate node.
 
 Seeds 0..9, k = 2. tie_at_k / top1_is_bridge are counts out of 10 seeds; top1_xpath / top2_xpath = mean share of cross-region shortest paths passing through the rank-1 / rank-2 tank.
 
@@ -54,19 +56,21 @@ Seeds 0..9, k = 2. tie_at_k / top1_is_bridge are counts out of 10 seeds; top1_xp
 
 ## 4. Reading
 
-- **接受率（C1）**：16 个组合 × 10 seeds 全部在 100 次内接受。`p_out = 0.03` 最多重试 6 次、平均 1-2.8 次；`p_out = 0.05` 在 `p_in = 0.5` 时最多重试 4 次、`p_in ≥ 0.6` 时最多 1 次；`p_out ≥ 0.08` 最多 2 次。满足 C1 的是 `p_out ≥ 0.05` 且 `p_in ≥ 0.6` 的组合，以及 `p_out ≥ 0.08` 的全部组合。
-- **模块性（C2、C3）**：modularity 随 `p_out` 下降而上升，范围 0.30-0.59。`p_out = 0.10` 时 modularity 仍有 0.30-0.42（`p_in` 仍是 `p_out` 的 5-8 倍），只是相对更弱的模块化，并非均匀混合；但跨区 edge 约 15 条，不满足 C3。`p_out = 0.05` 时跨区 edge 8-10 条、modularity 0.42-0.54；`p_out = 0.03` 时 6 条、0.52-0.59。
-- **Betweenness 非平凡（C4，R002）**：rank-1 与中位数之比在 3.7（0.6/0.10）到 10.3（0.8/0.03）之间；`p_out ≤ 0.05` 的组合全部 ≥ 4.8。rank-2 精确 tie 只在 (0.7, 0.03) 出现 1 次，160 个网络中其余都无 tie。
-- **Bridge 语义（C5）**：10/10 seeds 中 rank-1 tank 都有跨区 edge，这是弱证据；更直接的 `top1_xpath` 显示 `p_out = 0.05` 时 rank-1 tank 承载约 43-44% 的跨区 shortest paths，`p_out = 0.03` 时 51-58%，`p_out ≥ 0.08` 时降到 25-32%。rank-2 tank 在 `p_out = 0.05` 时承载约 33-35%。
-- **`p_in` 的作用**：主要影响 clustering（0.22 → 0.58）和缸内连通冗余，对桥结构影响小。
+- **Acceptance rate (C1)**: all 16 combinations × 10 seeds were accepted within 100 attempts. At `p_out = 0.03`, retries reached 6, with means of 1-2.8. At `p_out = 0.05`, retries reached 4 for `p_in = 0.5` and at most 1 for `p_in ≥ 0.6`; at `p_out ≥ 0.08`, the maximum was 2. C1 is satisfied by combinations with `p_out ≥ 0.05` and `p_in ≥ 0.6`, and by all combinations with `p_out ≥ 0.08`.
+- **Modularity (C2, C3)**: modularity rises as `p_out` falls, ranging from 0.30-0.59. At `p_out = 0.10`, modularity remains 0.30-0.42 (`p_in` is still 5-8 times `p_out`), indicating relatively weaker modularity, not uniform mixing; however, about 15 cross-region edges fails C3. At `p_out = 0.05`, there are 8-10 cross-region edges and modularity of 0.42-0.54; at `p_out = 0.03`, the values are 6 edges and 0.52-0.59.
+- **Non-trivial betweenness (C4, R002)**: the rank-1-to-median ratio ranges from 3.7 (0.6/0.10) to 10.3 (0.8/0.03); all combinations with `p_out ≤ 0.05` have ratios ≥ 4.8. Only (0.7, 0.03) produces an exact rank-2 tie, once; no other network among the 160 has such a tie.
+- **Bridge interpretation (C5)**: the rank-1 tank has a cross-region edge in 10/10 seeds, which is weak evidence. The more direct `top1_xpath` shows that the rank-1 tank carries about 43-44% of cross-region shortest paths at `p_out = 0.05`, 51-58% at `p_out = 0.03`, and 25-32% at `p_out ≥ 0.08`. The rank-2 tank carries about 33-35% at `p_out = 0.05`.
+- **Effect of `p_in`**: mainly affects clustering (0.22 → 0.58) and within-region connectivity redundancy, with little effect on bridge structure.
 
-## 5. Candidate for D005（不是冻结值）
+## 5. Candidate for D005 (not a frozen value)
 
-同时满足 C1-C5 的组合：**(0.6, 0.05)、(0.7, 0.05)、(0.8, 0.05)**。三者跨区结构几乎相同（inter_edges 8.3-8.8，top1_xpath 0.43-0.44，modularity 0.48-0.54），区别只在缸内 clustering（0.30 / 0.43 / 0.50）。
+Combinations satisfying all of C1-C5: **(0.6, 0.05), (0.7, 0.05), (0.8, 0.05)**. Their cross-region structures are almost identical (inter_edges 8.3-8.8, top1_xpath 0.43-0.44, modularity 0.48-0.54). They differ in clustering (0.30 / 0.43 / 0.50) as within-region connectivity changes.
 
-选 **`p_in = 0.6`，`p_out = 0.05`**：三者中缸内密度最低（每区 10 个 pair 平均 6 条 edge），区内不接近完全图，同时是 M1 config 现有默认值。这是一个偏好选择而非唯一解；若 M2 movement pilot 显示缸内路径冗余不足（例如 quarantine 后区内经常断开），可切换到 0.7/0.05。
+Select **`p_in = 0.6`, `p_out = 0.05`**: it has the lowest within-region density of the three (a mean of 6 edges among 10 pairs per region), does not approach a complete graph within each region, and is already the M1 config default. This is a preference, not a unique solution; if the M2 movement pilot shows insufficient within-region path redundancy (for example, regions frequently become disconnected after quarantine), 0.7/0.05 is an alternative.
 
-备选：`(0.6, 0.03)` 桥更少、bridge effect 更突出，但 C1 不满足（最多重试 6 次）且 diameter 更大；`(0.6, 0.08)` 在 cross-group spread 过于罕见时可反向考虑，但 C3、C5 边缘。最终数值在 M2 movement pilot 后按 experiment-plan §7 第 4 问冻结，冻结前应把 network seeds 扩到 ≥ 30 个复核 C1；记入 `decision-log.md` 和 issue #5。
+Alternatives: `(0.6, 0.03)` has fewer bridges and a stronger bridge effect, but fails C1 (up to 6 retries) and has a larger diameter. Conversely, `(0.6, 0.08)` could be considered if cross-group spread is too rare, but is marginal on C3 and C5. Freeze the final values after the M2 movement pilot under experiment-plan §7 question 4; before freezing, expand to ≥ 30 network seeds to recheck C1, and record the decision in `decision-log.md` and issue #5.
+
+Terminology clarification: within-region connectivity means links between tanks in the same region, not contacts between turtles inside one tank.
 
 ## 6. Reproduce
 

@@ -88,7 +88,7 @@ Table 2 and Figure 4 give the paired targeted − random differences. Of the {{t
 
 One explanation, which this experiment did not test, is that a randomly chosen tank is a useful barrier only if the infection has not yet reached or passed it, and as the outbreak grows more random choices are already infected or far from the remaining susceptible regions. A high-betweenness tank lies on many shortest paths between regions, so it stays relevant while any region remains uninfected; in the cross-region run of Figure 3, regions were invaded weeks apart, so a quarantine on day 33 could still block a later invasion. Testing this would require recording, for each quarantined tank, whether it was infected on the response day and how many between-region transfers it blocked; both can be derived from the existing raw records.
 
-These conclusions are limited in several ways. The turtles, tanks, disease and network are synthetic and uncalibrated, so magnitudes should not be read as predictions. We studied one quarantine budget and one disease regime, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run. The response delay has no explicit detection model, and movement does not depend on disease state. With {{n_networks}} networks, the intervals are wide relative to the differences between strategies. Finally, several choices were made after data were seen, including an added transfer level, a corrected pilot criterion for *D*, the nested-seed rerun and the comparison with baselines; each is flagged in the text, recorded in Appendix B and the decision log, and the original results are kept.
+These conclusions are limited in several ways. The turtles, tanks, disease and network are synthetic and uncalibrated, so magnitudes should not be read as predictions. We studied one quarantine budget and one disease regime, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run. The response delay has no explicit detection model, and movement does not depend on disease state. With {{n_networks}} networks, the intervals are wide relative to the differences between strategies. An expanded 30-seed check of the network generator, done only after the formal experiment, found one exact tie for the second-highest betweenness, so the original no-tie acceptance criterion is not met (Appendix C). Finally, several choices were made after data were seen, including an added transfer level, a corrected pilot criterion for *D*, the nested-seed rerun and the comparison with baselines; each is flagged in the text, recorded in Appendix B and the decision log, and the original results are kept.
 
 ## 6. Conclusion
 
@@ -156,6 +156,8 @@ Across the {{n_networks}} networks of the formal experiment:
 | Diameter | {{net_diameter_median}} | {{net_diameter_min}}–{{net_diameter_max}} |
 
 {{net_resampled}} networks needed at least one redraw.
+
+The promised expanded structural check (network seeds 0-29) was completed only after the formal experiment. The selected setting meets the generation-stability criterion but fails the original no-rank-2-tie clause: at one seed, the two highest-betweenness tanks tie and are both selected when *k* = 2, so there is no tie across the selected/excluded boundary. The audit retains the failed criterion and the existing parameters; it does not alter the runtime tie rule or demonstrate robustness of the epidemic conclusions. Details are in `docs/network-audit-2026-10-08.md`.
 
 ## Appendix D. Sensitivity to the seed design
 
