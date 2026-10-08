@@ -90,6 +90,27 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
     delays = json.loads((ROOT / "results" / "pilot" / "pilot-stage1-disease-r2-delays.json").read_text(encoding="utf-8"))
     v["pilot_nonminor_runs"] = str(delays["non_minor_runs"])
 
+    # ---- exploratory mechanism analysis (scripts/mechanism_analysis.py; post hoc)
+    mech = json.loads((ANALYSIS / FORMAL / "mechanism.json").read_text(encoding="utf-8"))
+    v["mech_bridges"] = f"{mech['between_region_edges_mean']:.1f}"
+    v["mech_cov_targeted"] = pct(mech["bridge_coverage_targeted_mean"], 0)
+    v["mech_cov_random"] = pct(mech["bridge_coverage_random_mean"], 0)
+    v["mech_cut_targeted"] = pct(mech["disconnects_targeted_share"], 0)
+    v["mech_cut_random"] = pct(mech["disconnects_random_share"], 0)
+    v["mech_rate"] = f"{mech['focus_rate']:g}"
+    v["mech_never_cross"] = pct(mech["never_crossed_share"], 0)
+    v["mech_cross_median"] = f"{mech['first_cross_day_median']:g}"
+    v["mech_cross_q1"] = f"{mech['first_cross_day_q1']:g}"
+    v["mech_cross_q3"] = f"{mech['first_cross_day_q3']:g}"
+    for delay, t in mech["timing_by_delay"].items():
+        v[f"mech_before_d{delay}"] = pct(t["crossed_before_start"], 0)
+        v[f"mech_window_d{delay}"] = pct(t["crossed_during_window"], 0)
+        v[f"mech_after_d{delay}"] = pct(t["crossed_after_window"], 0)
+    focus = mech["selected_already_infected"][f"{mech['focus_rate']:g}"]
+    for delay, arms in focus.items():
+        v[f"mech_infected_targeted_d{delay}"] = pct(arms["betweenness"], 0)
+        v[f"mech_infected_random_d{delay}"] = pct(arms["random"], 0)
+
     # ---- networks of the formal design
     nets = pd.read_csv(ANALYSIS / FORMAL / "networks.csv")
     for col in ("modularity", "n_inter_edges", "mean_degree", "diameter", "clustering"):
