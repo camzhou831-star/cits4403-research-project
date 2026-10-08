@@ -2,7 +2,7 @@
 
 # Bridge Transfers and Quarantine in a Captive Turtle Farm
 
-*CITS4403 Research Project, 2026. Cam Zhou and Wenhao Zhang.*
+*CITS4403 Research Project, 2026. Cam Zhou (24349432) and Wenhao Zhang (24364285).*
 
 *Code, notebook and demonstration video: <https://github.com/camzhou831-star/cits4403-research-project> (walkthrough: `notebooks/project-walkthrough.ipynb`; animated example: `results/demo/demo-3min.mp4`).*
 
