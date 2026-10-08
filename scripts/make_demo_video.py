@@ -1,17 +1,19 @@
-"""Render the 30-second Week 12 demo video (MP4 and GIF) from one paired block of `formal-nested`.
+"""Render the 3-minute Week 12 demo video (MP4 and GIF) covering the whole project.
 
-The block is the same one `scripts/demo_final.py` reruns: the representative cross-region outbreak of figure 7,
-picked by a rule on the no-intervention run only. The random arm shown is the policy seed whose attack rate is
-the median of the three random arms, so the clip does not pick the most favourable comparison. One block
-illustrates the mechanism; the closing card states the formal results from the report.
+Eight sections: question, model, verification, parameter selection, experiment design, one example, results,
+limits and reproduction. Terminal output, tables and figures are produced from the repository when the video
+is rendered (pytest, demo_final.py, results/pilot, results/analysis), not typed in by hand. The example
+section uses the animation in scripts/demo_animation.py. The video is silent and is presented live; the
+presentation script is in docs/demo-video.md.
 
 Usage:
-    python scripts/make_demo_video.py            # writes results/demo/demo-30s.mp4 and demo-30s.gif
+    python scripts/make_demo_video.py           # writes results/demo/demo-3min.mp4 and demo-3min.gif
 """
 
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -19,177 +21,276 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import matplotlib
-
-matplotlib.use("Agg")
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
+import pandas as pd
+from matplotlib.patches import FancyBboxPatch
 
 from analyse_results import _network_layout
-from turtlefarm import SimulationConfig
-from turtlefarm.model import run_baseline
+from demo_animation import ARM_COLOURS, DPI, FPS, GRID, H, INK, MUTED, OUT_DIR, QUAR, W, anim_frame, run_block, save
 
-DESIGN = ROOT / "experiments" / "config" / "formal-nested.json"
-SELECTION = ROOT / "results" / "analysis" / "formal-nested" / "fig7-selection.json"
-OUT_DIR = ROOT / "results" / "demo"
-
-FPS = 10
-TITLE_S, END_S, ANIM_S = 3, 7, 20
-W, H, DPI = 12.8, 7.2, 100  # 1280 x 720
-
-INK, MUTED, GRID = "#1f2328", "#59636e", "#d0d7de"
-NEVER, CLEARED, QUAR = "#eef1f4", "#e8d9b5", "#1f6feb"
-ARM_COLOURS = {"none": "#6e7781", "betweenness": "#1f6feb", "random": "#bf8700"}
-INFECTED = LinearSegmentedColormap.from_list("inf", ["#ffd8d3", "#cf222e"])
-
-plt.rcParams.update({"font.family": "DejaVu Sans", "text.color": INK, "axes.edgecolor": GRID})
+PY = sys.executable
+FIGS = ROOT / "results" / "analysis" / "formal-nested"
+SECTIONS = [  # (title, seconds)
+    ("Question", 15), ("Model", 30), ("Verification", 20), ("Parameter selection", 25),
+    ("Experiment design", 20), ("One example", 30), ("Results", 30), ("Limits and reproduction", 10),
+]
+MONO = "DejaVu Sans Mono"
 
 
-def run_block() -> tuple[list[tuple[str, str, object]], dict]:
-    design = json.loads(DESIGN.read_text(encoding="utf-8"))
-    sel = json.loads(SELECTION.read_text(encoding="utf-8"))["cross_region"]
-    fixed = design["fixed"]
-    common = dict(fixed, design="main", label=design["name"], network_seed=sel["network_seed"],
-                  epidemic_seed=sel["epidemic_seed"], transfer_rate=sel["config"]["transfer_rate"])
-    delay = max(design["response_delays"])
-    none = run_baseline(SimulationConfig(**{**common, "strategy": "none", "quarantine_duration": 0}))
-    targeted = run_baseline(SimulationConfig(**common, strategy="betweenness", response_delay=delay))
-    randoms = [run_baseline(SimulationConfig(**common, strategy="random", response_delay=delay, policy_seed=s))
-               for s in design["policy_seeds"]]
-    median_random = sorted(randoms, key=lambda r: r.metrics["final_attack_rate"])[len(randoms) // 2]
-    arms = [("none", "No quarantine", none),
-            ("betweenness", "Targeted (highest betweenness)", targeted),
-            ("random", "Random tanks", median_random)]
-    info = dict(delay=delay, duration=fixed["quarantine_duration"], rate=common["transfer_rate"],
-                network=none.network, policy_seed=median_random.config["policy_seed"])
-    return arms, info
+def chrome(fig: plt.Figure, section: int, header: bool = True) -> None:
+    """Section label at the top and an 8-part progress bar at the bottom."""
+    if header:
+        fig.text(0.04, 0.93, SECTIONS[section][0], fontsize=30, weight="bold", color=INK)
+        fig.text(0.96, 0.94, f"{section + 1} / {len(SECTIONS)}", ha="right", fontsize=16, color=MUTED)
+    total = sum(s for _, s in SECTIONS)
+    x = 0.04
+    for i, (_, secs) in enumerate(SECTIONS):
+        width = 0.92 * secs / total
+        fig.patches.append(plt.Rectangle((x + 0.002, 0.012), width - 0.004, 0.008, transform=fig.transFigure,
+                                         color=QUAR if i == section else GRID, alpha=1 if i <= section else 0.6))
+        x += width
 
 
-def tank_colour(row: dict, ever: bool) -> object:
-    if row["I"] > 0:
-        return INFECTED(min(1.0, row["I"] / max(1, row["occupancy"])) ** 0.5)
-    return CLEARED if ever else NEVER
-
-
-def title_frame(info: dict) -> plt.Figure:
+def blank(section: int, header: bool = True) -> plt.Figure:
     fig = plt.figure(figsize=(W, H), dpi=DPI, facecolor="white")
-    fig.text(0.5, 0.60, "Bridge transfers and quarantine", ha="center", fontsize=40, weight="bold")
-    fig.text(0.5, 0.48, "200 turtles in 20 tanks, 4 regions.  Transfers move infection between tanks.",
-             ha="center", fontsize=20, color=MUTED)
-    fig.text(0.5, 0.40, f"Quarantine budget: 2 tanks for {info['duration']} days.  Which 2 tanks should we close?",
-             ha="center", fontsize=20, color=MUTED)
+    chrome(fig, section, header)
     return fig
 
 
-def anim_frame(arms, info, pos, day: int, last_day: int) -> plt.Figure:
-    fig = plt.figure(figsize=(W, H), dpi=DPI, facecolor="white")
-    grid = fig.add_gridspec(2, 3, height_ratios=[3.1, 1], left=0.06, right=0.97, top=0.83, bottom=0.08,
-                            hspace=0.18, wspace=0.04)
-    start, end = info["delay"], info["delay"] + info["duration"]
-    active = start <= day < end
-    status = (f"Day {day}" + (f"   ·   quarantine active (days {start}-{end - 1})" if active else
-                              f"   ·   quarantine starts on day {start}" if day < start else ""))
-    fig.text(0.03, 0.93, status, fontsize=22, weight="bold", color=QUAR if active else INK)
-    fig.text(0.03, 0.885, f"Same network and same random draws in all three; transfer rate {info['rate']}",
-             fontsize=13, color=MUTED)
-    edges = info["network"]["edges"]
-    for col, (key, label, rec) in enumerate(arms):
-        ax = fig.add_subplot(grid[0, col])
-        ax.set_axis_off()
-        d = rec.daily[min(day, len(rec.daily) - 1)]
-        ever = {t for dd in rec.daily[: min(day, len(rec.daily) - 1) + 1] for t, row in enumerate(dd.tanks) if row["I"] > 0}
-        for a, b in edges:
-            ax.plot([pos[a][0], pos[b][0]], [pos[a][1], pos[b][1]], color=GRID, lw=1, zorder=1)
-        for t, row in enumerate(d.tanks):
-            quarantined = row["management_state"] != "open"
-            ax.scatter(*pos[t], s=60 + 45 * row["occupancy"], color=tank_colour(row, t in ever), zorder=3,
-                       edgecolors=QUAR if quarantined else "#8c959f", linewidths=4 if quarantined else 0.8,
-                       marker="s" if quarantined else "o")
-        ar = (d.I + d.R) / (d.S + d.I + d.R)
-        ax.set_title(label, fontsize=16, color=ARM_COLOURS[key], weight="bold", pad=4)
-        ax.text(0.5, -0.04, f"ever infected {ar:.0%}   ·   tanks hit {len(ever)}", transform=ax.transAxes,
-                ha="center", fontsize=13, color=INK)
-        ax.set_aspect("equal")
-    curve = fig.add_subplot(grid[1, :])
-    curve.axvspan(start, end, color=QUAR, alpha=0.08, lw=0)
-    for key, label, rec in arms:
-        xs = [dd.day for dd in rec.daily if dd.day <= day]
-        ys = [dd.I for dd in rec.daily if dd.day <= day]
-        style = dict(ls=(0, (4, 2)), lw=2.2, zorder=4) if key == "none" else dict(lw=2.6, zorder=3)
-        curve.plot(xs, ys, color=ARM_COLOURS[key], label=label, **style)
-    curve.set_xlim(0, last_day)
-    curve.set_ylim(0, max(dd.I for _, _, r in arms for dd in r.daily) * 1.1)
-    curve.set_ylabel("infectious turtles", fontsize=11, color=MUTED)
-    curve.tick_params(colors=MUTED, labelsize=10)
-    for side in ("top", "right"):
-        curve.spines[side].set_visible(False)
-    curve.legend(loc="upper right", frameon=False, fontsize=11)
+def bullets(fig: plt.Figure, items: list[str], x: float, y: float, size: int = 19, step: float = 0.075) -> None:
+    for i, item in enumerate(items):
+        fig.text(x, y - i * step, "•  " + item, fontsize=size, color=INK, va="top")
+
+
+def image(fig: plt.Figure, path: Path, box: tuple[float, float, float, float]) -> None:
+    ax = fig.add_axes(box)
+    ax.imshow(mpimg.imread(path))
+    ax.set_axis_off()
+
+
+def terminal(fig: plt.Figure, box: tuple[float, float, float, float], lines: list[str], size: int = 11) -> None:
+    x, y, w, h = box
+    fig.patches.append(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.004,rounding_size=0.01",
+                                      transform=fig.transFigure, facecolor="#0d1117", edgecolor="none"))
+    for i, line in enumerate(lines):
+        colour = "#7ee787" if line.startswith("$") else "#e6edf3"
+        fig.text(x + 0.012, y + h - 0.03 - i * size * 0.0023, line, fontsize=size, family=MONO, color=colour,
+                 va="top")
+
+
+# ----------------------------------------------------------------------------------------------- sections
+
+
+def s_question() -> plt.Figure:
+    fig = blank(0, header=False)
+    fig.text(0.5, 0.64, "Bridge transfers and quarantine", ha="center", fontsize=42, weight="bold")
+    fig.text(0.5, 0.53, "in a captive turtle farm", ha="center", fontsize=26, color=MUTED)
+    fig.text(0.5, 0.36, "Transfers between tanks can carry an outbreak into other regions.", ha="center", fontsize=21)
+    fig.text(0.5, 0.29, "With a budget of 2 tanks for 14 days, which tanks should be quarantined, and when?",
+             ha="center", fontsize=21, color=QUAR)
+    fig.text(0.5, 0.12, "CITS4403 research project", ha="center", fontsize=15, color=MUTED)
     return fig
 
 
-def end_frame() -> plt.Figure:
-    fig = plt.figure(figsize=(W, H), dpi=DPI, facecolor="white")
-    fig.text(0.07, 0.83, "That was one block.  Over 100 blocks per condition:", fontsize=28, weight="bold")
-    lines = [
-        ("Transfer rate 0.01 → 0.025", "attack rate × 3.3, affected tanks × 3.4"),
-        ("Quarantine, 2 tanks × 14 days", "reduces attack rate by at most 10.6%"),
-        ("Targeted vs random", "no consistent advantage: 2 of 18 comparisons exclude 0"),
-    ]
-    for i, (head, body) in enumerate(lines):
-        y = 0.64 - i * 0.15
-        fig.text(0.07, y, head, fontsize=22, weight="bold", color=QUAR)
-        fig.text(0.07, y - 0.06, body, fontsize=20, color=INK)
-    fig.text(0.07, 0.10, "In this model, transfers matter far more than which tanks are closed, at this budget.", fontsize=20,
-             color=MUTED, style="italic")
+def s_model() -> plt.Figure:
+    fig = blank(1)
+    image(fig, ROOT / "docs" / "figures" / "concept-diagram.png", (0.03, 0.08, 0.94, 0.80))
     return fig
 
 
-def save(fig: plt.Figure, path: Path) -> None:
-    fig.savefig(path, dpi=DPI, facecolor="white")
-    plt.close(fig)
+def s_verification(pytest_tail: str, demo_lines: list[str]) -> plt.Figure:
+    fig = blank(2)
+    bullets(fig, ["Invariants checked every day: 200 turtles, no tank over capacity, S + I + R = 200",
+                  "Extreme cases (no movement, no infection, full tanks) and a hand-traced 3-tank example",
+                  "Event-keyed random draws: every strategy sees the same outbreak until quarantine starts"],
+            0.04, 0.86, size=17, step=0.06)
+    terminal(fig, (0.04, 0.20, 0.92, 0.40), ["$ python -m pytest -q", pytest_tail, "",
+                                            "$ python scripts/demo_final.py", *demo_lines], size=10)
+    return fig
+
+
+def s_pilot(stage2: pd.DataFrame, fixed: dict, delays: list[int], rates: list[float]) -> plt.Figure:
+    fig = blank(3)
+    bullets(fig, [f"Stage 1: beta = {fixed['beta']}, gamma = {fixed['gamma']}; "
+                  f"transfer rates {' / '.join(f'{r:g}' for r in rates)}",
+                  f"Response delays {' / '.join(map(str, delays))} days: immediate, first spread to a 2nd tank, "
+                  "median peak",
+                  "Stage 2 chose the duration D with three pre-set criteria Q1-Q3"], 0.04, 0.86, size=17, step=0.06)
+    ax = fig.add_axes((0.08, 0.17, 0.84, 0.44))
+    ax.set_axis_off()
+    head = ["D (days)", "Q1: quarantine block\nin ≥ 90% of runs", "Q2: D ≤ 25% of\noutbreak length",
+            "Q3: D ≥ infectious\nperiod (10 d)", "Selected"]
+    rows = [[str(r.quarantine_duration), f"{r.share_quarantine_block_ge_1_started:.1%}",
+             "pass" if r.Q2_D_le_25pct_extinction else "fail", "pass" if r.Q3_D_ge_infectious_period else "fail",
+             "yes" if str(r.passed) == "True" else ""] for r in stage2.itertuples()]
+    table = ax.table(cellText=rows, colLabels=head, loc="center", cellLoc="center")
+    table.auto_set_font_size(False)
+    table.set_fontsize(15)
+    table.scale(1, 3.2)
+    for (r, c), cell in table.get_celld().items():
+        cell.set_edgecolor(GRID)
+        if r == 0:
+            cell.set_text_props(weight="bold", fontsize=13)
+        text = cell.get_text().get_text()
+        if text == "fail":
+            cell.get_text().set_color("#cf222e")
+        if r > 0 and rows[r - 1][4] == "yes":
+            cell.set_facecolor("#ddf4ff")
+    fig.text(0.04, 0.10, "Q1 first counted capacity blocks too. We pre-registered quarantine-only counters, reran the",
+             fontsize=15, color=MUTED)
+    fig.text(0.04, 0.06, "pilot (every earlier output identical), and D = 14 passed all three.", fontsize=15,
+             color=MUTED)
+    return fig
+
+
+def s_design(design: dict) -> plt.Figure:
+    fig = blank(4)
+    n_net, n_epi = len(design["network_seeds"]), len(design["epidemic_seeds"]) // len(design["network_seeds"])
+    rates, delays, policy = design["transfer_rates"], design["response_delays"], design["policy_seeds"]
+    per_block = 1 + len(delays) * (1 + len(policy))
+    total = n_net * n_epi * len(rates) * per_block
+    ax = fig.add_axes((0.04, 0.10, 0.92, 0.74))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 60)
+    ax.set_axis_off()
+
+    def box(x, y, w, h, text, colour=INK, face="#f6f8fa", size=15):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.4,rounding_size=1.2", facecolor=face,
+                                    edgecolor=colour, lw=2))
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=size, color=colour)
+
+    box(2, 40, 26, 14, f"{n_net} networks\n× {n_epi} outbreak seeds\nnested in each", size=16)
+    ax.annotate("", (33, 47), (29, 47), arrowprops=dict(arrowstyle="->", lw=2, color=MUTED))
+    box(34, 40, 26, 14, f"{n_net * n_epi} paired blocks\nper transfer rate\n({len(rates)} rates)", size=16)
+    ax.annotate("", (65, 47), (61, 47), arrowprops=dict(arrowstyle="->", lw=2, color=MUTED))
+    box(66, 40, 32, 14, f"each block: {per_block} runs\n1 no quarantine + for each delay\n1 targeted + "
+        f"{len(policy)} random", size=15)
+    box(2, 18, 46, 14, "Same seeds in every arm → compare\ntargeted − random within a block", colour=QUAR,
+        face="#ddf4ff", size=16)
+    box(52, 18, 46, 14, "95% CIs: bootstrap that resamples\nwhole networks, not single runs", colour=QUAR,
+        face="#ddf4ff", size=16)
+    ax.text(50, 6, f"{total:,} runs.  A first run shared 5 seeds across all networks (too-narrow CIs); "
+            "we reran with nested seeds and report that.", ha="center", fontsize=14, color=MUTED)
+    return fig
+
+
+def s_results(path: Path, title: str, lines: list[str]) -> plt.Figure:
+    fig = blank(6)
+    fig.text(0.04, 0.855, title, fontsize=19, color=QUAR, weight="bold")
+    image(fig, path, (0.03, 0.27, 0.94, 0.56))
+    bullets(fig, lines, 0.05, 0.22, size=18, step=0.065)
+    return fig
+
+
+def s_close() -> plt.Figure:
+    fig = blank(7)
+    bullets(fig, ["Synthetic system: not calibrated to a real pathogen or farm",
+                  "One budget (2 tanks × 14 days), one disease regime; sensitivity runs not done",
+                  "Q1 was measured after the formal run; one denominator choice was post hoc"],
+            0.04, 0.84, size=19, step=0.07)
+    terminal(fig, (0.04, 0.12, 0.92, 0.30), [
+        "$ python scripts/run_experiment.py experiments/config/formal-nested.json",
+        "$ python scripts/analyse_results.py formal-nested",
+        "$ python scripts/build_report.py",
+        "",
+        "  every table, figure and report number is regenerated from the seeds",
+        "  notebooks/project-walkthrough.ipynb walks through the model and results"], size=14)
+    return fig
+
+
+# ----------------------------------------------------------------------------------------------- render
+
+
+def capture(cmd: list[str]) -> str:
+    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False).stdout
+
+
+def report_numbers() -> dict[str, str]:
+    """Headline numbers read from the generated report, so the video cannot drift from it."""
+    text = (ROOT / "report" / "report.md").read_text(encoding="utf-8")
+    found = {
+        "mult": re.search(r"multiplies the attack rate by (\d+(?:\.\d+)?)", text),
+        "tanks": re.search(r"number of affected tanks by (\d+(?:\.\d+)?)", text),
+        "max_reduction": re.search(r"reduces the attack rate by at most ([\d.]+%)", text),
+        "ci": re.search(r"(\d+) have a 95% CI that excludes 0", text),
+    }
+    missing = [k for k, m in found.items() if m is None]
+    if missing:
+        raise SystemExit(f"report/report.md no longer states: {missing}")
+    return {k: m.group(1) for k, m in found.items()}
 
 
 def main() -> int:
     if shutil.which("ffmpeg") is None:
         raise SystemExit("ffmpeg is required")
+    design = json.loads((ROOT / "experiments" / "config" / "formal-nested.json").read_text(encoding="utf-8"))
+    stage2 = pd.read_csv(ROOT / "results" / "pilot" / "stage2-criteria.csv")
+    nums = report_numbers()
+    pytest_tail = capture([PY, "-m", "pytest", "-q"]).strip().splitlines()[-1]
+    demo = capture([PY, "scripts/demo_final.py"]).rstrip().splitlines()
+    demo_lines = [line for line in demo if line.strip()][2:9] + [demo[-1]]
+
     arms, info = run_block()
-    net = info["network"]
-    pos = _network_layout(net["edges"], net["regions"])
+    pos = _network_layout(info["network"]["edges"], info["network"]["regions"])
     last_day = max(len(r.daily) - 1 for _, _, r in arms)
-    n_anim = ANIM_S * FPS
+
+    slides = {
+        0: s_question(),
+        1: s_model(),
+        2: s_verification(pytest_tail, demo_lines),
+        3: s_pilot(stage2, design["fixed"], design["response_delays"], design["transfer_rates"]),
+        4: s_design(design),
+        7: s_close(),
+    }
+    results = [
+        s_results(FIGS / "fig2-attack-rate.png", "Transfer rate decides how far an outbreak spreads",
+                  [f"Transfer rate 0.01 → 0.025: attack rate × {nums['mult']}, affected tanks × {nums['tanks']}",
+                   f"Quarantine of 2 tanks for 14 days reduces the attack rate by at most {nums['max_reduction']}"]),
+        s_results(FIGS / "fig4-paired-effects.png", "Targeted vs random: no consistent advantage",
+                  [f"Only {nums['ci']} of 18 targeted − random intervals exclude 0 (both at rate 0.025, delay 33)",
+                   "In this model, transfers matter far more than which tanks are closed"]),
+    ]
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         frames = Path(tmp)
         i = 0
-        title = frames / "title.png"
-        save(title_frame(info), title)
-        for _ in range(TITLE_S * FPS):
-            shutil.copy(title, frames / f"f{i:05d}.png"); i += 1
-        for k in range(n_anim):
-            day = round(k * last_day / (n_anim - 1))
-            save(anim_frame(arms, info, pos, day, last_day), frames / f"f{i:05d}.png"); i += 1
-        end = frames / "end.png"
-        save(end_frame(), end)
-        for _ in range(END_S * FPS):
-            shutil.copy(end, frames / f"f{i:05d}.png"); i += 1
-        mp4, gif = OUT_DIR / "demo-30s.mp4", OUT_DIR / "demo-30s.gif"
+
+        def hold(fig: plt.Figure, seconds: float) -> None:
+            nonlocal i
+            still = frames / f"still{i}.png"
+            save(fig, still)
+            for _ in range(round(seconds * FPS)):
+                shutil.copy(still, frames / f"f{i:05d}.png")
+                i += 1
+
+        for section, (_, seconds) in enumerate(SECTIONS):
+            if section in slides:
+                hold(slides[section], seconds)
+            elif section == 5:
+                n = seconds * FPS
+                for k in range(n):
+                    fig = anim_frame(arms, info, pos, round(k * last_day / (n - 1)), last_day)
+                    chrome(fig, 5, header=False)
+                    save(fig, frames / f"f{i:05d}.png")
+                    i += 1
+            else:
+                for fig in results:
+                    hold(fig, seconds / len(results))
+
+        mp4, gif = OUT_DIR / "demo-3min.mp4", OUT_DIR / "demo-3min.gif"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", str(frames / "f%05d.png"),
                         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart", str(mp4)],
                        check=True)
-        palette = frames / "palette.png"
-        scale = "fps=10,scale=960:-1:flags=lanczos"
+        palette, scale = frames / "palette.png", "fps=8,scale=960:-1:flags=lanczos"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp4), "-vf", f"{scale},palettegen",
                         str(palette)], check=True)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp4), "-i", str(palette), "-lavfi",
                         f"{scale}[x];[x][1:v]paletteuse", str(gif)], check=True)
-    for key, label, rec in arms:
-        print(f"{label:32s} attack rate {rec.metrics['final_attack_rate']:.3f}  "
-              f"tanks {rec.metrics['affected_tanks']}  selected {rec.selected_tanks or '-'}")
-    print(f"random arm shown: policy seed {info['policy_seed']} (median of the random arms)")
-    print(f"wrote {mp4.relative_to(ROOT)} and {gif.relative_to(ROOT)}")
+    print(f"{i / FPS:.0f} s; wrote {mp4.relative_to(ROOT)} and {gif.relative_to(ROOT)}")
     return 0
 
 
