@@ -9,8 +9,8 @@ Record the final decisions for D001-D008. Each decision must state its source (f
 | D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | Team (facilitator raised no objection) | 2026-09-11 | No change to the delay origin was requested at Checkpoint 1 (2026-09-07); working proposal adopted (spec §11) |
 | D002 | Tank capacity | 12 | 12 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
 | D003 | Quarantined tank count `k` | 2 | 2 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
-| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A (Member B's confirmation pending) | 2026-10-06 | Q1-Q3 met with cause-specific counters; 2026-10-08 recomputation reproduced the criterion table. Alternatives and qualifications are recorded below. |
-| D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A (Member B's confirmation pending) | 2026-10-06 | Used in the completed formal experiment. The retrospective 30-seed check on 2026-10-08 passes C1 but finds one exact tie under C4; see the follow-up below. |
+| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A; Member B confirmed retrospectively on 2026-10-08 (issue #4) | 2026-10-06 | Q1-Q3 met with cause-specific counters; 2026-10-08 recomputation reproduced the criterion table. Alternatives and qualifications are recorded below. |
+| D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A; Member B confirmed retrospectively on 2026-10-08, accepting the C4 tie (issue #5) | 2026-10-06 | Used in the completed formal experiment. The retrospective 30-seed check on 2026-10-08 passes C1 but finds one exact tie under C4; see the follow-up below. |
 | D006 | `max_days` | 365 | 365 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted; `censored_max_days` status still recorded |
 | D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
 | D008 | Headline outcome | Attack rate + affected tanks co-primary | Attack rate + affected tanks co-primary | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
@@ -21,7 +21,7 @@ This update records the evidence for the settings already used in the formal exp
 
 ### D004: quarantine duration
 
-Selected value: `D=14` days, with `k=2` and a planned cost of 28 tank-days for each intervention that starts. Member A selected the value through the pilot; Member B's retrospective confirmation remains pending.
+Selected value: `D=14` days, with `k=2` and a planned cost of 28 tank-days for each intervention that starts. Member A selected the value through the pilot. Member B confirmed retaining it on 2026-10-08 (issue #4); this is a retrospective confirmation, not approval before the pilot ran.
 
 The alternatives were 7, 14 and 21 days. Recomputing `evaluate_stage2` from all 5,550 rows of `results/summary/pilot-stage2-intervention.csv` reproduces the committed `results/pilot/stage2-criteria.csv`; `select_duration` returns 14. No epidemic was rerun for this check.
 
@@ -37,7 +37,7 @@ The Q1 denominator was changed after inspecting data, and cause-specific blockin
 
 ### D005: network probabilities and acceptance rules
 
-Selected values: `p_in=0.6`, `p_out=0.05`. These are edge probabilities between tanks in the same region and in different regions, respectively, not turtle movement probabilities. Member A retained the structural-audit candidate for the formal experiment because it passed the original 10-seed C1-C5 audit and supported the S1-S6 movement pilot. Member B's retrospective confirmation remains pending.
+Selected values: `p_in=0.6`, `p_out=0.05`. These are edge probabilities between tanks in the same region and in different regions, respectively, not turtle movement probabilities. Member A retained the structural-audit candidate for the formal experiment because it passed the original 10-seed C1-C5 audit and supported the S1-S6 movement pilot. Member B confirmed retaining it on 2026-10-08, accepting the disclosed C4 tie, and Member A confirmed the same on 2026-10-08 (issue #5). Both confirmations are retrospective.
 
 The original grid covered `p_in` in 0.5/0.6/0.7/0.8 and `p_out` in 0.03/0.05/0.08/0.10. Of the three candidates passing C1-C5 in that audit, 0.6/0.05 had the lowest within-region density. The other passing choices were 0.7/0.05 and 0.8/0.05. The lower-bridge alternative 0.6/0.03 failed the retry criterion; 0.6/0.08 had too many cross-region edges and too little concentration of cross-region shortest paths for C3/C5. This was a modelling preference, not a unique optimum or a fit to real farm data.
 
@@ -108,7 +108,7 @@ The completed experiments retain 0.6/0.05. Accepting the observed C4 limitation 
 - Historical denominator adjustment (Member A, after inspecting the data): the Q1 proxy denominator was changed to runs where quarantine started. The former `Q1_original_all_runs` and `passed_original_q1` flags are preserved in `stage2-criteria-legacy-proxy.csv`; the current evaluator labels both denominators as proxies and leaves quarantine-specific Q1 unverified.
 - Only D=14 satisfies Q2 (D ≤ 16.25) and Q3 (D ≥ 10). This narrows the candidates but does not validate Q1; the historical proxy selection must not be described as satisfying all three scientific criteria.
 - Historical choice: **D=14**, planned budget 28 tank-days. Retained as the existing formal experiment setting, with Q1 unverified; see the counter correction below.
-- Member B retrospective confirmation: pending (date: —)
+- Member B retrospective confirmation: 2026-10-08 (issue #4)
 
 ## Parameter freeze record (experiment-plan §9; 2026-10-06)
 
