@@ -27,6 +27,7 @@ import pandas as pd
 from utils.formatting import ci, excludes_zero, f2, f3, pct, rate_key
 
 from turtlefarm.analysis import DIFF_TOLERANCE
+from turtlefarm.config import SimulationConfig
 
 FORMAL = "formal-nested"
 CROSSED = "formal"
@@ -57,6 +58,15 @@ def collect() -> tuple[dict[str, str], dict[str, str]]:
         runs_per_block=str(1 + len(design["response_delays"]) * (1 + len(design["policy_seeds"]))),
     )
     v["mean_infectious_days"] = f"{1 / fixed['gamma']:g}"
+    defaults = SimulationConfig()  # fixed structure of the main design (D001-D003, D006)
+    v.update(
+        n_agents=str(defaults.n_agents), n_tanks=str(defaults.n_tanks), n_regions=str(defaults.n_regions),
+        capacity=str(defaults.capacity), initial_per_tank=str(defaults.initial_per_tank),
+        initial_infected=str(defaults.initial_infected), k=str(defaults.k), max_days=str(defaults.max_days),
+        network_max_attempts=str(defaults.network_max_attempts),
+    )
+    v["free_places"] = str(defaults.capacity - defaults.initial_per_tank)
+    v["k_share"] = pct(defaults.k / defaults.n_tanks, 0)
     v["budget"] = str(2 * fixed["quarantine_duration"])
 
     # ---- pilot

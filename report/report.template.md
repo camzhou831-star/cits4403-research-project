@@ -14,11 +14,11 @@ This structure raises a practical question for anyone who can restrict movement:
 
 We study these ideas in a deliberately simple system: 200 synthetic turtles in 20 tanks, grouped into 4 regions of a modular transfer network. Our primary question is how the cross-tank transfer rate and the response delay affect the final outbreak size and the number of affected tanks. Our secondary question is whether, under the same intervention budget, quarantining the highest-betweenness tanks reduces spread more than quarantining randomly chosen tanks. Before the experiment we stated three hypotheses: (H1) a low but non-zero transfer rate lets a local outbreak spread between regions, raising both outcomes; (H2) a longer response delay does not lower either outcome; and (H3) under an equal budget, highest-betweenness quarantine lowers both outcomes more than random quarantine.
 
-**Contribution.** Our contribution is a controlled computational experiment, not a new simulator. The studies above target individuals in contact networks; here the unit of control is a tank with finite capacity, so closing a tank both isolates its occupants and changes where other agents can move. We compare strategies under an identical budget in tank-days and with common random numbers [9], so every strategy in a comparison sees exactly the same outbreak until the quarantine starts, and any later difference is caused by the choice of tanks. Finally, we use the recorded runs to explain the size of the quarantine effect (Section 4.4). The model is a stylised explanation of mechanism, not a forecast for any real facility.
+**Contribution.** Our contribution is a controlled computational experiment, not a new simulator, and none of the unit's taught models [9] is reused. The studies above target individuals in contact networks; here the unit of control is a tank with finite capacity, so closing a tank both isolates its occupants and changes where other agents can move. We compare strategies under an identical budget in tank-days and with common random numbers [10], so every strategy in a comparison sees exactly the same outbreak until the quarantine starts, and any later difference is caused by the choice of tanks. Finally, we use the recorded runs to explain the size of the quarantine effect (Section 4.4). The model is a stylised explanation of mechanism, not a forecast for any real facility.
 
 ## 2. Model
 
-We built a discrete-time stochastic agent-based model (ABM); one time step is one day, and all data are synthetic. Each of the 200 turtle agents has a disease state, susceptible (`S`), infectious (`I`) or recovered (`R`), as in the SIR model [12], and lives in exactly one of 20 tanks. A tank holds at most 12 agents and is either `open` or `quarantined`. At the start, every tank holds 10 agents and one agent, chosen uniformly at random, is infected. The spare capacity means a transfer can fail when every neighbouring tank is full.
+We built a discrete-time stochastic agent-based model (ABM); one time step is one day, and all data are synthetic. Each of the 200 turtle agents has a disease state, susceptible (`S`), infectious (`I`) or recovered (`R`), as in the SIR model [11], and lives in exactly one of 20 tanks. A tank holds at most 12 agents and is either `open` or `quarantined`. At the start, every tank holds 10 agents and one agent, chosen uniformly at random, is infected. The capacity leaves {{free_places}} free places per tank, so a transfer is possible but fails when every neighbouring tank is full. All parameters, their sources and the seeds are listed in Appendix G.
 
 Tanks are the nodes of a static, undirected **modular transfer network**, in which an edge means that agents may be moved directly between two tanks. The 20 tanks form 4 regions of 5 tanks. Each within-region pair is joined with probability `p_in` = {{p_in}} and each between-region pair with `p_out` = {{p_out}}, so regions are internally dense and joined by a few bridge edges (Figure 1). A generated network is accepted only if it is connected, has at least one between-region edge, is not complete, and does not give every node the same betweenness; otherwise it is redrawn deterministically from the same seed. Network statistics are given in Appendix C.
 
@@ -28,7 +28,7 @@ Tanks are the nodes of a static, undirected **modular transfer network**, in whi
 
 Each day runs the same steps in a fixed order. First, quarantine starts or ends. Second, each agent attempts a transfer with probability `transfer_rate`. Attempts are processed in a random order and each is checked at once against the current tank states: a transfer is blocked if the origin is quarantined or if no neighbouring tank is both open and below capacity; otherwise the agent moves to an eligible neighbour chosen uniformly at random. Disease state does not affect movement. Third, mixing within a tank is complete, and a susceptible agent in tank *j* becomes infected with probability 1 − (1 − `beta`)^*I_j*, where *I_j* is the number of infectious agents in the tank after movement. Fourth, each agent that was infectious at the start of the day recovers with probability `gamma` and stays immune. Infections and recoveries are applied together, so a newly infected agent neither transmits nor recovers on the day it is infected. A run stops on the first day with no infectious agents, or is recorded as censored at day 365.
 
-We compare three strategies: no intervention; **random quarantine**, which closes *k* tanks chosen uniformly at random; and **highest-betweenness quarantine**, which closes the *k* tanks with the highest normalised betweenness [8] in the pre-outbreak network (computed with NetworkX [17], which implements Brandes' algorithm [11]). Neither selector can see the infection. Both close *k* = 2 tanks on the same response day for *D* = {{D}} days, so each costs {{budget}} tank-days, and the only difference between them is which tanks are chosen. A quarantined tank cannot send or receive transfers, but transmission and recovery inside it continue. The response delay is counted from the introduction of infection on day 0 and stands in for detection plus administrative response.
+We compare three strategies: no intervention; **random quarantine**, which closes *k* tanks chosen uniformly at random; and **highest-betweenness quarantine**, which closes the *k* tanks with the highest normalised betweenness [8] in the pre-outbreak network (computed with NetworkX [12], which implements Brandes' algorithm [13]). Neither selector can see the infection. Both close *k* = {{k}} tanks ({{k_share}} of the tanks, a small budget) on the same response day for *D* = {{D}} days, so each costs {{budget}} tank-days, and the only difference between them is which tanks are chosen. A quarantined tank cannot send or receive transfers, but transmission and recovery inside it continue. The response delay is counted from the introduction of infection on day 0 and stands in for detection plus administrative response.
 
 The disease parameters, the transfer-rate and delay levels and *D* were chosen in a two-stage pilot whose criteria were committed before it ran and which never compared the two strategies (Appendix B). It chose `beta` = {{beta}} and `gamma` = {{gamma}} (mean infectious period {{mean_infectious_days}} days) and transfer levels {{transfer_levels}}, from no movement to a saturating epidemic. The delays, {{delay_levels}} days, are an immediate response, the median day infection first reaches a second tank, and the median time to peak. *D* = {{D}} days is the only candidate at least one infectious period long that still covers less than a quarter of the epidemic.
 
@@ -38,9 +38,9 @@ The disease parameters, the transfer-rate and delay levels and *D* were chosen i
 
 The formal experiment crosses three factors: transfer rate ({{transfer_levels}}), response delay ({{delay_levels}} days) and strategy. We used {{n_networks}} network instances, each with {{epi_per_network}} epidemic seeds of its own. Each combination of network, epidemic seed and transfer rate forms one **paired block**, giving {{formal_blocks_per_rate}} blocks per transfer rate. A block contains {{runs_per_block}} runs: one no-intervention baseline shared by all delays and, for each delay, one betweenness run and {{n_policy}} random runs with different policy seeds. This gives {{formal_runs}} runs in total.
 
-Pairing relies on how randomness is generated. Each run has a network seed, an epidemic seed and, for random quarantine, a policy seed. Epidemic draws are *event-keyed*, an implementation of common random numbers [9]: the random number used for any (process, day, agent) event depends only on the epidemic seed and that key. Every strategy in a block therefore follows an identical trajectory until the quarantine starts.
+Each run is driven by a network seed, an epidemic seed and, for random quarantine, a policy seed (Appendix G). Epidemic draws are *event-keyed*, an implementation of common random numbers [10]: the random number used for any (process, day, agent) event depends only on the epidemic seed and that key. Every strategy in a block therefore follows an identical trajectory until the quarantine starts.
 
-The co-primary outcomes are the **final attack rate**, the share of agents ever infected, and the number of **affected tanks**, the tanks that ever held an infectious agent. For each block we take the difference *targeted − random*, averaging the random arm over its policy seeds (negative favours targeting), and report its mean and the relative reduction −mean(difference)/mean(random), with 95% confidence intervals from a percentile bootstrap [13] that resamples whole networks, as recommended for clustered data [14] (2000 resamples). The comparison of each strategy with its block's baseline, the restriction to blocks in which quarantine started, and the nested-seed rerun of a first, crossed-seed run (Appendix D) were added after the formal results. Every number in this report is rendered from the result files (Appendix E).
+The co-primary outcomes are the **final attack rate**, the share of agents ever infected, and the number of **affected tanks**, the tanks that ever held an infectious agent. For each block we take the difference *targeted − random*, averaging the random arm over its policy seeds (negative favours targeting), and report its mean and the relative reduction −mean(difference)/mean(random), with 95% confidence intervals from a percentile bootstrap [14] that resamples whole networks, as recommended for clustered data [15] (2000 resamples). The comparison of each strategy with its block's baseline, the restriction to blocks in which quarantine started, and the nested-seed rerun of a first, crossed-seed run (Appendix D) were added after the formal results. Every number in this report is rendered from the result files (Appendix E).
 
 ## 4. Results
 
@@ -48,7 +48,7 @@ All {{formal_runs}} formal runs completed (failed: {{formal_failed}}; censored: 
 
 ### 4.1 Transfer rate drives the spread across regions
 
-Without intervention, the transfer rate decides whether an outbreak stays in its first tank or spreads through the system (Table 1, Figure 2). With no movement, infection never leaves the initial tank: the mean attack rate is {{base_final_attack_rate_0}}. The attack rate rises to {{base_final_attack_rate_0p01}} at a transfer rate of 0.01 ({{base_affected_tanks_0p01}} affected tanks) and to {{base_final_attack_rate_0p025}} at 0.025 ({{base_affected_tanks_0p025}} tanks); at 0.1 the outbreak saturates the system, with an attack rate of {{base_final_attack_rate_0p1}} and {{base_affected_tanks_0p1}} of the 20 tanks affected. Epidemics last longest at the intermediate rate (median time to extinction {{base_time_to_extinction_0p025_median}} days at 0.025 against {{base_time_to_extinction_0p1_median}} days at 0.1).
+Without intervention, the transfer rate decides whether an outbreak stays in its first tank or spreads through the system (Table 1, Figure 2). With no movement, infection never leaves the initial tank: the mean attack rate is {{base_final_attack_rate_0}}. The attack rate rises to {{base_final_attack_rate_0p01}} at a transfer rate of 0.01 ({{base_affected_tanks_0p01}} affected tanks) and to {{base_final_attack_rate_0p025}} at 0.025 ({{base_affected_tanks_0p025}} tanks); at 0.1 the outbreak saturates the system, with an attack rate of {{base_final_attack_rate_0p1}} and {{base_affected_tanks_0p1}} of the 20 tanks affected.
 
 *Table 1. No-intervention outcomes by transfer rate ({{formal_blocks_per_rate}} runs each; 95% CIs from a bootstrap that resamples whole networks).*
 
@@ -84,7 +84,7 @@ Of the {{tvr_cells}} paired comparisons with non-zero transfer (Table 2, Figure 
 
 Why does a well-placed quarantine change so little? After the formal results, we measured three properties of the recorded runs (`scripts/mechanism_analysis.py`); this analysis is exploratory, not pre-registered.
 
-**Position.** On the pre-outbreak networks, the two highest-betweenness tanks are endpoints of {{mech_cov_targeted}} of the between-region edges (of {{mech_bridges}} per network), against {{mech_cov_random}} for the random pairs actually drawn, and removing them splits the network in {{mech_cut_targeted}} of networks, against {{mech_cut_random}}. Targeting does close the bridges.
+**Position.** On the pre-outbreak networks, the two highest-betweenness tanks are endpoints of {{mech_cov_targeted}} of the between-region edges (of {{mech_bridges}} per network), against {{mech_cov_random}} for the random pairs actually drawn, and removing them splits the network in {{mech_cut_targeted}} of networks, against {{mech_cut_random}}.
 
 **Timing.** In the no-intervention runs at transfer rate {{mech_rate}}, {{mech_never_cross}} of outbreaks never left their initial region; the others first reached a second region on day {{mech_cross_median}} (median; interquartile range {{mech_cross_q1}}–{{mech_cross_q3}}). An immediate {{D}}-day quarantine covers {{mech_window_d1}} of these first crossings, and {{mech_after_d1}} happen after it has ended; with a 12-day or 33-day delay, {{mech_before_d12}} or {{mech_before_d33}} have already happened when it starts. A fixed {{D}}-day closure therefore overlaps only part of the period in which outbreaks cross regions.
 
@@ -98,13 +98,13 @@ Why does a well-placed quarantine change so little? After the formal results, we
 
 **H3 receives limited support.** Only one condition favours targeting with an interval excluding 0, and with 18 correlated comparisons about one in twenty would do so by chance. The data do not support a general advantage for targeting under this budget, only the narrower pattern that its effect did not fade with a later response.
 
-Section 4.4 suggests why both strategies achieve so little. Targeting works as intended at the level of the network: it closes about twice as many bridges as a random choice. The constraint is time. Most outbreaks that spread first cross regions within about two weeks, so a {{D}}-day closure either starts after the first crossing or ends before it. A possible reason, not tested here, why targeted quarantine kept its effect at a 33-day delay while random quarantine did not is that the bridge tanks can still delay the invasion of the regions that remain uninfected, whereas a random pair seldom lies on those paths. Salathé and Jones [5] found bridge-targeting effective for immunization, which is permanent; our results suggest that a temporary closure keeps this advantage only if it covers the period in which crossings occur. The analysis points to two testable improvements: a longer closure, and a closure triggered by the first detection outside the initial region rather than by a fixed delay.
+Section 4.4 suggests why both strategies achieve so little. Targeting closes about twice as many bridges as a random choice; the constraint is time. Most outbreaks that spread first cross regions within about two weeks, so a {{D}}-day closure either starts after the first crossing or ends before it. A possible reason, not tested here, why targeted quarantine kept its effect at a 33-day delay while random quarantine did not is that the bridge tanks can still delay the invasion of the regions that remain uninfected, whereas a random pair seldom lies on those paths. Salathé and Jones [5] found bridge-targeting effective for immunization, which is permanent; our results suggest that a temporary closure keeps this advantage only if it covers the period in which crossings occur. The analysis points to two testable improvements: a longer closure, and a closure triggered by the first detection outside the initial region rather than by a fixed delay.
 
-These conclusions are limited in several ways. The turtles, tanks, disease and network are synthetic and uncalibrated, so magnitudes should not be read as predictions. We studied one quarantine budget and one disease regime, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run. There is no detection model, and movement ignores disease state. With {{n_networks}} networks, the intervals are wide relative to the differences between strategies. An expanded 30-seed check of the network generator, done only after the formal experiment, found one exact tie for the second-highest betweenness, so the original no-tie acceptance criterion is not met (Appendix C). Finally, several choices were made after data were seen, including an added transfer level, a corrected pilot criterion for *D*, the nested-seed rerun, the comparison with baselines and the exploratory analysis of Section 4.4, whose timing measures come from the no-intervention runs; each is flagged in the text, recorded in Appendix B and the decision log, and the original results are kept.
+These conclusions are limited in several ways. The turtles, tanks, disease and network are synthetic and uncalibrated, so magnitudes should not be read as predictions. We studied one quarantine budget and one disease regime, and the planned sensitivity analyses on `beta`, `gamma` and capacity were not run. There is no detection model. With {{n_networks}} networks, the intervals are wide relative to the differences between strategies. An expanded 30-seed check of the network generator, done only after the formal experiment, found one exact tie for the second-highest betweenness, so the original no-tie acceptance criterion is not met (Appendix C). Finally, several choices were made after data were seen, including an added transfer level, a corrected pilot criterion for *D*, the nested-seed rerun, the comparison with baselines and the exploratory analysis of Section 4.4, whose timing measures come from the no-intervention runs; each is flagged in the text, recorded in Appendix B and the decision log, and the original results are kept.
 
 ## 6. Conclusion
 
-In a modular tank system, the transfer rate decides whether a local outbreak stays local: raising it from 0.01 to 0.025 multiplies the attack rate by {{ar_ratio_0p01_to_0p025}} and the number of affected tanks by {{tanks_ratio_0p01_to_0p025}}. A quarantine of 2 tanks for {{D}} days reduces the attack rate by at most {{max_vsbase_reduction}}, and targeting the bridge tanks is not consistently better than choosing at random, even though it closes about twice as many between-region edges. The exploratory analysis attributes this to timing: most crossings happen before or after a short, fixed-delay closure. Within this model, reducing cross-region transfers or timing a closure to the first crossing outside the initial region would matter more than which two tanks are closed; neither was tested here.
+In a modular tank system, the transfer rate decides whether a local outbreak stays local: raising it from 0.01 to 0.025 multiplies the attack rate by {{ar_ratio_0p01_to_0p025}} and the number of affected tanks by {{tanks_ratio_0p01_to_0p025}}. A quarantine of 2 tanks for {{D}} days reduces the attack rate by at most {{max_vsbase_reduction}}, and targeting the bridge tanks is not consistently better than choosing at random, even though it closes about twice as many between-region edges. The exploratory analysis attributes this to timing: most crossings happen before or after a short, fixed-delay closure. Within this model, reducing cross-region transfers, or timing a closure to the first crossing, would matter more than which two tanks are closed; neither was tested here.
 
 ## References
 
@@ -124,33 +124,35 @@ In a modular tank system, the transfer rate decides whether a local outbreak sta
 
 [8] L. C. Freeman, "A set of measures of centrality based on betweenness," *Sociometry*, vol. 40, no. 1, pp. 35–41, 1977. doi:10.2307/3033543
 
-[9] P. Glasserman and D. D. Yao, "Some guidelines and guarantees for common random numbers," *Management Science*, vol. 38, no. 6, pp. 884–908, 1992. doi:10.1287/mnsc.38.6.884
+[9] A. B. Downey, *Think Complexity: Complexity Science and Computational Modeling*, 2nd ed. Sebastopol, CA, USA: O'Reilly Media, 2018. ISBN 978-1-4920-4020-0
 
-[10] M. E. J. Newman, "Modularity and community structure in networks," *Proceedings of the National Academy of Sciences*, vol. 103, no. 23, pp. 8577–8582, 2006. doi:10.1073/pnas.0601602103
+[10] P. Glasserman and D. D. Yao, "Some guidelines and guarantees for common random numbers," *Management Science*, vol. 38, no. 6, pp. 884–908, 1992. doi:10.1287/mnsc.38.6.884
 
-[11] U. Brandes, "A faster algorithm for betweenness centrality," *Journal of Mathematical Sociology*, vol. 25, no. 2, pp. 163–177, 2001. doi:10.1080/0022250X.2001.9990249
+[11] W. O. Kermack and A. G. McKendrick, "A contribution to the mathematical theory of epidemics," *Proceedings of the Royal Society of London. Series A*, vol. 115, no. 772, pp. 700–721, 1927. doi:10.1098/rspa.1927.0118
 
-[12] W. O. Kermack and A. G. McKendrick, "A contribution to the mathematical theory of epidemics," *Proceedings of the Royal Society of London. Series A*, vol. 115, no. 772, pp. 700–721, 1927. doi:10.1098/rspa.1927.0118
+[12] A. A. Hagberg, D. A. Schult and P. J. Swart, "Exploring network structure, dynamics, and function using NetworkX," in *Proceedings of the 7th Python in Science Conference*, pp. 11–15, 2008. doi:10.25080/TCWV9851
 
-[13] B. Efron, "Bootstrap methods: Another look at the jackknife," *The Annals of Statistics*, vol. 7, no. 1, pp. 1–26, 1979. doi:10.1214/aos/1176344552
+[13] U. Brandes, "A faster algorithm for betweenness centrality," *Journal of Mathematical Sociology*, vol. 25, no. 2, pp. 163–177, 2001. doi:10.1080/0022250X.2001.9990249
 
-[14] C. A. Field and A. H. Welsh, "Bootstrapping clustered data," *Journal of the Royal Statistical Society: Series B*, vol. 69, no. 3, pp. 369–390, 2007. doi:10.1111/j.1467-9868.2007.00593.x
+[14] B. Efron, "Bootstrap methods: Another look at the jackknife," *The Annals of Statistics*, vol. 7, no. 1, pp. 1–26, 1979. doi:10.1214/aos/1176344552
 
-[15] C. R. Harris et al., "Array programming with NumPy," *Nature*, vol. 585, no. 7825, pp. 357–362, 2020. doi:10.1038/s41586-020-2649-2
+[15] C. A. Field and A. H. Welsh, "Bootstrapping clustered data," *Journal of the Royal Statistical Society: Series B*, vol. 69, no. 3, pp. 369–390, 2007. doi:10.1111/j.1467-9868.2007.00593.x
 
-[16] W. McKinney, "Data structures for statistical computing in Python," in *Proceedings of the 9th Python in Science Conference*, pp. 56–61, 2010. doi:10.25080/Majora-92bf1922-00a
+[16] C. R. Harris et al., "Array programming with NumPy," *Nature*, vol. 585, no. 7825, pp. 357–362, 2020. doi:10.1038/s41586-020-2649-2
 
-[17] A. A. Hagberg, D. A. Schult and P. J. Swart, "Exploring network structure, dynamics, and function using NetworkX," in *Proceedings of the 7th Python in Science Conference*, pp. 11–15, 2008. doi:10.25080/TCWV9851
+[17] W. McKinney, "Data structures for statistical computing in Python," in *Proceedings of the 9th Python in Science Conference*, pp. 56–61, 2010. doi:10.25080/Majora-92bf1922-00a
 
 [18] J. D. Hunter, "Matplotlib: A 2D graphics environment," *Computing in Science & Engineering*, vol. 9, no. 3, pp. 90–95, 2007. doi:10.1109/MCSE.2007.55
 
-[19] A. B. Downey, *Think Complexity: Complexity Science and Computational Modeling*, 2nd ed. Sebastopol, CA, USA: O'Reilly Media, 2018. ISBN 978-1-4920-4020-0
+[19] M. E. J. Newman, "Modularity and community structure in networks," *Proceedings of the National Academy of Sciences*, vol. 103, no. 23, pp. 8577–8582, 2006. doi:10.1073/pnas.0601602103
 
 ## Declaration: software, course material and AI tools
 
-The model, experiments and analysis are implemented in Python 3.12 with NumPy [15], pandas [16], NetworkX [17] (whose betweenness function implements [11]) and Matplotlib [18]; exact versions are pinned in `requirements.txt`. The unit textbook [19] informed our understanding of networks and agent-based models, but none of its models or code is used; the tank, network and quarantine model, the experiments and the analysis were designed by the team for this project.
+The model, experiments and analysis are implemented in Python 3.12 with NumPy [16], pandas [17], NetworkX [12] (whose betweenness function implements [13]) and Matplotlib [18]; exact versions are pinned in `requirements.txt`. The unit textbook [9] informed our understanding of networks and agent-based models, but none of its models or code is used; the tank, network and quarantine model, the experiments and the analysis were designed by the team for this project.
 
 Generative AI tools were used in this project. Claude (Claude Code, Anthropic) assisted Member A with code, analysis scripts and the drafting and revision of documentation and of this report; Member B used ChatGPT (OpenAI) for parts of his code and documentation changes; and Codex CLI (OpenAI) performed read-only reviews of the code and results. The team reviewed all AI-assisted output, every number in this report is generated from the recorded results by the repository scripts, and every reference was checked against CrossRef, Semantic Scholar or the publisher record. The use of AI tools is also recorded in the repository README and contribution record.
+
+**Team contributions.** Member A (Cam Zhou) wrote the research design, the baseline SIR model and event-keyed random draws, the network generator, the batch runner, the pilot and formal experiments, the analysis, the demonstration video and this report. Member B (Wenhao Zhang) wrote the run-record schema, the network-constrained movement and the two quarantine strategies, independently recalculated the hand-traced scenario, reviewed and corrected the pilot duration criterion, ran the expanded network audit, and wrote the project notebook. Both members reviewed each other's pull requests; the GitHub history and `docs/collaboration-plan.md` record who did what.
 
 ## Appendix A. Verification
 
@@ -184,7 +186,7 @@ Across the {{n_networks}} networks of the formal experiment:
 
 | Property | Median | Range |
 |---|---|---|
-| Modularity of the region partition [10] | {{net_modularity_median}} | {{net_modularity_min}}–{{net_modularity_max}} |
+| Modularity of the region partition [19] | {{net_modularity_median}} | {{net_modularity_min}}–{{net_modularity_max}} |
 | Between-region edges | {{net_n_inter_edges_median}} | {{net_n_inter_edges_min}}–{{net_n_inter_edges_max}} |
 | Mean degree | {{net_mean_degree_median}} | {{net_mean_degree_min}}–{{net_mean_degree_max}} |
 | Diameter | {{net_diameter_median}} | {{net_diameter_min}}–{{net_diameter_max}} |
@@ -218,3 +220,25 @@ python scripts/build_report.py
 ![Figure F1]({{figdir}}/fig3-affected-tanks.png)
 
 *Figure F1. Mean number of affected tanks, laid out as in Figure 2.*
+
+## Appendix G. Parameters and seeds
+
+*Table G1. Parameters of the formal experiment. "Pilot" values were selected by the pre-registered pilot (Appendix B); "fixed" values were set at Checkpoint 1 and recorded in `docs/decision-log.md`.*
+
+| Parameter | Value | Meaning | Source |
+|---|---|---|---|
+| Agents / tanks / regions | {{n_agents}} / {{n_tanks}} / {{n_regions}} | population and housing structure | fixed |
+| Tank capacity | {{capacity}} | maximum agents per tank | fixed (D002) |
+| Initial occupancy | {{initial_per_tank}} per tank, {{initial_infected}} infected | start state; the infected agent is drawn from the epidemic seed | fixed |
+| `p_in` / `p_out` | {{p_in}} / {{p_out}} | edge probability within / between regions | structural audit (D005) |
+| `beta` | {{beta}} | daily infection probability per infectious tank-mate | pilot |
+| `gamma` | {{gamma}} | daily recovery probability (mean infectious period {{mean_infectious_days}} days) | pilot |
+| `transfer_rate` | {{transfer_levels}} | daily probability that an agent attempts a transfer | pilot |
+| Response delay | {{delay_levels}} days | days from introduction to the start of quarantine | pilot |
+| *k* / *D* | {{k}} tanks / {{D}} days | quarantine budget ({{budget}} tank-days) | fixed (D003) / pilot (D004) |
+| Horizon | {{max_days}} days | runs still infectious at this day are censored | fixed (D006) |
+| Network seeds | {{network_seed_range}} | one network per seed; redrawn up to {{network_max_attempts}} times if a structural check fails | design |
+| Epidemic seeds | {{epidemic_seed_range}} | {{epi_per_network}} per network, nested | design |
+| Policy seeds | {{policy_seed_range}} | random quarantine choices | design |
+| Bootstrap | 2000 resamples | network-cluster percentile CIs | analysis |
+
