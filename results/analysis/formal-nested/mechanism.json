@@ -1,0 +1,77 @@
+{
+  "design": "formal-nested",
+  "quarantine_duration": 14,
+  "networks": 20,
+  "between_region_edges_mean": 8.1,
+  "bridge_coverage_targeted_mean": 0.4027991452991453,
+  "bridge_coverage_random_mean": 0.20676434676434677,
+  "disconnects_targeted_share": 0.65,
+  "disconnects_random_share": 0.16666666666666666,
+  "focus_rate": 0.025,
+  "focus_baselines": 100,
+  "never_crossed_share": 0.21,
+  "first_cross_day_median": 15,
+  "first_cross_day_q1": 8.0,
+  "first_cross_day_q3": 28.0,
+  "timing_by_delay": {
+    "1": {
+      "crossed_before_start": 0.0,
+      "crossed_during_window": 0.4936708860759494,
+      "crossed_after_window": 0.5063291139240507
+    },
+    "12": {
+      "crossed_before_start": 0.3924050632911392,
+      "crossed_during_window": 0.34177215189873417,
+      "crossed_after_window": 0.26582278481012656
+    },
+    "33": {
+      "crossed_before_start": 0.7974683544303798,
+      "crossed_during_window": 0.11392405063291139,
+      "crossed_after_window": 0.08860759493670886
+    }
+  },
+  "selected_already_infected": {
+    "0.01": {
+      "1": {
+        "betweenness": 0.04,
+        "random": 0.051666666666666666
+      },
+      "12": {
+        "betweenness": 0.0663265306122449,
+        "random": 0.09183673469387756
+      },
+      "33": {
+        "betweenness": 0.1506849315068493,
+        "random": 0.17579908675799086
+      }
+    },
+    "0.025": {
+      "1": {
+        "betweenness": 0.04,
+        "random": 0.051666666666666666
+      },
+      "12": {
+        "betweenness": 0.1326530612244898,
+        "random": 0.141156462585034
+      },
+      "33": {
+        "betweenness": 0.3010752688172043,
+        "random": 0.33154121863799285
+      }
+    },
+    "0.1": {
+      "1": {
+        "betweenness": 0.04,
+        "random": 0.051666666666666666
+      },
+      "12": {
+        "betweenness": 0.4846938775510204,
+        "random": 0.41496598639455784
+      },
+      "33": {
+        "betweenness": 0.9591836734693877,
+        "random": 0.9404761904761905
+      }
+    }
+  }
+}
