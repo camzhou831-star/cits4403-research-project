@@ -21,5 +21,5 @@ This file preserves the original repository link. The canonical Checkpoint mater
 - Research and model documentation is prepared.
 - The shared repository exists.
 - Checkpoint 1 meeting held; facilitator satisfied, no changes requested (see `decision-log.md`).
-- M1 baseline SIR implemented in `turtlefarm/` (PR #19); no movement, intervention or experimental result yet.
+- M1 baseline SIR implemented in `src/turtlefarm/` (PR #19); no movement, intervention or experimental result yet.
 - Prototype result to be added after the M2 movement/intervention model is implemented.

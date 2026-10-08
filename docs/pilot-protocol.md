@@ -133,7 +133,7 @@ All three cause columns must be present and non-missing for every summary row be
 
 ## 5. Implementation of selection rules
 
-The criteria above are implemented in `turtlefarm/analysis.py`. `scripts/pilot_select.py stage1` / `stage2` applies them to recorded pilot results and writes each candidate's criterion-by-criterion assessment to `results/pilot/`. If the rules cannot yield a unique choice (for example, no candidate passes, or rule 2 remains tied with equal `beta`), the script stops with exit code 3 without selecting automatically; follow §1 rule 5.
+The criteria above are implemented in `src/turtlefarm/analysis.py`. `scripts/pilot_select.py stage1` / `stage2` applies them to recorded pilot results and writes each candidate's criterion-by-criterion assessment to `results/pilot/`. If the rules cannot yield a unique choice (for example, no candidate passes, or rule 2 remains tied with equal `beta`), the script stops with exit code 3 without selecting automatically; follow §1 rule 5.
 
 Additions on 2026-10-06 (before running or inspecting any pilot data): tie-breaking for Stage 1 rule 3, Stage 2 transfer levels, delay rounding, the baseline scope for Q2 and the counting limitation for Q1.
 
@@ -142,7 +142,7 @@ Additions on 2026-10-06 (before running or inspecting any pilot data): tie-break
 1. Write `docs/pilot-report-<date>.md`: criterion-by-criterion results for each candidate, excluded candidates, failed / censored runs and runtime.
 2. Freeze `beta`, `gamma`, `D`, `p_in` / `p_out`, transfer-rate levels, delay levels, seed lists and replication counts in `decision-log.md`, and close issues #4 and #5.
 3. Create `experiments/config/formal.json` (no `sweep`; no overlap with pilot seeds).
-4. Remove frozen fields from `PROVISIONAL_FIELDS` in `turtlefarm/config.py`.
+4. Remove frozen fields from `PROVISIONAL_FIELDS` in `src/turtlefarm/config.py`.
 
 ## 7. Sign-off
 

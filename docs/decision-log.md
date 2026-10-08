@@ -127,7 +127,7 @@ The completed experiments retain 0.6/0.05. Accepting the observed C4 limitation 
 | Planned runs | 5200 (4 transfer levels × 100 blocks × 13 runs) | `experiments/config/formal.json` |
 | Replicates per condition | 100 blocks (≥ 30) | experiment-plan §8 |
 
-- Added analysis scope (recorded before running the formal experiment): report paired effects for both all blocks and blocks where quarantine actually started (the `subset` column in `turtlefarm/analysis.py`); rationale in `pilot-report-2026-10-06.md` §5.
+- Added analysis scope (recorded before running the formal experiment): report paired effects for both all blocks and blocks where quarantine actually started (the `subset` column in `src/turtlefarm/analysis.py`); rationale in `pilot-report-2026-10-06.md` §5.
 - After the formal experiment starts, do not change these parameters because results disagree with the hypothesis (experiment-plan §9).
 - Confirmation by both members: Member A on 2026-10-06; Member B pending.
 
@@ -178,7 +178,7 @@ The following decisions were all made after inspecting summary results from `for
 
 | # | Decision | Reason | Location |
 |---|---|---|---|
-| A1 | Add paired comparisons of "each strategy − the no-intervention baseline in the same block" (`baseline_differences`) as descriptive analysis | The delay effect in research question 1 can only be shown relative to baseline; the original plan compared only targeted with random | `turtlefarm/analysis.py`, report §4.2 / Appendix F, Table F1 |
+| A1 | Add paired comparisons of "each strategy − the no-intervention baseline in the same block" (`baseline_differences`) as descriptive analysis | The delay effect in research question 1 can only be shown relative to baseline; the original plan compared only targeted with random | `src/turtlefarm/analysis.py`, report §4.2 / Appendix F, Table F1 |
 | A2 | Representative-run rule (Figure 7): classify no-intervention runs at transfer rate 0.025 as local / cross-region; select the run in each class with final attack rate closest to that class's median, breaking ties by smaller seeds | experiment-plan §13 requires an objective rule; the rule was written after viewing only summary results, before inspecting any individual trajectory | `pick_representative_runs`, report Figure 3 |
 | A3 | Report the comparison of `formal` (crossed seeds) and `formal-nested` (cells whose intervals do not cross 0: 7 vs 2) | Disclose overstated precision under the crossed design | Report Appendix D |
 | A4 | `formal-nested` reuses `formal` network seeds 200-219 and policy seeds 1000-1002, changing only epidemic seeds | The crossing issue arises only from shared epidemic seeds; networks are generated deterministically from seeds, so reusing the same networks isolates the seed-design difference between the two runs | `experiments/config/formal-nested.json` |
@@ -200,6 +200,6 @@ These fixes change no numerical results in the report (`formal-nested` and `form
 
 | Date | Decision changed | Documents updated | PR |
 |---|---|---|---|
-| 2026-09-11 | None (working proposals adopted as final values for D001-D003 and D006-D008) | `decision-log.md`, `README.md`, `checkpoint-1.md`, `turtlefarm/config.py` (provisional labels removed) | docs/checkpoint-1-feedback (PR #21) |
+| 2026-09-11 | None (working proposals adopted as final values for D001-D003 and D006-D008) | `decision-log.md`, `README.md`, `checkpoint-1.md`, `src/turtlefarm/config.py` (provisional labels removed) | docs/checkpoint-1-feedback (PR #21) |
 | 2026-09-11 | Semantic additions: spec §16 randomness changed from "independent substreams" to event-keyed draws (ensuring pairing across strategies); two-layer freeze rule added in §18 | `model-specification.md` §16/§18, `validation-plan.md` §9, `hand-trace-3tank.md` | model/validation-and-paired-rng (PR #22) |
-| 2026-09-11 | Structural checks in spec §3.2 step 4 specified as 4 rules; D005 candidate values 0.6 / 0.05 | `model-specification.md` §3.2, `network-audit-2026-09-11.md`, `turtlefarm/network.py` | model/modular-network |
+| 2026-09-11 | Structural checks in spec §3.2 step 4 specified as 4 rules; D005 candidate values 0.6 / 0.05 | `model-specification.md` §3.2, `network-audit-2026-09-11.md`, `src/turtlefarm/network.py` | model/modular-network |

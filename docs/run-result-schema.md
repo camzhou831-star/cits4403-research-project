@@ -1,6 +1,6 @@
 # Run Metadata and Raw-Result Schema
 
-Status: adopted (issue #15, PR #25); implemented by `turtlefarm/runner.py` and checked field by field in `tests/test_runner.py`. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
+Status: adopted (issue #15, PR #25); implemented by `src/turtlefarm/runner.py` and checked field by field in `tests/test_runner.py`. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
 
 ## 1. Storage contract
 

@@ -20,9 +20,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path[:0] = [str(ROOT / "src"), str(ROOT)]  # src/: the turtlefarm package; root: utils/
 
 import pandas as pd
+
+from utils.formatting import ci, excludes_zero, f2, f3, pct, rate_key
 
 from turtlefarm.analysis import DIFF_TOLERANCE
 
@@ -31,30 +33,6 @@ CROSSED = "formal"
 PILOTS = ("pilot-stage1-disease", "pilot-stage1-disease-r2", "pilot-stage2-intervention")
 ANALYSIS = ROOT / "results" / "analysis"
 METRIC_NAMES = {"final_attack_rate": "Final attack rate", "affected_tanks": "Affected tanks"}
-
-
-def f2(x: float) -> str:
-    return f"{x:.2f}"
-
-
-def f3(x: float) -> str:
-    return f"{x:.3f}"
-
-
-def pct(x: float, digits: int = 1) -> str:
-    return f"{100 * x:.{digits}f}%"
-
-
-def ci(lo: float, hi: float, fmt=f3) -> str:
-    return f"[{fmt(lo)}, {fmt(hi)}]"
-
-
-def rate_key(rate: float) -> str:
-    return f"{rate:g}".replace(".", "p")
-
-
-def excludes_zero(lo: float, hi: float) -> bool:
-    return lo > 0 or hi < 0
 
 
 def collect() -> tuple[dict[str, str], dict[str, str]]:

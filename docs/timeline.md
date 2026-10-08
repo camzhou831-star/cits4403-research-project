@@ -71,7 +71,7 @@ Priorities:
 ### Status at 2026-09-20
 
 - Must have: all complete. Movement / capacity (PR #27), management state and three strategies (PR #29), pre-outbreak betweenness selection, budget-fair pairing, separation of the three seed types, validation cases (111 tests on `main`).
-- Should have: batch runner, design validation and raw-result provenance were implemented two days behind schedule on 2026-09-20 (issue #30, `turtlefarm/runner.py`, 25 additional tests); the schema was merged on 2026-09-20 (PR #25). End-to-end coverage is provided by `experiments/config/smoke.json`.
+- Should have: batch runner, design validation and raw-result provenance were implemented two days behind schedule on 2026-09-20 (issue #30, `src/turtlefarm/runner.py`, 25 additional tests); the schema was merged on 2026-09-20 (PR #25). End-to-end coverage is provided by `experiments/config/smoke.json`.
 - Workflow gap: PR #27 and #29 have no review record from the other member; see `collaboration-plan.md` §8.
 
 ## 19-25 September - Pilot and formal experiments

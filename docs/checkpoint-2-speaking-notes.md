@@ -6,7 +6,7 @@ Coverage: main model components, experiment plan, current progress, issues and n
 
 > The official Checkpoint 2 requirements and rubric are not recorded in the repository (README, "Current stage and gates", item 5). Check the LMS before the meeting; if the requirements differ, update this file first.
 
-Line-number reference: `turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md` and README lines 1-37 have not changed since `main` @ `37a7fe3`. After opening a file on GitHub, press `y` to pin the link to the current commit.
+Line-number reference: `src/turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md` and README lines 1-37 have not changed since `main` @ `37a7fe3`. After opening a file on GitHub, press `y` to pin the link to the current commit.
 
 ## Before the meeting
 
@@ -16,7 +16,7 @@ python -m pytest -q                  # Note the passing test count to read in Se
 python scripts/demo_checkpoint2.py   # Confirm the demo runs; about 1 second.
 ```
 
-Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show line numbers), `turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md`, and a terminal in the repository directory with `.venv` activated.
+Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show line numbers), `src/turtlefarm/config.py`, `entities.py`, `network.py`, `model.py`, `docs/experiment-plan.md`, and a terminal in the repository directory with `.venv` activated.
 
 ---
 
@@ -46,7 +46,7 @@ Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show 
 
 ## 3. Parameters (about 60 seconds)
 
-**Show:** `turtlefarm/config.py` line 13.
+**Show:** `src/turtlefarm/config.py` line 13.
 
 > We have three strategies: no quarantine, random quarantine, and highest-betweenness quarantine.
 
@@ -70,7 +70,7 @@ Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show 
 
 ## 4. Agent and Tank (about 25 seconds)
 
-**Show:** `turtlefarm/entities.py` lines 7-31.
+**Show:** `src/turtlefarm/entities.py` lines 7-31.
 
 > This file defines our two entities.
 >
@@ -80,7 +80,7 @@ Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show 
 
 ## 5. Network (about 50 seconds)
 
-**Show:** The top of `turtlefarm/network.py`.
+**Show:** The top of `src/turtlefarm/network.py`.
 
 > Tanks are the nodes of a fixed network. A link means turtles can move between those two tanks.
 >
@@ -96,7 +96,7 @@ Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show 
 
 ## 6. Daily update rules (about 90 seconds)
 
-**Show:** `turtlefarm/model.py` lines 429-443 (`step()`), pointing to lines 431-437 one by one.
+**Show:** `src/turtlefarm/model.py` lines 429-443 (`step()`), pointing to lines 431-437 one by one.
 
 > This function is one simulated day.
 >
@@ -132,7 +132,7 @@ Open these tabs in advance: `README.md` (use `?plain=1` on the web page to show 
 
 ## 8. Quarantine strategies
 
-**Show:** `turtlefarm/model.py` lines 173-187.
+**Show:** `src/turtlefarm/model.py` lines 173-187.
 
 > I will first explain how the intervention strategies are implemented.
 >
@@ -164,7 +164,7 @@ Do not read out or interpret the attack rate values in the table; if asked, repe
 
 ## 9. Result recording
 
-**Show:** `turtlefarm/model.py` line 33 (`DailyRecord`).
+**Show:** `src/turtlefarm/model.py` line 33 (`DailyRecord`).
 
 > The model records a daily result containing the S, I, and R counts, new infections, recoveries, attempted movements, accepted movements, blocked movements, affected tanks, and per-tank states.
 

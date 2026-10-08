@@ -142,7 +142,7 @@ def test_replay_in_fresh_process_gives_same_hash():
         "print(n.network_hash, n.attempt)"
     )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True,
-                         cwd=Path(__file__).resolve().parent.parent)
+                         cwd=Path(__file__).resolve().parent.parent / "src")
     assert out.stdout.split() == [GOLDEN_HASH_SEED0, "1"]
 
 

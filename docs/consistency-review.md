@@ -79,7 +79,7 @@ If any D001-D008 decision changes, update at minimum:
 
 | Date | Trigger | Outcome | Documents updated |
 |---|---|---|---|
-| 2026-09-11 | Checkpoint 1 held; no decision value changed; D001-D003, D006-D008 status pending → frozen | Status-only change; §6 semantic-update list not triggered | `decision-log.md`, `model-specification.md` (§1 note, §3, §6.2, §11, §14, §18), `research-plan.md`, `experiment-plan.md` (§3, §17), `assumptions.md`, `README.md`, `checkpoint-1.md`, `turtlefarm/config.py` |
+| 2026-09-11 | Checkpoint 1 held; no decision value changed; D001-D003, D006-D008 status pending → frozen | Status-only change; §6 semantic-update list not triggered | `decision-log.md`, `model-specification.md` (§1 note, §3, §6.2, §11, §14, §18), `research-plan.md`, `experiment-plan.md` (§3, §17), `assumptions.md`, `README.md`, `checkpoint-1.md`, `src/turtlefarm/config.py` |
 | 2026-10-08 | Issues #4/#5: reconcile documentation with completed experiments and add the promised structural follow-up | D=14 and p_in/p_out=0.6/0.05 unchanged; Q1-Q3 recomputation matches; C1 passes on 30 seeds, C4 no-tie clause fails once; member confirmation remains pending | All seven documents in §6, `decision-log.md`, both network audits, `pilot-protocol.md`, `README.md`, report template and generated report |
 
 ## 8. D004/D005 consistency check (2026-10-08)
