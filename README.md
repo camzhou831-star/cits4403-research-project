@@ -14,7 +14,7 @@ This repository holds the research design, model implementation, computational e
 - Deadline: Friday 9 October 2026. The lecture slides give 1:59pm AWST, while earlier planning used 23:59; the exact time and the submission format must be confirmed on LMS.
 - Demonstration: Week 12.
 
-## Status (6 October 2026)
+## Status (8 October 2026)
 
 | Part | State |
 |---|---|
@@ -23,7 +23,8 @@ This repository holds the research design, model implementation, computational e
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
 | Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. Final format pending the LMS requirements. |
-| Review | Two read-only acceptance rounds by Codex CLI (ACCEPT WITH FIXES; fixes applied). Member B review and sign-offs pending (PR #34). |
+| Review | PRs #34 and #36 merged on 7 October. Recorded Q1 reviews do not replace the outstanding protocol and parameter confirmations. Issues #4, #5 and #18 remain open. |
+| Decision follow-up | D=14 criterion table reproduced from the recorded Stage 2 runs. The expanded 30-seed network check passes C1 but has one C4 rank-2 tie; both tied tanks are selected. See `docs/network-audit-2026-10-08.md`. |
 
 Deviations from our own protocol are disclosed in `docs/decision-log.md` (sections "Protocol deviations" and "Analysis decisions made after the formal results") and in the report. The most important are:
 
@@ -31,6 +32,7 @@ Deviations from our own protocol are disclosed in `docs/decision-log.md` (sectio
 - the Stage 1 transfer grid was extended after the first round failed;
 - Q1's denominator was changed after the Stage 2 data were seen; review then showed the mixed blocked-transfer counter could not measure Q1, so cause-specific counters were pre-registered, added, and the Stage 2 pilot rerun (outcomes unchanged; Q1 met);
 - the first formal run crossed epidemic seeds with networks and was rerun with nested seeds.
+- the promised expanded structural check was performed after the formal experiment; it passes generation stability but fails the original no-rank-2-tie clause once, as disclosed in the follow-up audit and report.
 
 ### Main findings (details and uncertainty in the report)
 
@@ -123,6 +125,8 @@ Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `b
 | `docs/collaboration-plan.md` | Communication, GitHub workflow, review rules and the evidence-based contribution record |
 | `docs/figures/concept-diagram.png` | Conceptual system diagram (issue #17) |
 | `docs/network-audit-2026-09-11.md` | Structural audit of the network generator, D005 candidate values |
+| `docs/network-audit-2026-10-08.md` | Retrospective 30-seed audit, complete grid and the C4 tie limitation |
+| `docs/model-walkthrough.md` | Ten-minute daily-update and invariant walkthrough guide; actual session record pending (#18) |
 | `docs/hand-trace-3tank.md` | Hand-traced 3-tank scenario, checked against `tests/test_hand_trace.py` |
 | `docs/checkpoint-1-*.md`, `docs/checkpoint-2-speaking-notes.md` | Checkpoint briefs, speaking notes and rehearsals |
 | `docs/timeline.md`, `docs/risk-register.md`, `docs/facilitator-questions.md`, `docs/literature-plan.md`, `docs/consistency-review.md`, `docs/week-plan-2026-09-05.md` | Planning records |

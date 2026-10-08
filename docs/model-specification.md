@@ -1,6 +1,6 @@
 # Model Specification
 
-This document is the normative model specification. D001-D003 and D006-D008 were frozen on 2026-09-11 (see `decision-log.md`). Items still marked `Candidate value, frozen after pilot` (D004 quarantine duration, D005 network parameters, `beta`, and `gamma`) follow the two-layer freeze rule in §18. Both members should be able to implement the same behaviour independently from this document.
+This document is the normative model specification. D001-D003 and D006-D008 were frozen on 2026-09-11. The completed formal experiment uses `beta=0.2`, `gamma=0.1`, `D=14`, `p_in=0.6` and `p_out=0.05`, selected on 2026-10-06. Member B's retrospective confirmation and the protocol deviations remain recorded in `decision-log.md`; the numerical settings are not awaiting implementation. Both members should be able to implement the same behaviour independently from this document.
 
 ## 1. Model type, purpose and time
 
@@ -57,7 +57,9 @@ Transmission and recovery continue inside a quarantined tank; only transfers int
 4. If the network is disconnected, has no cross-region edge or fails a predefined structural check, deterministically generate the next attempt from the same network seed and record the attempt index. The predefined structural checks (specified on 2026-09-11 in `turtlefarm/network.py`) are: (a) connected; (b) at least one cross-region edge; (c) not a complete graph; (d) node betweenness values are not all equal. Deterministic convention (frozen on 2026-09-11): each attempt uses `PCG64(SeedSequence(network_seed, spawn_key=(attempt,)))`, drawing one uniform value for each of the 190 node pairs in the lexicographic order of `itertools.combinations(range(20), 2)`. Every rejection reason is recorded. If no attempt passes within 100 attempts, the run is marked `failed` and all rejection reasons are retained.
 5. Save the adjacency list, region assignment, network seed, attempt index, network hash, mean degree, density, clustering coefficient, modularity, diameter and node betweenness.
 
-`p_in`, `p_out` and structural acceptance thresholds: **Candidate value, frozen after structural pilot (D005, issue #5)**. The generation algorithm and acceptance rules (steps 1-5 in this section) are frozen; only their numerical values remain pending. The working proposal is to use the pilot to select parameters that reliably generate connected modular graphs without fixing a single bridge tank too rigidly. The structural audit (`docs/network-audit-2026-09-11.md`) proposes `p_in = 0.6` and `p_out = 0.05`. Manually specifying bridge edges is interpretable but gives low network-instance variance; a pure stochastic block model has more natural variance but may need rejection criteria.
+The formal experiment uses **`p_in = 0.6`, `p_out = 0.05` (D005, selected 2026-10-06)** with the generation and acceptance rules above. The original structural audit compared 16 parameter pairs and preferred the lowest within-region density among its three passing candidates. The movement pilot supported retaining that setting. Member B's retrospective confirmation is pending in `decision-log.md`.
+
+The follow-up in `network-audit-2026-10-08.md` finds that all 30 checked networks generate within the retry limit, but one has an exact tie at rank 2 under the original C4 criterion. Both tied tanks are selected for `k=2`. This limitation does not change the runtime acceptance or tie-breaking rules, and must not be described as all C1-C5 criteria passing on the expanded sample. Manual bridge edges would be easier to prescribe but would reduce network-instance variation; they are not used here.
 
 ## 4. Betweenness centrality
 
@@ -163,7 +165,7 @@ In the implementation, day `0` is the initial snapshot with no movement; the fir
 
 **Delay origin: measured from outbreak introduction (`t = 0`), Frozen 2026-09-11 (D001; the team adopted the working proposal after Checkpoint 1; see `decision-log.md`).** The alternative, first observed infection, requires an observation model or an additional detection assumption and would expand the scope. This project interprets delay as a combined abstraction of detection and administrative response.
 
-Selected tanks are `quarantined` during `[start_day, start_day + D)` and return to `open` on day `start_day + D`. Duration `D` is fixed in the main experiment; its value is **Candidate value, frozen after pilot (D004, issue #4)**. The semantics (half-open interval, one-time trigger and cost measured in tank-days) are frozen. In the implementation, `D` is an ordinary configuration value marked provisional in the config.
+Selected tanks are `quarantined` during `[start_day, start_day + D)` and return to `open` on day `start_day + D`. The main experiment fixes **`D=14` (D004, selected 2026-10-06)**. Of the 7/14/21-day candidates, only 14 meets Q1-Q3; the criterion table was reproduced on 2026-10-08. See `decision-log.md` for the alternatives, post-hoc Q1 qualifications and pending Member B confirmation. The half-open interval, one-time trigger and tank-day cost are unchanged. The implementation's provisional-field list is empty for the formal experiment; that metadata does not establish team sign-off.
 
 ## 12. Intervention strategies
 
@@ -290,8 +292,8 @@ Intervention selection must not use future infection states, future transfers, f
 | D001 | Response-delay origin | Frozen 2026-09-11 | From introduction at `t = 0` (§11) |
 | D002 | Fixed capacity | Frozen 2026-09-11 | 12 (§6.2) |
 | D003 | Quarantined tank count `k` | Frozen 2026-09-11 | 2 (§12) |
-| D004 | Quarantine duration `D` | Semantics frozen; value after pilot | §11; issue #4 |
-| D005 | `p_in` / `p_out` / acceptance thresholds | Algorithm frozen; values after structural pilot | §3; issue #5 |
+| D004 | Quarantine duration `D` | Selected 2026-10-06; Member B confirmation pending | 14 days; §11; issue #4 |
+| D005 | `p_in` / `p_out` / acceptance thresholds | Selected 2026-10-06; confirmation and expanded-audit C4 limitation pending | 0.6 / 0.05; unchanged runtime checks in §3; issue #5 |
 | D006 | `max_days` | Frozen 2026-09-11 | 365 (§14) |
 | D007 | No-intervention reporting | Frozen 2026-09-11 | Shared baseline per block (experiment-plan §3) |
 | D008 | Headline outcome | Frozen 2026-09-11 | Attack rate + affected tanks co-primary (§15.3) |
@@ -302,3 +304,5 @@ Intervention selection must not use future infection states, future transfers, f
 2. **Numerical freeze (before formal experiments)**: `beta`, `gamma`, `D`, `p_in`/`p_out`, transfer-rate levels, delay levels and replication counts are frozen after the 19-25 Sep pilot and recorded in `decision-log.md` and the experiment config. Until then, these fields are ordinary configuration values, automatically marked provisional by the code and written to run metadata; pilot results are not hypothesis evidence.
 
 Any semantic change still triggers cross-document updates under `consistency-review.md` §6.
+
+The rule above records the intended workflow. The pilot actually ran in October before Member B signed the protocol, and the 30-seed structural follow-up was completed after the formal experiment. These departures remain in the decision log; current documentation does not backdate approval or move the checks before execution.

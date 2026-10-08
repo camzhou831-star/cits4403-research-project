@@ -8,14 +8,14 @@ The main experiment answers the two research questions; it is not a demonstratio
 
 ### Independent variables
 
-1. **Cross-tank transfer rate (`mu`)**: provisionally 4 levels, namely `0` and 3 non-zero levels to be set by the pilot.
-2. **Response delay (`d`)**: provisionally 3 levels, e.g. immediate / short / long; the exact days are set by facilitator feedback and the pilot.
+1. **Cross-tank transfer rate (`mu`)**: `0 / 0.01 / 0.025 / 0.1`, selected through the pilot.
+2. **Response delay (`d`)**: `1 / 12 / 33` days from outbreak introduction, selected through the pilot.
 3. **Intervention strategy**:
    - `No intervention`
    - `Random tank quarantine`
    - `Highest-betweenness tank quarantine`
 
-Numeric levels must not be written down as final values before the pilot.
+These are the levels used by the completed `formal-nested` experiment. The original plan required selection before formal execution; deviations and pending confirmations are recorded in `decision-log.md`.
 
 ### Control variables
 
@@ -30,6 +30,8 @@ Fixed in the main experiment:
 - daily update order;
 - maximum horizon;
 - metric definitions.
+
+The formal settings are `beta=0.2`, `gamma=0.1`, capacity 12, `k=2`, `D=14`, `p_in=0.6`, `p_out=0.05` and `max_days=365`. D004's candidate comparison and D005's structural criteria are in `decision-log.md`. The 2026-10-08 network follow-up is a retrospective structural check, not an additional epidemic experiment.
 
 ## 3. Baseline and treatment conditions
 
@@ -237,10 +239,6 @@ The sensitivity analysis must not grow into a full Cartesian product of paramete
 
 Frozen (2026-09-11, see `decision-log.md`): capacity = 12, `k` = 2, `max_days` = 365, delay measured from introduction, shared baseline reporting, attack rate and affected tanks co-primary.
 
-Numeric values to be frozen after the 19-25 Sep pilot (`model-specification.md` section 18, second layer):
+The October pilot selected the numerical settings in §2. The reported design, `experiments/config/formal-nested.json`, uses 20 network seeds (200-219), 100 epidemic seeds (20000-20099, five distinct seeds per network), and three random-policy seeds (1000-1002). Four transfer levels and 100 blocks per level, each with one shared baseline and twelve intervention runs, give 5,200 runs. The earlier crossed-seed experiment is retained as a historical comparison, not substituted for this result set.
 
-- numeric transfer-rate levels;
-- numeric response-delay levels;
-- `beta`, `gamma`, `D`;
-- network generation parameters `p_in` / `p_out`;
-- final network/epidemic/policy replication counts.
+Member B's retrospective confirmation of the pilot decisions remains pending. The 30-seed structural follow-up passes C1 but finds one C4 rank-2 tie, as documented in `network-audit-2026-10-08.md`; accepting that limitation requires a recorded team decision. No formal parameter, seed or result was changed by the documentation update.

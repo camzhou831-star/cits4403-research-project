@@ -9,11 +9,43 @@ Record the final decisions for D001-D008. Each decision must state its source (f
 | D001 | Response-delay origin | From introduction at `t=0` | From introduction at `t=0` | Team (facilitator raised no objection) | 2026-09-11 | No change to the delay origin was requested at Checkpoint 1 (2026-09-07); working proposal adopted (spec §11) |
 | D002 | Tank capacity | 12 | 12 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
 | D003 | Quarantined tank count `k` | 2 | 2 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
-| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A (Member B's confirmation pending) | 2026-10-06 | Q1-Q3 met with cause-specific blocking counters (Q1 95.7%), pre-registered before the rerun; `pilot-report-2026-10-06.md` §8 |
-| D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A (Member B's confirmation pending) | 2026-10-06 | Structural audit candidate; S1-S6 can be met in the movement pilot with these network parameters, so no replacement is needed |
+| D004 | Quarantine duration `D` | Select after pilot | 14 | Member A (Member B's confirmation pending) | 2026-10-06 | Q1-Q3 met with cause-specific counters; 2026-10-08 recomputation reproduced the criterion table. Alternatives and qualifications are recorded below. |
+| D005 | Network `p_in` / `p_out` | Select after structural pilot | 0.6 / 0.05 | Member A (Member B's confirmation pending) | 2026-10-06 | Used in the completed formal experiment. The retrospective 30-seed check on 2026-10-08 passes C1 but finds one exact tie under C4; see the follow-up below. |
 | D006 | `max_days` | 365 | 365 | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted; `censored_max_days` status still recorded |
 | D007 | No-intervention reporting | Shared baseline per block | Shared baseline per block | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
 | D008 | Headline outcome | Attack rate + affected tanks co-primary | Attack rate + affected tanks co-primary | Team (facilitator raised no objection) | 2026-09-11 | Working proposal adopted |
+
+## D004 and D005 evidence update (2026-10-08)
+
+This update records the evidence for the settings already used in the formal experiment. It does not change any parameter or add a member's sign-off. Issues #4 and #5 remain open. The selection date remains 2026-10-06; the checks below took place on 2026-10-08. Neither choice was prescribed by the facilitator.
+
+### D004: quarantine duration
+
+Selected value: `D=14` days, with `k=2` and a planned cost of 28 tank-days for each intervention that starts. Member A selected the value through the pilot; Member B's retrospective confirmation remains pending.
+
+The alternatives were 7, 14 and 21 days. Recomputing `evaluate_stage2` from all 5,550 rows of `results/summary/pilot-stage2-intervention.csv` reproduces the committed `results/pilot/stage2-criteria.csv`; `select_duration` returns 14. No epidemic was rerun for this check.
+
+| Candidate D | Q1: started runs with at least one quarantine-attributed block (threshold 90%) | Q2: D <= 16.25 | Q3: D >= 10 | Decision |
+|---|---|---|---|---|
+| 7 | 91.8%, pass | Pass | Fail | Too short under Q3 |
+| 14 | 95.7%, pass | Pass | Pass | Only candidate meeting all three criteria |
+| 21 | 96.7%, pass | Fail | Pass | Too long under Q2 |
+
+The Q2 bound is 25% of the shared no-intervention median extinction time (65 days). The Q3 bound is the mean infectious period, `1/gamma = 10` days. Each duration has 1,800 intervention runs, of which 1,516 reached the quarantine start. Q1 pools both intervention strategies and does not select a duration according to which strategy performs better.
+
+The Q1 denominator was changed after inspecting data, and cause-specific blocking was measured after the formal experiment. Those deviations remain recorded below and in `pilot-report-2026-10-06.md` §§7-8. Q1 measures interception by a quarantine rule, not disease reduction or the number of transfers that would otherwise have succeeded.
+
+### D005: network probabilities and acceptance rules
+
+Selected values: `p_in=0.6`, `p_out=0.05`. These are edge probabilities between tanks in the same region and in different regions, respectively, not turtle movement probabilities. Member A retained the structural-audit candidate for the formal experiment because it passed the original 10-seed C1-C5 audit and supported the S1-S6 movement pilot. Member B's retrospective confirmation remains pending.
+
+The original grid covered `p_in` in 0.5/0.6/0.7/0.8 and `p_out` in 0.03/0.05/0.08/0.10. Of the three candidates passing C1-C5 in that audit, 0.6/0.05 had the lowest within-region density. The other passing choices were 0.7/0.05 and 0.8/0.05. The lower-bridge alternative 0.6/0.03 failed the retry criterion; 0.6/0.08 had too many cross-region edges and too little concentration of cross-region shortest paths for C3/C5. This was a modelling preference, not a unique optimum or a fit to real farm data.
+
+Per-network acceptance still requires a connected graph, at least one cross-region edge, a graph that is not complete, and betweenness values that are not all equal. The generator tries at most 100 attempts and records each rejection. These runtime rules are distinct from the C1-C5 aggregate criteria used to compare candidate probabilities; their definitions have not changed.
+
+The [30-seed follow-up](network-audit-2026-10-08.md) completes the expanded stability check promised in the original audit, but it was performed after the parameter freeze and formal experiment. For 0.6/0.05, all 30 networks generate successfully, with mean prior rejections 0.200 and maximum 1, satisfying C1. C2, C3 and C5 also pass under the original aggregate interpretation. C4's no-tie clause does not: seed 12 has an exact tie between tanks 7 and 13 at ranks 1 and 2. Both are selected for `k=2`, so this instance does not require choosing between a selected and an excluded tied tank. The existing deterministic tie rule is unchanged, and the failed no-tie clause is not waived or relabelled as a pass.
+
+The completed experiments retain 0.6/0.05. Accepting the observed C4 limitation needs a recorded team decision; this evidence update does not make that decision or change the selection criteria after seeing the results. It adds no new epidemic results.
 
 ## Facilitator meeting record
 

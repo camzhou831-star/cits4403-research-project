@@ -1,5 +1,7 @@
 # Checkpoint 1 Brief
 
+Historical meeting material. Its provisional parameter wording records the position at Checkpoint 1. The completed formal experiment uses `D=14`, `p_in=0.6` and `p_out=0.05`; see [the decision log](decision-log.md) for the pilot evidence, pending confirmations and the retrospective network-audit limitation. Do not use this brief as the current parameter record.
+
 For the 5-10 minute facilitator meeting in Weeks 7-8. Aim for a 3-4 minute team presentation, leaving the remaining time for questions.
 
 ## Project title

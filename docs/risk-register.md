@@ -31,3 +31,13 @@ Likelihood/impact use Low / Medium / High. The owner is the main person followin
 2. Then protect the must-have primary experiment.
 3. Remove optional extensions rather than weaken fair comparisons or hide failures.
 4. If teammate availability or official requirements have a major impact, contact the facilitator/unit coordinator early.
+
+## Evidence update (2026-10-08)
+
+| Risk | Evidence and remaining action |
+|---|---|
+| R002: network symmetry and ties | The expanded structural audit generated all 30 selected-parameter networks within the retry limit. One seed has an exact tie at ranks 1 and 2, so the original C4 no-tie clause fails; both tanks are selected for `k=2`. Runtime tie-breaking remains deterministic. Record the team's decision on accepting this limitation; do not report an all-criteria pass. See `network-audit-2026-10-08.md`. |
+| R009: budget fairness | The formal setting is `k=2`, `D=14`, a planned 28 tank-days when quarantine starts. Recomputing the Stage 2 criteria reproduces the existing selection; it does not establish a counterfactual number of prevented transfers. |
+| R010: contribution and understanding | The contribution table has been updated to distinguish merged work from pending reviews. Issue #18's joint walkthrough is still unrecorded; `model-walkthrough.md` supplies preparation material, not evidence that it took place. |
+| R013: inconsistent documentation | Current specifications and plans now state the settings used in the formal design. Checkpoint 1 scripts retain their historical wording with a current-status note. The expanded network-audit limitation is included in the report. |
+| R019: outcome-driven tuning and sign-off | The 30-seed follow-up occurred after the formal experiment. Parameters and criteria remain unchanged, and its failed C4 clause is reported. Member B's outstanding confirmations remain pending; neither this update nor merging its PR backdates approval. |

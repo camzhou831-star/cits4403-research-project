@@ -1,5 +1,7 @@
 # Network Structural Audit (issue #16, risk R002, D005 candidates)
 
+Historical audit. The [2026-10-08 follow-up](network-audit-2026-10-08.md) extends the sample to 30 seeds after the formal experiment. The selected 0.6/0.05 setting passes C1 but has one rank-2 tie under C4; both tied tanks are selected. The original 10-seed results and selection rationale below are retained unchanged.
+
 Date: 2026-09-11 (wording revised and cross-path metrics added after the 2026-09-11 review). Generator: `turtlefarm/network.py`; script: `scripts/audit_network.py --seeds 10 --k 2`.
 
 **This is a structural pilot, with no epidemic simulation, and is not hypothesis evidence.** It has only two purposes: confirm that the generator reliably produces connected, modular networks with non-trivial betweenness rankings under the candidate parameters (spec §3, §4; R002), and propose candidate values for D005. Values will be frozen after the 19-25 Sep pilot.

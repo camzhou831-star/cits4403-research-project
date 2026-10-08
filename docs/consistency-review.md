@@ -2,6 +2,8 @@
 
 Review date: 2026-09-02. Scope: all tracked project documents in the non-code preparation package.
 
+Sections 1-5 are the historical preparation review, not a claim about today's implementation, results or available rubric. The current D004/D005 review is recorded in §8. Current submission-time uncertainty is stated in the README; the historical deadline row below is not confirmation of the LMS deadline.
+
 ## 1. Local sources checked before authoring
 
 The following are English descriptions of local sources held by the original reviewer, not repository paths. The original machine-specific paths are retained in Git history.
@@ -78,3 +80,19 @@ If any D001-D008 decision changes, update at minimum:
 | Date | Trigger | Outcome | Documents updated |
 |---|---|---|---|
 | 2026-09-11 | Checkpoint 1 held; no decision value changed; D001-D003, D006-D008 status pending → frozen | Status-only change; §6 semantic-update list not triggered | `decision-log.md`, `model-specification.md` (§1 note, §3, §6.2, §11, §14, §18), `research-plan.md`, `experiment-plan.md` (§3, §17), `assumptions.md`, `README.md`, `checkpoint-1.md`, `turtlefarm/config.py` |
+| 2026-10-08 | Issues #4/#5: reconcile documentation with completed experiments and add the promised structural follow-up | D=14 and p_in/p_out=0.6/0.05 unchanged; Q1-Q3 recomputation matches; C1 passes on 30 seeds, C4 no-tie clause fails once; member confirmation remains pending | All seven documents in §6, `decision-log.md`, both network audits, `pilot-protocol.md`, `README.md`, report template and generated report |
+
+## 8. D004/D005 consistency check (2026-10-08)
+
+| Check | Current record | Outcome |
+|---|---|---|
+| Duration and alternatives | D=14; compared with 7 and 21 using Q1-Q3 | Matches the formal design and the criterion table recomputed from 5,550 Stage 2 rows |
+| Q1 interpretation | 95.7% of started runs have at least one quarantine-attributed block at D=14 | Operational rule interception only; post-hoc denominator and measurement timing remain disclosed |
+| Network probabilities | p_in=0.6, p_out=0.05 | Matches formal configuration; alternatives and rationale recorded in `decision-log.md` |
+| Runtime acceptance | Connected, cross-region edge present, not complete, betweenness not all equal; at most 100 attempts | Unchanged; distinct from the C1-C5 candidate-comparison criteria |
+| Expanded structural check | 30 seeds; mean 0.2 prior rejections, maximum 1; one exact rank-2 tie | C1 passes; C4 no-tie clause fails. Both tied tanks are selected; team acceptance of the limitation remains pending |
+| Historical material | Checkpoint 1 scripts and the original structural audit | Preserved, with dated/current-status links rather than rewritten as if the results were known earlier |
+| Decision approval | Member A's selection dated 2026-10-06; Member B confirmation pending | No personal sign-off inferred; issues #4 and #5 stay open |
+| Model and results | Model code, experiment configurations, recorded epidemic data and figures | Unchanged; report regenerated only to add the structural limitation |
+
+This check documents evidence and consistency. It does not approve unrelated protocol deviations, waive a failed criterion, or record the joint walkthrough required by issue #18.

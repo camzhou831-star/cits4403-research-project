@@ -1,5 +1,7 @@
 # Pilot Protocol (experiment-plan §7, §9; D004 / D005; issues #4, #5)
 
+Current record (2026-10-08): this protocol preserves the original draft and dated amendments. The pilot and formal experiment have since run. Recomputing Stage 2 criteria confirms the recorded D=14 selection. Member B's pre-run approval did not occur; retrospective confirmations remain pending in `decision-log.md`. The expanded structural check in `network-audit-2026-10-08.md` was completed after the formal experiment and reports one C4 no-tie failure. None of those facts changes the original ordering of decisions or approvals below.
+
 Status: **DRAFT: drafted by Member A (2026-09-20), pending Member B's confirmation. Do not run the pilot or inspect any pilot outcome before both members confirm.**
 
 This document follows the approach in `network-audit-2026-09-11.md`: **write selection criteria before inspecting data**. The pilot is used only for parameter freezing, bug discovery and runtime estimation, not as hypothesis evidence (experiment-plan §7). This document contains no simulation results.
