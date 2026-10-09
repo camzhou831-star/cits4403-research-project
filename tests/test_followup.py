@@ -1,6 +1,7 @@
 """Design pairing, compact persistence and resume safeguards for the follow-up."""
 
 import json
+import multiprocessing
 from dataclasses import replace
 from pathlib import Path
 
@@ -71,9 +72,22 @@ def test_resume_skips_without_writing_and_refuses_existing_file(tmp_path):
         run_followup(design, output)
 
 
+def test_completed_historical_batch_is_not_relabelled_after_implementation_changes(tmp_path, monkeypatch):
+    import turtlefarm.followup as module
+    design = small_design(network_seeds=(200,), epidemic_replicates=1, durations=(2,), response_delays=(1,))
+    output = tmp_path / "runs.jsonl"
+    run_followup(design, output)
+    before = output.read_bytes()
+    monkeypatch.setattr(module, "_repository_commit", lambda: "later-guard-implementation")
+    counts = run_followup(design, output, resume=True)
+    assert counts["written"] == 0 and counts["skipped"] == len(design.configs())
+    assert output.read_bytes() == before
+
+
 @pytest.mark.parametrize("change,match", [
     ("protocol", "protocol/schema"), ("duplicate", "duplicate"), ("config", "altered"),
-    ("commit", "implementation commit changed"), ("failure", "failed runs exceed"),
+    ("commit", "implementation commit changed"), ("missing_commit", "missing implementation commit"),
+    ("failure", "failed runs exceed"),
     ("invariant", "invariant failure"),
 ])
 def test_resume_refuses_bad_prior_records_before_appending(tmp_path, change, match):
@@ -85,6 +99,8 @@ def test_resume_refuses_bad_prior_records_before_appending(tmp_path, change, mat
         record["config"]["beta"] = 0.9
     elif change == "commit":
         record["summary"]["code_commit"] = "other"
+    elif change == "missing_commit":
+        record["summary"]["code_commit"] = None
     elif change in {"failure", "invariant"}:
         record["summary"]["status"] = "failed"
         record["summary"]["stop_reason"] = "invariant failure" if change == "invariant" else "runtime error"
@@ -107,12 +123,13 @@ def test_parallel_execution_matches_serial_scientific_rows(tmp_path):
     assert science(serial) == science(parallel)
 
 
-def test_new_failure_is_saved_before_batch_halts(tmp_path, monkeypatch):
+@pytest.mark.parametrize("reason", ["runtime error", "invariant failure"])
+def test_new_failure_is_saved_before_batch_halts(tmp_path, monkeypatch, reason):
     import turtlefarm.followup as module
     original = module._execute
     def fail(task):
         row = original(task)
-        row["summary"].update(status="failed", stop_reason="runtime error")
+        row["summary"].update(status="failed", stop_reason=reason)
         row["error"] = "fixture failure"
         return row
     monkeypatch.setattr(module, "_execute", fail)
@@ -120,3 +137,142 @@ def test_new_failure_is_saved_before_batch_halts(tmp_path, monkeypatch):
     with pytest.raises(BatchHalted):
         run_followup(small_design(), output)
     assert len(list(iter_raw(output))) == 1
+    assert not output.with_name(output.name + ".lock").exists()
+
+
+def _hold_first_run(design, output, entered, release):
+    """A real second process holds the coordinator lock while its first record is persisted."""
+    def progress(done, _total, _row):
+        if done == 1:
+            entered.set()
+            if not release.wait(timeout=20):
+                raise RuntimeError("test coordinator was not released")
+    run_followup(design, output, progress=progress)
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_concurrent_coordinator_is_rejected_without_touching_raw_file(tmp_path, resume):
+    design = small_design(network_seeds=(200,), epidemic_replicates=1, durations=(2,), response_delays=(1,))
+    output = tmp_path / "runs.jsonl"
+    context = multiprocessing.get_context("spawn")
+    entered, release = context.Event(), context.Event()
+    process = context.Process(target=_hold_first_run, args=(design, output, entered, release))
+    process.start()
+    try:
+        assert entered.wait(timeout=15), "first coordinator never reached its locked checkpoint"
+        before = output.read_bytes()
+        with pytest.raises(FileExistsError, match="coordinator lock exists"):
+            run_followup(design, output, resume=resume)
+        assert output.read_bytes() == before
+    finally:
+        release.set()
+        process.join(timeout=15)
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=5)
+    assert process.exitcode == 0
+    assert len(list(iter_raw(output))) == len(design.configs())
+    assert not output.with_name(output.name + ".lock").exists()
+
+
+def test_stale_lock_is_not_deleted_automatically_and_manual_recovery_preserves_raw(tmp_path):
+    design = small_design(network_seeds=(200,), epidemic_replicates=1, durations=(2,), response_delays=(1,))
+    output = tmp_path / "runs.jsonl"
+    first = _execute((design.configs()[0], design.protocol_hash))
+    output.write_text(json.dumps(first) + "\n")
+    before = output.read_bytes()
+    lock = output.with_name(output.name + ".lock")
+    marker = json.dumps({"pid": 99999999, "hostname": "inactive-test-host"})
+    lock.write_text(marker)
+    with pytest.raises(FileExistsError, match="crash recovery"):
+        run_followup(design, output, resume=True)
+    assert lock.read_text() == marker and output.read_bytes() == before
+    lock.unlink()  # Emulate manual removal of this test-owned inactive marker, not any raw record.
+    counts = run_followup(design, output, resume=True)
+    assert counts["skipped"] == 1
+    assert output.read_bytes().startswith(before)
+    assert not lock.exists()
+
+
+@pytest.mark.parametrize("workers", [1, 2])
+def test_repository_provenance_is_independent_of_cwd(tmp_path, monkeypatch, workers):
+    import turtlefarm.followup as module
+    import turtlefarm.model as model
+    expected_commit = module._repository_commit()
+    monkeypatch.chdir(tmp_path)
+    # The inherited model may return None or another repository's SHA. Compact provenance must
+    # be independently resolved from the implementation path, not copied from that value.
+    monkeypatch.setattr(model, "_git_commit", lambda: "unrelated-cwd-commit")
+    design = small_design(network_seeds=(200,), epidemic_replicates=1, durations=(2,), response_delays=(1,))
+    output = tmp_path / "runs.jsonl"
+    run_followup(design, output, workers=workers)
+    assert {record["summary"]["code_commit"] for record in iter_raw(output)} == {expected_commit}
+
+
+def test_missing_repository_provenance_refuses_new_work_before_opening_raw(tmp_path, monkeypatch):
+    import turtlefarm.followup as module
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    output = tmp_path / "runs.jsonl"
+    with pytest.raises(ValueError, match="cannot determine implementation commit"):
+        run_followup(small_design(), output)
+    assert not output.exists()
+    assert not output.with_name(output.name + ".lock").exists()
+
+
+def test_midbatch_commit_change_does_not_append_a_mixed_commit_record(tmp_path, monkeypatch):
+    import turtlefarm.followup as module
+    head = ["original-commit"]
+    monkeypatch.setattr(module, "_repository_commit", lambda: head[0])
+    output = tmp_path / "runs.jsonl"
+    saved = []
+    def change_head(done, _total, _row):
+        assert done == 1
+        saved.append(output.read_bytes())
+        head[0] = "changed-commit"
+    with pytest.raises(ValueError, match="implementation commit changed during batch"):
+        run_followup(small_design(), output, progress=change_head)
+    assert output.read_bytes() == saved[0]
+    assert len(list(iter_raw(output))) == 1
+    assert not output.with_name(output.name + ".lock").exists()
+
+
+def test_commit_change_during_one_simulation_discards_that_result(tmp_path, monkeypatch):
+    import turtlefarm.followup as module
+    head = ["original-commit"]
+    monkeypatch.setattr(module, "_repository_commit", lambda: head[0])
+    original = module.ObservedSimulation.run
+    def change_head(simulation):
+        record = original(simulation)
+        head[0] = "changed-commit"
+        return record
+    monkeypatch.setattr(module.ObservedSimulation, "run", change_head)
+    output = tmp_path / "runs.jsonl"
+    with pytest.raises(ValueError, match="implementation commit changed during simulation"):
+        run_followup(small_design(), output)
+    assert output.read_bytes() == b""
+    assert not output.with_name(output.name + ".lock").exists()
+
+
+@pytest.mark.parametrize("change", ["protocol", "schema", "observation_schema", "config", "commit"])
+def test_new_record_metadata_is_validated_before_append(tmp_path, monkeypatch, change):
+    import turtlefarm.followup as module
+    original = module._execute
+    def corrupt_metadata(task):
+        record = original(task)
+        if change == "protocol":
+            record["summary"]["protocol_hash"] = "wrong"
+        elif change == "schema":
+            record["schema_version"] = "wrong"
+        elif change == "observation_schema":
+            record["summary"]["observation_schema_version"] = "wrong"
+        elif change == "config":
+            record["config"]["beta"] = 0.9
+        else:
+            record["summary"]["code_commit"] = "wrong"
+        return record
+    monkeypatch.setattr(module, "_execute", corrupt_metadata)
+    output = tmp_path / "runs.jsonl"
+    with pytest.raises(ValueError):
+        run_followup(small_design(), output)
+    assert output.read_bytes() == b""
+    assert not output.with_name(output.name + ".lock").exists()

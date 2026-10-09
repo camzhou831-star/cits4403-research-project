@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import socket
+import subprocess
 import uuid
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from turtlefarm.config import ConfigError, SimulationConfig
 from turtlefarm.model import STATUS_FAILED
@@ -22,6 +26,55 @@ from turtlefarm.runner import BatchHalted, configuration_hash, flatten, iter_raw
 
 OBSERVATION_SCHEMA_VERSION = "turtlefarm.observation.v1"
 COMPACT_SCHEMA_VERSION = "turtlefarm.followup.v1"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _repository_commit() -> str:
+    """Resolve this implementation's repository, never the caller's working directory.
+
+    Keep the existing short-SHA representation so historical compact records remain readable.
+    Missing provenance is an execution error, not a permissible None commit.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "rev-parse", "--verify", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"cannot determine implementation commit for {REPO_ROOT}") from exc
+    commit = result.stdout.strip()
+    if not commit:
+        raise ValueError(f"cannot determine implementation commit for {REPO_ROOT}")
+    return commit
+
+
+@contextmanager
+def _coordinator_lock(out: Path) -> Iterator[None]:
+    """One coordinator per canonical raw path, using portable exclusive file creation.
+
+    The lock covers both resume inspection and writing; workers never acquire or remove it.
+    Normal returns and exceptions remove the marker. A hard crash can leave <raw>.lock:
+    inspect its PID and hostname, confirm that coordinator has stopped, then remove ONLY
+    that marker and use --resume. Never remove a live coordinator's lock or the raw data.
+    PID reuse and remote hosts make automatic stale-lock deletion unsafe.
+    """
+    out.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = out.with_name(out.name + ".lock")
+    try:
+        handle = lock_path.open("x", encoding="utf-8")
+    except FileExistsError as exc:
+        raise FileExistsError(
+            f"coordinator lock exists: {lock_path}; another run may be active. "
+            "For crash recovery, verify its PID/hostname is inactive before removing only the lock."
+        ) from exc
+    try:
+        json.dump({"pid": os.getpid(), "hostname": socket.gethostname(),
+                   "created_utc": datetime.now(timezone.utc).isoformat(), "raw_path": str(out)}, handle)
+        handle.flush()
+        yield
+    finally:
+        handle.close()
+        lock_path.unlink()
 
 
 @dataclass(frozen=True)
@@ -100,10 +153,16 @@ class FollowupDesign:
 
 def _execute(task: tuple[SimulationConfig, str]) -> dict[str, Any]:
     cfg, protocol_hash = task
+    implementation_commit = _repository_commit()
     simulation = ObservedSimulation(cfg)
     record = simulation.run()
+    if _repository_commit() != implementation_commit:
+        raise ValueError("implementation commit changed during simulation; no record was appended")
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     raw = to_raw_record(record, run_id=uuid.uuid4().hex, timestamp_utc=timestamp)
+    # The original model resolves Git relative to cwd. Only this compact execution envelope
+    # overrides that provenance; no model rule, scientific quantity or historical record changes.
+    raw["code_commit"] = implementation_commit
     row = flatten(raw)
     row.update({field: getattr(cfg, field) for field in ("capacity", "p_in", "p_out", "max_days")})
     row.update(simulation.observation_metrics())
@@ -131,22 +190,39 @@ def run_followup(
     """Persist in configuration order, including failures; never silently replace a run.
 
     Resume requires matching protocol and schema, unique configuration hashes and a
-    single implementation commit. Existing failures count toward the batch limit.
+    single implementation commit. Existing failures count toward the batch limit. An exclusive
+    <raw>.lock marker prevents overlapping coordinators; see _coordinator_lock for crash recovery.
     """
     if type(workers) is not int or workers < 1:
         raise ValueError("workers must be a positive integer")
     if not math.isfinite(max_failure_rate) or not 0 <= max_failure_rate <= 1:
         raise ValueError("max_failure_rate must lie in [0, 1]")
     configs = design.configs()
+    out = Path(out_path).resolve()
+    with _coordinator_lock(out):
+        return _run_locked(design, configs, out, resume=resume, workers=workers,
+                           max_failure_rate=max_failure_rate, progress=progress)
+
+
+def _run_locked(
+    design: FollowupDesign,
+    configs: list[SimulationConfig],
+    out: Path,
+    *,
+    resume: bool,
+    workers: int,
+    max_failure_rate: float,
+    progress: Callable[[int, int, dict[str, Any]], None] | None,
+) -> dict[str, int]:
+    """The caller holds the coordinator lock until all worker processes have stopped."""
     expected = {configuration_hash(cfg.to_dict()) for cfg in configs}
-    out = Path(out_path)
     if out.exists() and not resume:
         raise FileExistsError(f"{out} exists; use --resume or a different output directory")
     done: set[str] = set()
     commits: set[str] = set()
     counts = dict(planned=len(configs), written=0, skipped=0, failed=0)
 
-    def check(record: dict[str, Any]) -> None:
+    def validate_metadata(record: dict[str, Any]) -> None:
         row = record["summary"]
         key = row["configuration_hash"]
         if (record["schema_version"] != COMPACT_SCHEMA_VERSION
@@ -155,10 +231,17 @@ def run_followup(
             raise ValueError("raw records do not match the current protocol/schema")
         if key != configuration_hash(record["config"]) or key not in expected or key in done:
             raise ValueError("raw records have an unknown, altered or duplicate configuration")
-        commits.add(row["code_commit"])
-        if len(commits) != 1:
+        commit = row["code_commit"]
+        if not isinstance(commit, str) or not commit:
+            raise ValueError("raw records have missing implementation commit provenance")
+        if commits and commit not in commits:
             raise ValueError("raw records mix implementation commits; use a separate output directory")
-        done.add(key)
+
+    def accept_record(record: dict[str, Any]) -> None:
+        """Account for a validated, already-persisted record before enforcing stop rules."""
+        row = record["summary"]
+        commits.add(row["code_commit"])
+        done.add(row["configuration_hash"])
         if row["status"] == STATUS_FAILED:
             counts["failed"] += 1
             if row["stop_reason"] == "invariant failure":
@@ -168,26 +251,31 @@ def run_followup(
 
     if resume and out.exists():
         for record in iter_raw(out):
-            check(record)
+            validate_metadata(record)
+            accept_record(record)
     counts["skipped"] = len(done)
     pending = [(cfg, design.protocol_hash) for cfg in configs if configuration_hash(cfg.to_dict()) not in done]
     if not pending:
         return counts
-    # Reject stale resumes before appending (the model records this same commit).
-    from turtlefarm.model import _git_commit
-    if commits and _git_commit() not in commits:
+    # Completed historical files need no new execution. For pending work, pin the repository
+    # commit before starting workers and refuse a changed implementation before every append.
+    implementation_commit = _repository_commit()
+    if commits and implementation_commit not in commits:
         raise ValueError("implementation commit changed; use a separate output directory")
-    out.parent.mkdir(parents=True, exist_ok=True)
     pool = ProcessPoolExecutor(max_workers=workers) if workers > 1 else None
     try:
         records = pool.map(_execute, pending, chunksize=4) if pool else map(_execute, pending)
         with out.open("a", encoding="utf-8") as handle:
             for record in records:
+                if (_repository_commit() != implementation_commit
+                        or record["summary"]["code_commit"] != implementation_commit):
+                    raise ValueError("implementation commit changed during batch; no new record was appended")
+                validate_metadata(record)
                 # Store a failed simulation before enforcing its stop rule.
                 handle.write(json.dumps(record, separators=(",", ":")) + "\n")
                 handle.flush()
                 counts["written"] += 1
-                check(record)
+                accept_record(record)
                 if progress:
                     progress(len(done), len(configs), record["summary"])
     finally:
