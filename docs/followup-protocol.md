@@ -2,6 +2,8 @@
 
 Issue: #52. Baseline: main commit `76fa981`. This protocol is recorded before the follow-up simulations. The original results have already been seen, so this is a planned follow-up, not a preregistration of the original study. The original formal data and report remain unchanged.
 
+Execution record, 9 October 2026: all 19,000 runs completed without failures or censoring; all 400 replayed original conditions match. See [followup-results.md](followup-results.md) for the results and acceptance evidence. The design and requirements below retain their pre-execution wording.
+
 ## Questions
 
 1. How do outcomes differ between the recorded response delays when the same network, epidemic and policy choice are compared directly?

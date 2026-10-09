@@ -159,3 +159,17 @@ Before the model enters formal experiments:
 - No unexplained invariant failure may remain.
 
 Every run must end with normal extinction, `censored_max_days` or `failed`; it must not run indefinitely without a stop reason.
+
+## 11. Follow-up acceptance checks
+
+The separate [quarantine follow-up](followup-protocol.md) leaves the original 5,200 formal runs unchanged. Its protocol was committed in `03fbb54` before follow-up simulations, after the original results had been seen. All 19,000 follow-up runs completed without failures or censoring, and all 400 replayed original conditions match. The [follow-up results](followup-results.md) link the recorded acceptance evidence. The checks below remain requirements for reproductions.
+
+- Compare the original `RunRecord` with and without event observation. Include infectious arrival followed by same-day recovery, no qualifying event, and local S-to-I infection outside the initial region. Observation must not change random draws, update order or epidemic state.
+- Verify exactly the planned run keys: 20 networks, five distinct nested epidemic seeds per network, one shared baseline per block, and all duration/delay/strategy/policy combinations. Report failures and censoring, and refuse missing, duplicate or inconsistent arms in paired analysis.
+- Check identical network hashes and selected random pairs across paired conditions. Each network reuses its 20 policy draws across epidemic replicates, durations and delays. Report duplicate pairs and region coverage; do not substitute seeds to obtain a preferred sample.
+- Compare replayed baselines and targeted `D=14` conditions with matching original formal outcomes. Execution IDs, timestamps and implementation commits are provenance and need not match, but epidemic outcomes, networks and selected targeted tanks must agree.
+- Verify the compact-record and observation versions, protocol hash and configuration hashes. Check append-only persistence, refusal of incompatible resumes, preservation of failures, and the cumulative failure guard before further records are appended. Check that the exclusive raw-file lock refuses overlapping coordinators and that crash-recovery instructions require confirming the recorded process is inactive before removing only the lock.
+- Check that contrasts are paired before aggregation, random outcomes are averaged within epidemic blocks, and bootstrap resampling keeps complete networks together. Retain non-activated blocks in primary comparisons; event-time summaries must distinguish missing events from day zero and report event incidence separately.
+- Reproduce the analysis from saved summaries. Label intervals as pointwise and contrasts as exploratory. Equal budgets apply within a duration; duration contrasts also change cost. Policy-prefix checks and conditional Monte Carlo error must respect policy-choice reuse across epidemic replicates.
+
+The [experiment plan](experiment-plan.md#15-sensitivity-analysis) gives the dry-run, batch, resume and analysis commands. [run-result-schema.md](run-result-schema.md#11-follow-up-observation-and-compact-records) defines the additional event fields and separate compact format. Record actual test execution and batch acceptance separately; do not infer either from this checklist or from the original formal experiment's validation.

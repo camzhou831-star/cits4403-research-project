@@ -36,8 +36,10 @@ Deviations from our own protocol are disclosed in `docs/decision-log.md` (sectio
 
 ### Main findings (details and uncertainty in the report)
 
+These findings come from the original 5,200-run `formal-nested` experiment. The separate follow-up below does not replace that result set or update the report.
+
 - **Transfer rate** controls whether outbreaks stay local. Between transfer rates 0.01 and 0.025, most outbreaks change from staying in one region to crossing regions.
-- **Quarantine** of 2 tanks for 14 days has a modest effect. Its effect does not shrink with a later response for highest-betweenness selection, but it does for random selection. This is a descriptive pattern, not a tested result.
+- **Quarantine** of 2 tanks for 14 days has a modest effect. The original means suggested different delay patterns for targeted and random selection. The [subsequent paired delay contrasts](docs/followup-results.md#direct-delay-comparisons-in-the-original-experiment) do not establish a universal timing order.
 - **Targeted versus random:** under this budget, targeted quarantine did not beat random quarantine in general. Only one of nine transfer-rate × delay conditions shows an interval excluding zero.
 
 ## Proposed system
@@ -111,6 +113,40 @@ Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `b
 
 After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
 
+### Quarantine follow-up (9 October 2026)
+
+The [follow-up protocol](docs/followup-protocol.md) and [configuration](experiments/config/followup-duration-policy.json) were committed in `03fbb54` before the follow-up simulations. The original results were already known. All 19,000 follow-up runs completed with no failures or censoring, using implementation `6832e6d`. All 400 replayed original conditions match the recorded scientific fields. The [follow-up results](docs/followup-results.md) describe the direct delay comparisons, broader random-policy sample, duration effects and event observations separately from the original 5,200 formal runs.
+
+At transfer rate 0.025, the follow-up crosses durations of 7, 14 and 28 days with response delays of 1, 12 and 33 days. It keeps the disease parameters, capacity, network generator and epidemic rules fixed. Each of the same 20 networks has five nested epidemic replicates and 20 random-policy draws. A policy draw is reused across those replicates, durations and delays within its network. Different seeds may select the same tank pair, so 20 draws do not imply 20 distinct pairs. The study records duplicates and region coverage without replacing seeds.
+
+Each of the 100 network/epidemic blocks contains one shared baseline and `3 durations x 3 delays x (1 targeted + 20 random)` intervention runs, giving 19,000 runs. Within a duration, targeted and random quarantine have the same budget, `2 x D` tank-days when activated. Comparing durations also changes cost. Reusing the original 20 networks and 100 epidemic blocks makes this a paired sensitivity study, not independent confirmation on new outbreaks.
+
+Run from the repository root after installing the dependencies above:
+
+```bash
+# inspect the planned design without running simulations
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --dry-run
+
+# run the separate follow-up batch
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --workers 4
+
+# continue an existing batch without retrying recorded configurations
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --workers 4 --resume
+
+# reproduce follow-up analysis from saved inputs
+.venv/bin/python scripts/analyse_followup.py
+```
+
+Compact, append-only records go to the git-ignored `results/raw/followup-duration-policy.jsonl`, and the per-run table is `results/summary/followup-duration-policy.csv`. Analysis outputs go to `results/analysis/followup-duration-policy/`. Keep these outputs separate from `formal-nested`. Resume retains failed records, requires matching protocol and schema versions and a single implementation commit, and applies the cumulative failure guard before appending more records. Duplicate or altered configurations are refused. To reproduce into a different directory, pass `--output-dir PATH` to the runner, then give the analysis script `--followup PATH/summary/followup-duration-policy.csv --output PATH/analysis/followup-duration-policy`.
+
+The runner uses an exclusive `<raw>.lock` marker, normally `results/raw/followup-duration-policy.jsonl.lock`, to prevent overlapping coordinators. A hard crash can leave this marker behind. Inspect its PID and hostname and confirm that the coordinator is no longer active before removing only the lock and using `--resume`. Do not remove the raw data or a live process's lock. The recorded batch predates this runner hardening and retains its `6832e6d` provenance; the scientific rules are unchanged.
+
+The analysis uses the original formal summary for direct delay contrasts at all non-zero transfer rates and the follow-up summary for duration and broader random-policy comparisons. Check complete paired blocks, recorded run keys, status counts and agreement of replayed original conditions before interpreting outcomes. The analysis command reads saved summaries and does not run simulations or rebuild the report.
+
+The observer records infectious arrivals across regions and local infection events without changing random draws or epidemic rules. It distinguishes an infectious agent arriving outside the initial region from an S-to-I event there, including arrivals followed by recovery on the same day. A local infection event does not identify its infector or establish a transmission generation. Definitions and missing-value rules are in [the result schema](docs/run-result-schema.md#11-follow-up-observation-and-compact-records).
+
+Follow-up comparisons use 2,000 whole-network bootstrap resamples with analysis seed `20261009`. Their intervals are pointwise, without a multiple-comparison adjustment; the contrasts are exploratory and correlated. Prefixes of 5, 10 and 20 policy draws assess descriptive stability, but network intervals do not capture every source of policy-sampling uncertainty. Sensitivity to disease parameters, capacity, new disease mechanisms and other network structures remains outside this follow-up. The report and its generation scripts are unchanged.
+
 ### Optional PDF export
 
 The model and analysis use the Python dependencies above; notebook tools are listed separately in `requirements-notebook.txt`. Rebuilding `report/report.pdf` also requires **Chrome or Chromium** and **Poppler**, whose `pdfinfo` command must be on `PATH`. These are system tools and are not installed by `pip` or `uv pip`. On macOS with Homebrew, install Poppler with `brew install poppler`; install Chrome or Chromium separately if needed.
@@ -158,11 +194,13 @@ python -m jupyter nbconvert --execute --to notebook \
 | `docs/model-specification.md` | Consistent model specification that can be implemented independently |
 | `docs/assumptions.md` | Numbered assumptions, their impact and sensitivity needs |
 | `docs/experiment-plan.md` | Main experiment, paired design, replication, analysis and figure plan |
+| `docs/followup-protocol.md` | Separate duration and random-policy sensitivity study, recorded before its simulations |
+| `docs/followup-results.md` | Completed follow-up results, replay checks, source tables and interpretation limits |
 | `docs/validation-plan.md` | Invariants, extreme cases and validation evidence plan |
 | `docs/pilot-protocol.md` | Two-stage pilot design and selection criteria, written before any pilot data |
 | `docs/pilot-report-2026-10-06.md` | Pilot results, every candidate's criteria, selected parameters |
 | `docs/decision-log.md` | Decisions D001-D008, parameter freeze, protocol deviations, post-hoc analysis decisions, review record |
-| `docs/run-result-schema.md` | Field contract of a raw run record (`turtlefarm.run.v1`) |
+| `docs/run-result-schema.md` | Original raw-run contract (`turtlefarm.run.v1`) and separate follow-up observation definitions |
 | `docs/collaboration-plan.md` | Communication, GitHub workflow, review rules and the evidence-based contribution record |
 | `docs/figures/concept-diagram.png` | Conceptual system diagram (issue #17) |
 | `docs/network-audit-2026-09-11.md` | Structural audit of the network generator, D005 candidate values |
@@ -179,6 +217,8 @@ python -m jupyter nbconvert --execute --to notebook \
 | `scripts/run_experiment.py` | Run a design from `experiments/config/*.json`; raw JSONL plus a per-run summary table |
 | `scripts/pilot_select.py` | Apply the pre-registered pilot selection rules; writes the Stage 2 design |
 | `scripts/analyse_results.py` | Tables and figures 1-7 for a formal design |
+| `scripts/run_followup.py` | Separate 19,000-run duration and random-policy sensitivity design, with dry-run and resume modes |
+| `scripts/analyse_followup.py` | Paired delay/duration contrasts, policy coverage and observation summaries from saved inputs |
 | `scripts/build_report.py` | Render `report/report.md` from the template and result files |
 | `scripts/build_report_pdf.py` | Render `report/report.pdf` (A4, 11pt, 1-inch margins) and check the five-page limit |
 | `scripts/mechanism_analysis.py` | Exploratory position and timing measures for report Section 4.4 (`mechanism.json`) |
@@ -203,7 +243,7 @@ requirements.txt dependencies (requirements-notebook.txt adds the notebook tools
 README.md        this overview, setup and usage
 tests/           invariant, extreme-case, paired-draw, hand-trace, movement, quarantine, runner and analysis tests
 scripts/         command-line entry points: experiments, pilot selection, analysis, report, PDF, figures, demo video
-experiments/     experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested
+experiments/     experiment designs (experiments/config/*.json): smoke, pilot stages, formal, formal-nested, follow-up
 results/         raw/ (git-ignored), summary/ (per-run tables), pilot/ (criteria), analysis/ (tables, figures), demo/
 report/          report template, generated report and PDF
 docs/            design, decisions, protocols, reports and figures

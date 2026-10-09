@@ -1,6 +1,6 @@
 # Run Metadata and Raw-Result Schema
 
-Status: adopted (issue #15, PR #25); implemented by `src/turtlefarm/runner.py` and checked field by field in `tests/test_runner.py`. This document defines the recording contract for pilot and formal runs. It does not contain simulated, prototype, or fabricated results.
+Status: adopted (issue #15, PR #25); implemented by `src/turtlefarm/runner.py` and checked field by field in `tests/test_runner.py`. Sections 1-10 define the recording contract for pilot and formal runs. Section 11 describes the separate follow-up observations and compact records without changing the original `turtlefarm.run.v1` contract. This document defines fields, not numerical results.
 
 ## 1. Storage contract
 
@@ -165,3 +165,42 @@ Member A should confirm that:
 - intervention duration and budget have one consistent meaning across model, runner, and analysis;
 - failed and censored runs retain sufficient provenance;
 - the M2 runner owns only execution metadata and serialisation, not scientific outcome calculation.
+
+## 11. Follow-up observation and compact records
+
+The [follow-up protocol](followup-protocol.md), recorded in commit `03fbb54` before follow-up simulations, defines a separate 19,000-run duration and random-policy sensitivity design. Its records must not be appended to the original 5,200-run formal dataset. The ordinary `RunRecord` and `turtlefarm.run.v1` fields above remain unchanged; observation is recorded separately.
+
+`src/turtlefarm/followup.py` writes one compact JSON object per run to the git-ignored `results/raw/followup-duration-policy.jsonl`, using schema `turtlefarm.followup.v1`. The observation-definition version is `turtlefarm.observation.v1`. Its top-level fields are:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | `turtlefarm.followup.v1`; distinct from the original raw-run schema. |
+| `timestamp_utc` | string | UTC timestamp generated after the simulation returns, ending in `Z`. Unlike the original runner's timestamp, this is not the run start time. |
+| `config` | object | Complete serialised `SimulationConfig`, including all parameters and seeds. |
+| `error` | string or null | Original run error; null unless the run failed. |
+| `initial_infected_agents` | array of integer | Original initially infected agent IDs. |
+| `initial_infected_tanks` | array of integer | Original initially infected tank IDs. |
+| `summary` | object | One flattened per-run summary, including configuration identity, provenance, outcomes, status and event observations. |
+
+`summary` contains the fields produced by `turtlefarm.runner.flatten`, including `run_id`, `configuration_hash`, `code_commit`, seeds, network hash, selected tanks, intervention timing, transfer counters, status, stop reason and original metrics. It also includes `capacity`, `p_in`, `p_out`, `max_days`, the six observation fields below, `protocol_hash` and `observation_schema_version`. As in the original CSV summary, `selected_tanks` is a comma-separated string of tank IDs. `configuration_hash` identifies one complete model configuration; `protocol_hash` is SHA-256 over the canonical follow-up design JSON, including its protocol version and baseline commit, using sorted keys and compact separators.
+
+Compact records omit full daily trajectories, which the saved configurations and source commit can reproduce. Preserve every recorded failure. Resume requires the same protocol hash and schema versions, unique known configuration hashes, and a single implementation commit. Before appending pending configurations, it also checks that the current implementation commit matches the recorded one. A recorded invariant failure or failure count above the default 1% of the full planned design stops continuation. Resume never retries a recorded configuration, and a newly encountered failed run is saved before its stop rule is enforced.
+
+An exclusive `<raw>.lock` marker protects resume inspection and writing from overlapping coordinators. It records the coordinator's PID, hostname, creation time and canonical raw path, and is removed on normal return or a handled exception. After a hard crash, inspect those details and confirm that the coordinator is inactive before removing only the marker and resuming. Never remove a live coordinator's lock or the raw file; stale locks are not deleted automatically. The completed batch retains source commit `6832e6d`, before this runner hardening, which does not alter scientific rules.
+
+The observation layer reads the existing movement and synchronous infection stages. It must not draw random numbers, change agent order or mutate epidemic state. Tests compare the original run record with and without observation, including an infectious arrival followed by recovery on the same day. This matters because an end-of-day infectious snapshot need not show every infectious movement event.
+
+| Observation field | Type | Meaning and missing-value rule |
+|---|---|---|
+| `first_infectious_arrival` | integer or null | First day an already-infectious agent makes an accepted cross-region transfer into a region outside the initially infected region. Null means no qualifying arrival was observed, not day 0. |
+| `first_local_secondary_infection` | integer or null | First day an S-to-I transition occurs outside the initially infected region, at the agent's post-movement location. Null means no such event was observed. This does not identify an infector or establish a second-generation transmission chain. |
+| `infectious_cross_region_transfers` | integer | Number of accepted transfers by already-infectious agents between different regions. Repeated crossings and returns to the initial region count separately; no events gives 0. |
+| `regions_visited_by_I` | integer | Distinct regions that contain an infectious agent at any observed stage, including initial presence, infectious arrivals and local infection. Includes the initial region. |
+| `regions_with_local_transmission` | integer | Distinct regions with at least one committed S-to-I event. Includes the initial region when it has such an event, but initial infectious agents are not new infection events; no events gives 0. |
+| `local_infections_outside_initial_region` | integer | Number of committed S-to-I events outside the initially infected region; no events gives 0. |
+
+Main-design runs seed one region. Validation scenarios can seed more than one; for those scenarios, "outside the initial region" means outside the full set of initially infected regions. Observations from failed runs are partial, and a null event time in a censored run means no event was observed before the horizon. Neither should be interpreted as an unconditional statement that the event would never occur.
+
+The summary path is `results/summary/followup-duration-policy.csv`; derived comparisons and observation summaries go to `results/analysis/followup-duration-policy/`. Average the 20 random-policy draws within each epidemic block before comparing with the targeted outcome. These are draws, not necessarily distinct tank pairs, and each network reuses its draws across five epidemic replicates, three durations and three delays. Selected-tank records therefore support checks of pair duplication, region coverage and pairing across conditions.
+
+The recorded batch contains all 19,000 planned runs, with no failures or censoring, and all 400 replayed original conditions match. The [follow-up results](followup-results.md) link the acceptance evidence. Any reproduction must still verify run-key coverage, status counts, complete paired arms, observation neutrality and replay agreement. The commands and the distinction between equal budgets within a duration and changing budgets across durations are documented in [experiment-plan.md](experiment-plan.md#15-sensitivity-analysis).
