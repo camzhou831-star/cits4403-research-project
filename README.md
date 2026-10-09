@@ -18,12 +18,12 @@ This repository holds the research design, model implementation, computational e
 
 | Part | State |
 |---|---|
-| Model (`src/turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 198 tests pass. |
+| Model (`src/turtlefarm/`) | Complete: SIR within tanks, modular network, network-constrained movement, tank quarantine (random / highest-betweenness), event-keyed paired randomness, batch runner. 202 tests pass. |
 | Pilot | Run; formal settings recorded (`beta` 0.2, `gamma` 0.1, transfer levels 0 / 0.01 / 0.025 / 0.1, delays 1 / 12 / 33 days, `D` 14). `D` 14 selected by Q1-Q3 under the operational rule-attribution definition: 95.7% of started runs had an attempt intercepted by a quarantine rule, not necessarily an additional successful transfer prevented. See `docs/pilot-report-2026-10-06.md`. |
 | Formal experiment | `formal-nested`: 5,200 runs, 20 networks, 100 nested epidemic seeds; none failed or censored. |
 | Analysis and figures | `results/analysis/formal-nested/` (tables, figures 1-7). |
 | Report | Full draft in `report/report.md`, rendered from `report/report.template.md`; every result number is filled from `results/`. PDF (`report/report.pdf`, A4, 11pt, 1-inch margins) built by `scripts/build_report_pdf.py`, which checks the five-page limit of the rubric. |
-| Review | PRs #34 and #36 merged on 7 October; #37 (demo video), #39 (notebook) and #42 (five-page report) on 8 October. Recorded Q1 reviews do not replace the outstanding protocol and parameter confirmations. Issues #4, #5 and #18 remain open. |
+| Review | PRs #34 and #36 merged on 7 October; #37 (demo video), #39 (notebook), #42 (five-page report) and #43-#47 (decision confirmations, repository layout, exploratory analysis, demo plan, random-arm limitation) on 8 October. D004 and D005 were confirmed retrospectively (#43, closing #4 and #5); the pilot-protocol and extended-grid sign-offs are still pending. Issue #18 remains open. |
 | Decision follow-up | D=14 criterion table reproduced from the recorded Stage 2 runs. The expanded 30-seed network check passes C1 but has one C4 rank-2 tie; both tied tanks are selected. See `docs/network-audit-2026-10-08.md`. |
 
 Deviations from our own protocol are disclosed in `docs/decision-log.md` (sections "Protocol deviations" and "Analysis decisions made after the formal results") and in the report. The most important are:
@@ -87,7 +87,7 @@ Python 3.12, with dependencies pinned in `requirements.txt`.
 uv venv --python 3.12 .venv          # or: python3.12 -m venv .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt   # or: pip install -r requirements.txt
-python -m pytest -q                  # 198 tests
+python -m pytest -q                  # 202 tests
 
 # pilot (about 4 minutes in total) and parameter selection
 python scripts/run_experiment.py experiments/config/pilot-stage1-disease.json
@@ -99,6 +99,7 @@ python scripts/pilot_select.py stage2  # selects D=14
 # formal experiment (about 2 minutes), analysis, figures and report
 python scripts/run_experiment.py experiments/config/formal-nested.json
 python scripts/analyse_results.py formal-nested
+python scripts/mechanism_analysis.py   # exploratory measures of report Section 4.4
 python scripts/build_report.py
 ```
 
