@@ -1,0 +1,14 @@
+{
+  "name": "followup-duration-policy",
+  "protocol_version": 1,
+  "base_commit": "76fa981",
+  "transfer_rate": 0.025,
+  "network_seeds": [200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219],
+  "epidemic_seed_start": 20000,
+  "epidemic_replicates": 5,
+  "policy_seed_start": 50000,
+  "policy_replicates": 20,
+  "response_delays": [1, 12, 33],
+  "durations": [7, 14, 28],
+  "fixed": {"beta": 0.2, "gamma": 0.1, "capacity": 12, "p_in": 0.6, "p_out": 0.05, "k": 2, "max_days": 365}
+}
