@@ -1,0 +1,252 @@
+{
+  "analysis": "duration-policy follow-up; separate from the original formal experiment",
+  "sources": {
+    "formal": {
+      "path": "results/summary/formal-nested.csv",
+      "sha256": "d5233a22c00bb65af9a12f66fac8c94d226e9921f69c1dae3a6bbe1d00e6fe13"
+    },
+    "followup": {
+      "path": "results/summary/followup-duration-policy.csv",
+      "sha256": "3b7cd6b749d454e0d7053ca5bc5078bd8f8921aaf1138a21925467843e2ad6a9"
+    }
+  },
+  "analysis_code": {
+    "repository_head": "6832e6deb1e9b5bddfc6bfb14cde4503fb6e3809",
+    "revision_scope": "HEAD context only; file SHA256 values identify the analysed working-tree code",
+    "files": [
+      {
+        "path": "scripts/analyse_followup.py",
+        "sha256": "2e6d11975fc142484baa7f026ab708902b69a796a42b85d1ac38a67fca3e3a62"
+      },
+      {
+        "path": "src/turtlefarm/followup_analysis.py",
+        "sha256": "269cc0b3805e08c0d96b764af8ab3fdf5e8071d82042e7404ec063b50094546c"
+      }
+    ]
+  },
+  "source_code_commits": {
+    "formal": [
+      "ee77901"
+    ],
+    "followup": [
+      "6832e6d"
+    ]
+  },
+  "bootstrap": {
+    "unit": "network_seed",
+    "resamples": 2000,
+    "seed": 20261009,
+    "interval": "pointwise percentile 95%",
+    "multiplicity_adjustment": "none"
+  },
+  "validation": {
+    "passed": true,
+    "checks": [
+      "exact planned run keys",
+      "unique complete runs",
+      "fixed disease/capacity/k",
+      "matched network hashes",
+      "nested epidemic seeds",
+      "policy seed schedules and consistent selected pairs",
+      "valid outcome domains"
+    ]
+  },
+  "formal_capacity": "12: fixed historical design; original CSV omits this column",
+  "protocol": {
+    "path": "experiments/config/followup-duration-policy.json",
+    "sha256": "0a8b7182b11dbd39ef4056a78a32d75c1126eeebb51525a792355fbe0403cf77",
+    "configuration_hash": "043c61bbd8374619153e83849a6111153992c94328ddf6d6e8042bd765563794"
+  },
+  "formal_replay": {
+    "passed": true,
+    "matched_runs": 400,
+    "compared_columns": [
+      "accepted_transfers",
+      "affected_tanks",
+      "attempted_transfers",
+      "beta",
+      "blocked_transfers",
+      "days_simulated",
+      "ever_infected",
+      "final_attack_rate",
+      "gamma",
+      "intervention_cost",
+      "intervention_start_day",
+      "k",
+      "network_hash",
+      "peak_infected",
+      "policy_seed",
+      "selected_tanks",
+      "status",
+      "stop_reason",
+      "time_to_extinction",
+      "time_to_peak"
+    ],
+    "numeric_absolute_tolerance": 1e-12,
+    "excluded_metadata": [
+      "run_id",
+      "configuration_hash",
+      "code_commit",
+      "label"
+    ]
+  },
+  "selection": "all matched blocks; no intervention-started or observed-event selection for contrasts",
+  "event_times": "conditional on an event; non-events remain missing, with separate incidence indicators",
+  "policy_mcse": "conditional on recorded networks and epidemics; computed from policy-level epidemic means",
+  "duration_caveat": "k=2; increasing duration increases committed tank-day budget; no pure timing attribution",
+  "tests": {
+    "command": "python -m pytest tests/test_followup_analysis.py",
+    "execution": "not run by this analysis script; record test execution separately"
+  },
+  "tables": {
+    "strategy-effects": {
+      "rows": 72,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "quarantine_duration",
+        "response_delay",
+        "contrast",
+        "metric",
+        "blocks",
+        "networks",
+        "mean_left",
+        "mean_right",
+        "mean_diff",
+        "ci95_low",
+        "ci95_high"
+      ]
+    },
+    "delay-effects": {
+      "rows": 144,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "quarantine_duration",
+        "strategy",
+        "contrast",
+        "response_delay_left",
+        "response_delay_right",
+        "metric",
+        "blocks",
+        "networks",
+        "mean_left",
+        "mean_right",
+        "mean_diff",
+        "ci95_low",
+        "ci95_high"
+      ]
+    },
+    "duration-effects": {
+      "rows": 144,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "response_delay",
+        "strategy",
+        "contrast",
+        "quarantine_duration_left",
+        "quarantine_duration_right",
+        "metric",
+        "blocks",
+        "networks",
+        "mean_left",
+        "mean_right",
+        "mean_diff",
+        "ci95_low",
+        "ci95_high"
+      ]
+    },
+    "condition-summary": {
+      "rows": 190,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "quarantine_duration",
+        "response_delay",
+        "strategy",
+        "metric",
+        "runs",
+        "networks",
+        "observed",
+        "non_events",
+        "estimand",
+        "mean",
+        "ci95_low",
+        "ci95_high"
+      ]
+    },
+    "policy-coverage": {
+      "rows": 60,
+      "columns": [
+        "network_seed",
+        "policy_prefix",
+        "draws",
+        "unique_pairs",
+        "duplicate_pair_draws",
+        "same_region_draws",
+        "same_region_share",
+        "draws_covering_region_0",
+        "draws_covering_region_1",
+        "draws_covering_region_2",
+        "draws_covering_region_3",
+        "pairs"
+      ]
+    },
+    "policy-stability": {
+      "rows": 54,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "quarantine_duration",
+        "response_delay",
+        "metric",
+        "policy_prefix",
+        "networks",
+        "mean_random",
+        "mean_targeted",
+        "mean_diff",
+        "conditional_policy_mcse",
+        "conditional_mcse_scope"
+      ]
+    },
+    "formal-delay-effects": {
+      "rows": 36,
+      "columns": [
+        "beta",
+        "gamma",
+        "capacity",
+        "k",
+        "transfer_rate",
+        "quarantine_duration",
+        "strategy",
+        "contrast",
+        "response_delay_left",
+        "response_delay_right",
+        "metric",
+        "blocks",
+        "networks",
+        "mean_left",
+        "mean_right",
+        "mean_diff",
+        "ci95_low",
+        "ci95_high"
+      ]
+    }
+  }
+}

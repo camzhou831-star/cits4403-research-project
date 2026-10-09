@@ -67,7 +67,7 @@ Whether to repeat the baseline to balance the table: **no. Each transfer/network
 - intervention cost: `k × D` tank-days;
 - relative reduction compared with random quarantine: `(random - targeted) / random` on the paired outcome.
 
-No further metrics are added without a reason. Daily transfer acceptance, network metrics and initial-tank centrality are diagnostic variables, not additional headline outcomes.
+No further metrics are added without a reason. Daily transfer acceptance, network metrics and initial-tank centrality are diagnostic variables, not additional headline outcomes. The separate follow-up in section 15 adds event observations to distinguish infectious arrivals from local transmission; final attack rate and affected tanks remain its primary outcomes.
 
 ## 5. Seed hierarchy and variance separation
 
@@ -219,14 +219,44 @@ No prototype data or figures are produced at this stage.
 
 ## 15. Sensitivity analysis
 
-After the main experiment, only a small one-factor-at-a-time or small designed analysis:
+### Duration and random-policy follow-up
+
+The [follow-up protocol](followup-protocol.md) and `experiments/config/followup-duration-policy.json` were recorded in commit `03fbb54` before the follow-up simulations, after the original results had been seen. The separate 19,000-run sensitivity design does not replace or extend the original 5,200-run formal result set. All follow-up runs completed with no failures or censoring, and all 400 replayed original conditions match. This section records the design and reproduction route; the [follow-up results](followup-results.md) record outcomes and acceptance evidence.
+
+The follow-up fixes `mu=0.025`, `beta=0.2`, `gamma=0.1`, capacity 12 and `k=2`. It crosses `D=7/14/28` with delays `1/12/33`, using the original network seeds 200 through 219 and five nested epidemic seeds per network. For network position `i`, epidemic seeds are `20000 + 5*i + j`, where `j=0,...,4`; the 20 random-policy draws use `50000 + 20*i + s`, where `s=0,...,19`.
+
+The same policy draw is paired across epidemic replicates, durations and delays within its network. Different seeds can select the same pair. The analysis records duplicate pairs and region coverage rather than replacing seeds to force unique pairs. Each of the 100 network/epidemic blocks has one shared baseline plus `3 x 3 x (1 targeted + 20 random)` intervention runs, for 19,000 runs in total. Baselines and targeted `D=14` conditions are replayed to check agreement with matching original results.
+
+At each duration, random and targeted quarantine have equal committed budgets of `2 x D` tank-days when activated. Duration contrasts change the budget as well as the closure length, so they are not equal-cost timing comparisons. Blocks in which the epidemic ends before activation remain in the primary analysis. Reuse of the original 20 networks and 100 epidemic blocks makes this a paired sensitivity study rather than independent confirmation.
+
+Direct delay contrasts use the original formal CSV at every non-zero transfer rate. The follow-up adds strategy contrasts within each duration and delay, delay contrasts within each duration and strategy, and duration contrasts within each delay and strategy. Average the random arm within each epidemic block, pair before aggregating, and retain all complete blocks. The contrast directions, missing-arm checks and replay acceptance checks are specified in the protocol.
+
+Event observation distinguishes the first infectious arrival outside the initial region from the first local S-to-I event there. It also counts infectious cross-region transfers, regions visited by infectious agents, regions with local infections and local infections outside the initial region. An event can occur even when an infectious arrival recovers before the end-of-day snapshot. These observations do not identify infectors or transmission generations. They must not change random draws, agent order or model state; the ordinary `RunRecord` must match a run without observation. Field definitions are in [run-result-schema.md](run-result-schema.md#11-follow-up-observation-and-compact-records).
+
+Use 2,000 percentile bootstrap resamples of complete networks with fixed analysis seed `20261009`. The intervals are pointwise and the multiple contrasts are exploratory and correlated; they are not multiplicity-adjusted tests. Prefixes of 5, 10 and 20 policy draws provide a descriptive stability check. Conditional policy-sampling error must respect reuse of a policy choice across epidemic replicates, and whole-network intervals alone do not quantify all policy-sampling uncertainty.
+
+From the repository root, the reproduction route is:
+
+```bash
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --dry-run
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --workers 4
+# use this command to continue an existing batch
+.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --workers 4 --resume
+.venv/bin/python scripts/analyse_followup.py
+```
+
+Compact records belong in the git-ignored `results/raw/followup-duration-policy.jsonl`, the per-run summary in `results/summary/followup-duration-policy.csv`, and derived outputs in `results/analysis/followup-duration-policy/`. Resume preserves failures, requires matching protocol and schema versions and a single implementation commit, and applies the cumulative failure guard. It refuses duplicate or altered configurations. For a separate reproduction directory, use the runner's `--output-dir` and the analysis script's `--followup` and `--output` options. Check the recorded run keys, pairing, status counts, observation neutrality and replay agreement before interpretation. The original formal results, report files and report-generation scripts remain unchanged.
+
+### Other sensitivity work
+
+The earlier plan also proposed small one-factor-at-a-time or designed checks of:
 
 - lower/higher `beta`;
 - lower/higher `gamma`;
 - homogeneous vs limited heterogeneous capacity;
 - optional movement/update-order assumption.
 
-The sensitivity analysis must not grow into a full Cartesian product of parameters and does not replace the main experiment.
+These checks are not covered by the duration and random-policy follow-up. New disease mechanisms, network rewiring and cross-region movement restrictions are also outside its scope. Sensitivity work does not replace the main experiment or justify claims beyond the tested conditions.
 
 ## 16. Stop-running rules
 

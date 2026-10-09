@@ -6,6 +6,7 @@ This file is the entry point for the non-code preparation stage. The authoritati
 - `model-specification.md` - exact model behaviour;
 - `assumptions.md` - numbered assumptions;
 - `experiment-plan.md` - primary experiment and analysis;
+- [followup-protocol.md](followup-protocol.md) - separate quarantine-duration and random-policy sensitivity design;
 - `validation-plan.md` - future tests and verification;
 - `timeline.md` and `risk-register.md` - delivery control.
 
@@ -47,6 +48,12 @@ The facilitator raised no objections at Checkpoint 1 (2026-09-07). The team adop
 3. Update specification, assumptions, experiment plan and checkpoint material together.
 4. Obtain approval from both members.
 5. Freeze decisions before implementation.
+
+## Quarantine follow-up
+
+The [follow-up protocol](followup-protocol.md) was committed in `03fbb54` before its simulations, after the original results were known. Its 19,000 sensitivity runs at transfer rate 0.025 completed without failures or censoring, separately from the original 5,200-run formal experiment. It crosses durations of 7, 14 and 28 days with delays of 1, 12 and 33 days, using 20 random-policy draws per network. Draws can select duplicate pairs and are reused across conditions within a network.
+
+The same 20 networks and 100 epidemic blocks support paired comparisons, not independent confirmation. Strategies have equal budgets within each duration; comparisons across durations change cost. Event observations distinguish infectious arrivals from local infections without changing the epidemic rules. The [experiment plan](experiment-plan.md#15-sensitivity-analysis) gives commands, output paths and interpretation limits; the [validation plan](validation-plan.md#11-follow-up-acceptance-checks) lists acceptance requirements. The [follow-up results](followup-results.md) record the findings and agreement of all 400 replayed original conditions.
 
 ## Non-code stage exit criteria
 
