@@ -195,15 +195,6 @@ def to_raw_record(record: RunRecord, *, run_id: str, timestamp_utc: str) -> dict
     return raw
 
 
-def recorded_hashes(path: Path) -> set[str]:
-    """Configuration hashes already present in a raw file, whatever their status. A failed run is not
-    silently retried on resume (experiment-plan section 11)."""
-    if not path.exists():
-        return set()
-    with path.open(encoding="utf-8") as fh:
-        return {json.loads(line)["configuration_hash"] for line in fh if line.strip()}
-
-
 def run_design(
     design: ExperimentDesign,
     out_path: str | Path,
@@ -215,16 +206,34 @@ def run_design(
     """Run every configuration of ``design`` and append one JSON line per attempted run.
 
     An existing ``out_path`` is refused unless ``resume`` is set, in which case configurations whose hash
-    is already recorded are skipped. Raises ``BatchHalted`` after writing the offending record.
+    is already recorded are skipped, including failed runs. Matching prior failures are checked before
+    opening the output for append; records outside the current design do not consume its failure budget.
+    The returned ``failed`` count includes prior failures, while ``skipped`` and ``written`` describe this
+    invocation. A new failure is written before it can raise ``BatchHalted``.
     """
     out = Path(out_path)
     if out.exists() and not resume:
         raise FileExistsError(f"{out} exists; raw results are append-only. Pass resume=True to continue it.")
     configs = design.configs()
-    done = recorded_hashes(out) if resume else set()
-    out.parent.mkdir(parents=True, exist_ok=True)
-
+    done: set[str] = set()
     counts = {"planned": len(configs), "skipped": 0, "written": 0, "failed": 0}
+    if resume and out.exists():
+        current_hashes = {configuration_hash(cfg.to_dict()) for cfg in configs}
+        for raw in iter_raw(out):
+            recorded_hash = raw["configuration_hash"]
+            if recorded_hash not in current_hashes:
+                continue
+            done.add(recorded_hash)
+            if raw["status"] == STATUS_FAILED:
+                counts["failed"] += 1
+                if raw["stop_reason"] == "invariant failure":
+                    raise BatchHalted(f"prior invariant failure in run {raw['run_id']}: {raw['error']}")
+        if counts["failed"] > max_failure_rate * len(configs):
+            raise BatchHalted(
+                f"{counts['failed']} failed runs exceed {max_failure_rate:.0%} of {len(configs)} planned"
+            )
+
+    out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("a", encoding="utf-8") as fh:
         for index, cfg in enumerate(configs):
             if configuration_hash(cfg.to_dict()) in done:

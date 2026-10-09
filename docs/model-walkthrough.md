@@ -6,7 +6,7 @@ Member B (Wenhao Zhang) presents; Member A (Cam Zhou) attends and asks questions
 
 ## Preparation
 
-Open [model.py](../turtlefarm/model.py), [rng.py](../turtlefarm/rng.py), [entities.py](../turtlefarm/entities.py) and the [3-tank hand trace](hand-trace-3tank.md). Use the Python 3.12 project environment described in the [README](../README.md#reproducing-the-results). Only the focused tests below are needed; this session does not require a pilot or formal experiment rerun.
+Open [model.py](../src/turtlefarm/model.py), [rng.py](../src/turtlefarm/rng.py), [entities.py](../src/turtlefarm/entities.py) and the [3-tank hand trace](hand-trace-3tank.md). Use the Python 3.12 project environment described in the [README](../README.md#reproducing-the-results). Only the focused tests below are needed; this session does not require a pilot or formal experiment rerun.
 
 Record the revision actually used and any local changes:
 
@@ -28,11 +28,11 @@ git status --short
 | 7:00-9:00 | Work through day 2 of the hand trace, then compare it with the test. | `tests/test_hand_trace.py`, `test_hand_trace_matches_event_log` |
 | 9:00-10:00 | Answer the check questions and record any corrections or follow-up. | Session record below |
 
-All `Simulation` methods above are in [model.py](../turtlefarm/model.py); random-draw classes are in [rng.py](../turtlefarm/rng.py). `Agent` and `Tank` are in [entities.py](../turtlefarm/entities.py).
+All `Simulation` methods above are in [model.py](../src/turtlefarm/model.py); random-draw classes are in [rng.py](../src/turtlefarm/rng.py). `Agent` and `Tank` are in [entities.py](../src/turtlefarm/entities.py).
 
 ## Points to explain
 
-**Day and index conventions.** Day 0 records initial conditions before any movement or disease update. `step()` increments `self.day` first, so its first call executes day 1. In a normally completed run, `daily[0]` is day 0 and `daily[d]` is the end-of-day record for day `d`. Agent and tank IDs start at 0 and index their respective lists. Explicit validation layouts enforce contiguous IDs in [scenario.py](../turtlefarm/scenario.py), `Layout.validate()`.
+**Day and index conventions.** Day 0 records initial conditions before any movement or disease update. `step()` increments `self.day` first, so its first call executes day 1. In a normally completed run, `daily[0]` is day 0 and `daily[d]` is the end-of-day record for day `d`. Agent and tank IDs start at 0 and index their respective lists. Explicit validation layouts enforce contiguous IDs in [scenario.py](../src/turtlefarm/scenario.py), `Layout.validate()`.
 
 **Management before movement.** Tanks are selected from the pre-outbreak network during initialisation. `_management_update()` releases expired quarantines, then activates a pending intervention once. The first possible activation day is `max(1, response_delay)`. A quarantine starting on day `s` lasts on days `s` through `s + D - 1`; release occurs before movement on day `s + D`. An outbreak that ends before activation has zero intervention cost. Quarantine restricts transfers, while disease updates inside the tank continue.
 

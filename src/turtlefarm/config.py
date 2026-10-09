@@ -2,7 +2,7 @@
 
 D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (docs/decision-log.md). beta, gamma,
 quarantine_duration and p_in/p_out were frozen on 2026-10-06 after the pilot (model-specification section 18,
-layer 2); the formal values live in experiments/config/formal.json, and the defaults below serve unit tests.
+layer 2); the current formal design is experiments/config/formal-nested.json, and the defaults below serve unit tests.
 ``PROVISIONAL_FIELDS`` is therefore empty; it is still recorded in run metadata.
 """
 
@@ -44,11 +44,11 @@ class SimulationConfig:
     initial_per_tank: int = MAIN_INITIAL_PER_TANK
     initial_infected: int = MAIN_INITIAL_INFECTED
 
-    # Disease (fixed in the main experiment; values chosen by pilot, not yet frozen)
-    beta: float = 0.1  # unit-test default; formal value 0.2 frozen 2026-10-06 (experiments/config/formal.json)
+    # Disease (formal values frozen after the pilot on 2026-10-06; defaults below serve unit tests).
+    beta: float = 0.1  # unit-test default; formal value 0.2 (experiments/config/formal-nested.json)
     gamma: float = 0.1  # frozen 2026-10-06
 
-    # Transfer network (spec section 3). p_in / p_out are D005 candidates until the structural pilot.
+    # Transfer network (spec section 3). D005 values used in experiments/config/formal-nested.json.
     p_in: float = 0.6  # D005 frozen 2026-10-06
     p_out: float = 0.05  # D005 frozen 2026-10-06
     network_max_attempts: int = 100
@@ -60,7 +60,7 @@ class SimulationConfig:
     # Intervention (M2). Non-none strategies require a positive duration and at least one selected tank.
     strategy: str = "none"
     response_delay: int = 0  # D001 frozen: measured from introduction at t = 0
-    quarantine_duration: int = 0  # D004: formal value 14 frozen 2026-10-06 (experiments/config/formal.json)
+    quarantine_duration: int = 0  # D004: formal value 14 frozen 2026-10-06 (experiments/config/formal-nested.json)
     k: int = DEFAULT_K  # D003 frozen
 
     # Horizon

@@ -10,7 +10,8 @@ and exits with status 1 if the counted version is longer than five pages.
 
 Usage:
     python scripts/build_report.py && python scripts/build_report_pdf.py
-Requires the `markdown` package and Google Chrome (or set CHROME=/path/to/chrome).
+Requires the `markdown` package, Chrome/Chromium (or set CHROME=/path/to/chrome),
+and Poppler's `pdfinfo` command on PATH. See the README's PDF export instructions.
 """
 
 from __future__ import annotations

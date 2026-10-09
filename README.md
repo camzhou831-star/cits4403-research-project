@@ -106,7 +106,22 @@ Raw run records go to `results/raw/*.jsonl`. They are append-only and git-ignore
 
 Q1 is evaluated from the rule-attribution counters (`blocked_quarantine_out`, `blocked_quarantine_in`, `blocked_capacity`). All three must be present and complete; otherwise `pilot_select.py stage2` reports Q1 as unverified and exits 3, including for older records without the counters. Origin quarantine is checked before capacity, so Q1 does not establish how many additional transfers would have succeeded without quarantine. The historical mixed-counter table is preserved in `results/pilot/stage2-criteria-legacy-proxy.csv`.
 
-`scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
+`scripts/run_experiment.py` refuses to overwrite an existing raw file; pass `--resume` to continue one. Resume skips every recorded configuration, including failed runs. Failures belonging to the current design count towards its cumulative failure limit, and a recorded invariant failure or an exceeded limit stops continuation before any new records are written. Investigate a halted batch and retain its raw file; after a documented correction, use a separately named design/output for the rerun rather than deleting failed records.
+
+After a full rerun, `git status` should show no change to `experiments/config/` or `results/pilot/`. The 6 October 2026 clean-environment reproduction check predates the blocked-by-cause counters; its criterion table is preserved as `stage2-criteria-legacy-proxy.csv`.
+
+### Optional PDF export
+
+The model and analysis use the Python dependencies above; notebook tools are listed separately in `requirements-notebook.txt`. Rebuilding `report/report.pdf` also requires **Chrome or Chromium** and **Poppler**, whose `pdfinfo` command must be on `PATH`. These are system tools and are not installed by `pip` or `uv pip`. On macOS with Homebrew, install Poppler with `brew install poppler`; install Chrome or Chromium separately if needed.
+
+Check `pdfinfo -v` before exporting. The script finds a standard macOS Chrome installation or `google-chrome`, `chromium` or `chrome` on `PATH`. For another location, set `CHROME` to the browser executable, for example `export CHROME="/path/to/chromium"`.
+
+```bash
+python scripts/build_report.py
+python scripts/build_report_pdf.py
+```
+
+The second command writes the submission PDF and a text-only page-count copy under `results/tmp/`, then checks the five-page limit. The committed PDF can be read without these export tools. Regenerating the optional backup video separately requires `ffmpeg`; see [docs/demo-video.md](docs/demo-video.md).
 
 ## Documentation map
 

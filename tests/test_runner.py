@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import replace
+from unittest.mock import Mock
 
 import pytest
 
@@ -195,6 +196,127 @@ def test_existing_raw_file_is_refused_and_resume_skips_recorded_runs(tmp_path):
     grown = run_design(_design(epidemic_seeds=(7, 8, 9)), out, resume=True)
     assert grown["skipped"] == counts["planned"] and grown["written"] == grown["planned"] - counts["planned"]
     assert out.read_text(encoding="utf-8").startswith(before)
+
+
+def _resume_design(epidemic_seeds=(7, 8, 9, 10)):
+    return _design(
+        transfer_rates=(0.0,), response_delays=(), policy_seeds=(), epidemic_seeds=epidemic_seeds,
+        fixed=dict(beta=0.0, gamma=1.0, max_days=2),
+    )
+
+
+def _write_existing_runs(out, configs, failures=None):
+    """Create real run envelopes, substituting only controlled failure status for resume tests."""
+    failures = failures or {}
+    records = []
+    for cfg in configs:
+        record = run_baseline(cfg)
+        if cfg.epidemic_seed in failures:
+            record = replace(record, status="failed", stop_reason=failures[cfg.epidemic_seed], error="forced")
+        records.append(to_raw_record(record, run_id=f"existing-{cfg.epidemic_seed}", timestamp_utc="t"))
+    out.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+    return out.read_bytes()
+
+
+def test_resume_with_no_existing_file_runs_the_whole_design(tmp_path):
+    design = _resume_design()
+    out = tmp_path / "nested" / "raw.jsonl"
+    assert run_design(design, out, resume=True) == {"planned": 4, "skipped": 0, "written": 4, "failed": 0}
+    assert len(list(iter_raw(out))) == 4
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_resume_partial_batch_preserves_rows_and_counts_tolerated_failures(tmp_path, monkeypatch, failed):
+    design = _resume_design()
+    out = tmp_path / "raw.jsonl"
+    before = _write_existing_runs(out, design.configs()[:1], {7: "runtime error"} if failed else {})
+    simulate = Mock(wraps=run_baseline)
+    monkeypatch.setattr("turtlefarm.runner.run_baseline", simulate)
+
+    # One old failure is exactly the permitted threshold, not above it.
+    counts = run_design(design, out, resume=True, max_failure_rate=0.25)
+    assert counts == {"planned": 4, "skipped": 1, "written": 3, "failed": int(failed)}
+    assert [call.args[0].epidemic_seed for call in simulate.call_args_list] == [8, 9, 10]
+    assert out.read_bytes().startswith(before)
+    assert len(list(iter_raw(out))) == 4
+
+    simulate.reset_mock()
+    completed_bytes = out.read_bytes()
+    assert run_design(design, out, resume=True, max_failure_rate=0.25) == {
+        "planned": 4, "skipped": 4, "written": 0, "failed": int(failed),
+    }
+    simulate.assert_not_called()
+    assert out.read_bytes() == completed_bytes
+
+
+@pytest.mark.parametrize(
+    "failures,limit,match",
+    [
+        ({7: "runtime error", 8: "runtime error"}, 0.25, "2 failed runs exceed 25% of 4 planned"),
+        ({7: "invariant failure"}, 1.0, "invariant failure"),
+    ],
+)
+def test_resume_rejects_prior_halt_before_appending_or_running(tmp_path, monkeypatch, failures, limit, match):
+    design = _resume_design()
+    out = tmp_path / "raw.jsonl"
+    before = _write_existing_runs(out, design.configs()[:len(failures)], failures)
+    simulate = Mock(side_effect=AssertionError("resume must not start another simulation"))
+    monkeypatch.setattr("turtlefarm.runner.run_baseline", simulate)
+    path_type = type(out)
+    real_open = path_type.open
+
+    def read_only_open(path, mode="r", *args, **kwargs):
+        assert mode not in {"a", "w", "x"}, "rejected resume must not open the raw file for writing"
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(path_type, "open", read_only_open)
+    with pytest.raises(BatchHalted, match=match):
+        run_design(design, out, resume=True, max_failure_rate=limit)
+    simulate.assert_not_called()
+    assert out.read_bytes() == before
+
+
+def test_resume_accumulates_old_and_new_failures_before_halting(tmp_path, monkeypatch):
+    design = _resume_design()
+    configs = design.configs()
+    out = tmp_path / "raw.jsonl"
+    before = _write_existing_runs(out, configs[:1], {7: "runtime error"})
+    new_failure = replace(run_baseline(configs[1]), status="failed", stop_reason="runtime error", error="new")
+    simulate = Mock(side_effect=lambda cfg: new_failure if cfg == configs[1] else run_baseline(cfg))
+    monkeypatch.setattr("turtlefarm.runner.run_baseline", simulate)
+
+    with pytest.raises(BatchHalted, match="2 failed runs exceed 25% of 4 planned"):
+        run_design(design, out, resume=True, max_failure_rate=0.25)
+    assert [call.args[0].epidemic_seed for call in simulate.call_args_list] == [8]
+    assert out.read_bytes().startswith(before)
+    records = list(iter_raw(out))
+    assert len(records) == 2 and all(record["status"] == "failed" for record in records)
+    assert records[-1]["error"] == "new"
+
+
+def test_resume_expanded_design_uses_current_design_failure_budget(tmp_path, monkeypatch):
+    out = tmp_path / "raw.jsonl"
+    before = _write_existing_runs(out, _resume_design((7, 8)).configs(), {7: "runtime error"})
+    simulate = Mock(wraps=run_baseline)
+    monkeypatch.setattr("turtlefarm.runner.run_baseline", simulate)
+
+    counts = run_design(_resume_design(), out, resume=True, max_failure_rate=0.25)
+    assert counts == {"planned": 4, "skipped": 2, "written": 2, "failed": 1}
+    assert [call.args[0].epidemic_seed for call in simulate.call_args_list] == [9, 10]
+    assert out.read_bytes().startswith(before)
+
+
+def test_resume_ignores_failures_outside_current_design(tmp_path):
+    design = _resume_design()
+    unrelated = [replace(cfg, label="other-design") for cfg in design.configs()[:2]]
+    out = tmp_path / "raw.jsonl"
+    before = _write_existing_runs(out, unrelated, {7: "runtime error", 8: "invariant failure"})
+
+    assert run_design(design, out, resume=True, max_failure_rate=0.0) == {
+        "planned": 4, "skipped": 0, "written": 4, "failed": 0,
+    }
+    assert out.read_bytes().startswith(before)
+    assert len(list(iter_raw(out))) == 6
 
 
 def test_invariant_failure_is_recorded_then_halts_the_batch(tmp_path, monkeypatch):
