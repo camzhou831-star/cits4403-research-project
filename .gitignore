@@ -31,8 +31,8 @@ dist/
 *.egg-info/
 
 # Large or reproducible experiment artefacts
-results/raw/
-results/tmp/
+data/results/raw/
+data/results/tmp/
 *.log
 
 # audio recordings never belong in the repo

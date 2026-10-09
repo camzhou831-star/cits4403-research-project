@@ -1,4 +1,5 @@
-"""Batch experiment runner (experiment-plan sections 3, 6, 10, 11, 16; docs/run-result-schema.md).
+"""Batch experiment runner (data/methods/experiments.md#formal-design and #reproduction-and-failure-handling;
+data/methods/result-schema.md).
 
 The runner owns only the execution envelope and persistence: ``schema_version``, ``run_id``,
 ``timestamp_utc``, ``configuration_hash`` and append-only JSONL. Every scientific quantity comes from the
@@ -12,13 +13,13 @@ Inside one block every strategy shares the network instance and the event-keyed 
 
 By default every network seed is crossed with every epidemic seed. With ``nested_epidemic_seeds`` the
 epidemic seeds are split in order into equal consecutive groups, one group per network seed, so that no
-epidemic seed is shared between networks (experiment-plan section 5: epidemic replicates nested within a
+epidemic seed is shared between networks (data/methods/experiments.md#formal-design: epidemic replicates nested within a
 network). Crossed seeds share the initial infected agent and early draws across networks, which makes the
 networks correlated rather than independent clusters.
 
 A pilot design may additionally ``sweep`` otherwise-fixed fields (beta, gamma, D, ...) and may leave
 ``response_delays`` and ``policy_seeds`` empty to run the no-intervention baseline only. A formal design
-has no sweep: those values are frozen before it runs (experiment-plan section 9).
+has no sweep: those values are frozen before it runs (data/methods/experiments.md#pilot-protocol).
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from turtlefarm.model import STATUS_FAILED, RunRecord, run_baseline
 
 SCHEMA_VERSION = "turtlefarm.run.v1"
 
-# Working trigger of experiment-plan section 16: pause the whole batch above this share of failed runs.
+# Working trigger in data/methods/experiments.md#reproduction-and-failure-handling: pause above this failed-run share.
 DEFAULT_MAX_FAILURE_RATE = 0.01
 
 # Config fields a design may fix for every run. Structure (n_agents, n_tanks, ...) is locked by
@@ -49,12 +50,12 @@ _FIXED_FIELDS = frozenset(
 
 class BatchHalted(RuntimeError):
     """The batch stopped early (invariant failure or failure rate above the trigger). Records written so
-    far are kept; investigate and document before any rerun (experiment-plan sections 11 and 16)."""
+    far are kept; investigate and document before any rerun (data/methods/experiments.md#reproduction-and-failure-handling)."""
 
 
 @dataclass(frozen=True)
 class ExperimentDesign:
-    """Machine-readable description of one pilot or formal batch (``experiments/config/*.json``)."""
+    """Machine-readable description of one pilot or formal batch (``data/config/*.json``)."""
 
     name: str
     transfer_rates: tuple[float, ...]
@@ -172,7 +173,7 @@ class ExperimentDesign:
 
 
 def configuration_hash(config: dict[str, Any]) -> str:
-    """Lowercase hex SHA-256 over canonical JSON of ``config`` (run-result-schema section 8)."""
+    """Lowercase hex SHA-256 over canonical JSON of ``config`` (data/methods/result-schema.md#8-runner-derived-provenance)."""
     canonical = json.dumps(config, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 

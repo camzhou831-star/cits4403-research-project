@@ -1,4 +1,4 @@
-"""Compact, append-only execution of the protocol in docs/followup-protocol.md.
+"""Compact, append-only execution of the protocol in data/methods/followup.md.
 
 This runner retains configurations, outcomes and event observations, not full daily
 trajectories. It is separate from the original formal experiment runner.

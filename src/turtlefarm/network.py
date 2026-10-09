@@ -1,4 +1,4 @@
-"""Modular tank-transfer network (model-specification sections 3 and 4).
+"""Modular tank-transfer network (data/methods/model.md#3-transfer-network and #4-betweenness-centrality).
 
 20 tanks in 4 regions of 5. Edges are drawn independently: probability ``p_in`` inside a region, ``p_out``
 between regions, in a fixed pair order from a generator derived from ``(network_seed, attempt)``. An

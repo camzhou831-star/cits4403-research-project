@@ -1,33 +1,73 @@
-# Data
+# Synthetic data and provenance
 
-This project uses no external dataset. Every input is synthetic and is generated from seeds when a run starts:
-the transfer network from the network seed, the initial infection and every movement, transmission and recovery
-draw from the epidemic seed, and the random-quarantine choice from the policy seed.
+No external dataset is used. Networks, initial infections and subsequent random events are generated from the recorded seeds. The epidemic draws are keyed by event, day and agent; random-policy draws select the quarantined tank pair.
 
-| What | Where |
+## Inputs and outputs
+
+| Location | Contents |
 |---|---|
-| Inputs: experiment designs (parameter levels and seed lists) | `experiments/config/*.json` |
-| Raw run records, one JSON line per run (git-ignored, regenerable) | `results/raw/*.jsonl` |
-| Per-run summary tables (committed) | `results/summary/*.csv` |
-| Pilot criterion tables | `results/pilot/` |
-| Analysis tables and figures | `results/analysis/<design>/` |
+| `config/` | Seven JSON designs, including both pilot rounds, Stage 2, smoke, original crossed, final nested and follow-up designs |
+| `results/summary/` | One row per recorded run |
+| `results/pilot/` | Parameter-selection criteria and the disclosed historical Q1 proxy |
+| `results/analysis/formal-nested/` | Final original-study tables and figures |
+| `results/analysis/followup-duration-policy/` | Separate sensitivity analysis and its provenance receipt |
+| `results/analysis/formal/` | Superseded crossed-seed analysis, retained for audit |
+| `results/demo/` | Example animation, timing figure and historical original-study video |
+| `results/raw/` | Regenerable raw JSONL records; ignored by Git |
+| `results/tmp/` | Temporary verification outputs; ignored by Git |
+| `methods/` | Rules, protocols, schemas, validation evidence and limitations |
+| `figures/` | Conceptual model diagram |
 
-To regenerate the formal data from scratch, run from the repository root:
+## Recorded studies
+
+| Summary | Rows | Role |
+|---|---:|---|
+| `pilot-stage1-disease.csv` | 2,000 | Initial disease/transfer pilot |
+| `pilot-stage1-disease-r2.csv` | 2,400 | Expanded transfer-grid pilot |
+| `pilot-stage2-intervention.csv` | 5,550 | Quarantine-duration selection |
+| `formal.csv` | 5,200 | Historical crossed-seed experiment; not the final formal result |
+| `formal-nested.csv` | 5,200 | Final original experiment: 20 networks, 100 nested epidemic seeds |
+| `followup-duration-policy.csv` | 19,000 | Paired duration/policy sensitivity study on the same networks and epidemic blocks |
+
+The follow-up is separate from `formal-nested`, not an independent confirmation dataset. All 19,000 runs completed without failure or censoring; 400 replays of original conditions match their recorded scientific fields. Pointwise intervals and policy-sampling limits are described in [the follow-up methods and results](methods/followup.md).
+
+The historical `formal` dataset crossed the same five epidemic seeds with 20 networks. The final nested design instead uses five independent epidemic seeds within each network. They are different experimental designs, not duplicate copies. The historical files document the correction and must not be pooled with the final results.
+
+The old mixed-blocking Q1 table is retained as `results/pilot/stage2-criteria-legacy-proxy.csv`. Current criteria use complete, cause-specific counters. Neither table establishes the counterfactual number of successful transfers prevented by quarantine.
+
+## Reproduction
+
+Run from the repository root with the dependencies in `requirements.txt`:
 
 ```bash
-python scripts/run_experiment.py experiments/config/formal-nested.json
+python utils/run_experiment.py data/config/formal-nested.json
+python utils/analyse_results.py formal-nested
+python utils/mechanism_analysis.py
+
+python utils/run_followup.py data/config/followup-duration-policy.json --dry-run
+python utils/run_followup.py data/config/followup-duration-policy.json --workers 4
+python utils/analyse_followup.py
 ```
 
-The original formal dataset contains 5,200 runs. The separate [quarantine follow-up](../docs/followup-protocol.md) contains 19,000 completed sensitivity runs at transfer rate 0.025, varying duration and sampling more random-policy draws on the same 20 networks and 100 epidemic blocks. None failed or was censored, and all 400 replayed original conditions match. See the [follow-up results](../docs/followup-results.md) for evidence and interpretation. This is not an independent confirmation dataset or a replacement for `formal-nested`.
+Existing raw files are append-only. Use `--resume` only for a compatible unfinished batch; it does not retry failures. For a fresh reproduction after a code revision, use a separate output directory. The README provides the full commands, failure-handling rules and notebook instructions.
 
-The follow-up reproduction route, from the repository root, is:
+The original run contract and follow-up missing-value/event definitions are in [the result schema](methods/result-schema.md).
 
-```bash
-.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --dry-run
-.venv/bin/python scripts/run_followup.py experiments/config/followup-duration-policy.json --workers 4
-.venv/bin/python scripts/analyse_followup.py
-```
+## Directory migration and historical receipts
 
-Use `--resume` to continue the follow-up's append-only raw file without retrying recorded configurations. Compact records go to `results/raw/followup-duration-policy.jsonl`, the per-run table to `results/summary/followup-duration-policy.csv`, and analysis outputs to `results/analysis/followup-duration-policy/`. The runner's `--output-dir` option and the analysis script's `--followup` and `--output` options allow reproduction in a separate directory. The analysis record stores source hashes, coverage checks and replay evidence for the completed batch.
+The submission cleanup changed locations, not the configuration values, seeds or committed result bytes:
 
-The original raw-record format and the separate follow-up schema are documented in [run-result-schema.md](../docs/run-result-schema.md).
+| Historical location | Current location |
+|---|---|
+| `experiments/config/` | `data/config/` |
+| `results/` | `data/results/` |
+| `scripts/` | `utils/` |
+| `tests/` | `src/tests/` |
+| `docs/figures/` | `data/figures/` |
+| Scientific `docs/*.md` | Consolidated under `data/methods/` |
+
+The report is submitted separately through the university website. Old checkpoint notes, rehearsal scripts and report files were removed from the code submission; their earlier versions remain in Git history.
+
+Historical JSON receipts intentionally retain the paths, implementation commits and SHA256 hashes that were recorded when their analyses ran. In particular, `results/analysis/followup-duration-policy/analysis-summary.json` was moved under `data/` without rewriting its internal source paths. Resolve its historical `results/...` input paths as `data/results/...` when checking the current files. Historical code hashes identify that earlier analysis code, not the relocated working tree.
+
+Rerunning analysis creates a new receipt with current paths and code hashes; it does not retrospectively change the provenance of the recorded simulations. To keep the historical receipt intact, use the analysis command's `--output` option with a directory under `data/results/tmp/`.

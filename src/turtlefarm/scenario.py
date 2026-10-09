@@ -1,4 +1,4 @@
-"""Explicit small-scenario layouts for validation only (validation-plan section 9).
+"""Explicit small-scenario layouts for validation only (data/methods/validation.md#hand-trace).
 
 The main research design fixes 200 agents in 20 tanks (config ``design="main"``). Hand-traceable
 scenarios need a handful of tanks and agents, so they are built from an explicit ``Layout`` under

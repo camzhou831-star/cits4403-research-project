@@ -1,6 +1,6 @@
 """Deterministic layout of a tank transfer network for figures and animations.
 
-Used by scripts/analyse_results.py (Figure 1) and scripts/demo_animation.py (demo video), so both draw the
+Used by utils/analyse_results.py (Figure 1) and utils/demo_animation.py (demo video), so both draw the
 same network in the same positions.
 """
 

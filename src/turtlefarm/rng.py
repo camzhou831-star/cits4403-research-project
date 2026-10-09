@@ -1,4 +1,4 @@
-"""Seed management (model-specification section 16).
+"""Seed management (data/methods/model.md#16-random-number-and-seed-management).
 
 Epidemic randomness is **event-keyed**: the uniform draw consulted for (process, day, agent) is a pure
 function of (epidemic_seed, process, day, agent_id). It does not depend on how many other agents were
@@ -62,7 +62,7 @@ class EventKeyedDraws:
 
 
 class TableDraws:
-    """Explicit draws for hand traces (validation-plan section 9).
+    """Explicit draws for hand traces (data/methods/validation.md#hand-trace).
 
     Consulting a draw that is not in the table raises ``MissingDrawError``. That is deliberate: a trace
     proves a draw was *not* consulted (for example no recovery draw for an agent infected today) by
@@ -88,7 +88,7 @@ class TableDraws:
 
 
 def initialisation_stream(epidemic_seed: int) -> np.random.Generator:
-    """Generator used only to choose the initial infected agent (model-specification section 6.1)."""
+    """Generator used only to choose the initial infected agent (data/methods/model.md#61-population-and-initial-infection)."""
     seq = np.random.SeedSequence(int(epidemic_seed), spawn_key=(_INITIALISATION_KEY,))
     return np.random.Generator(np.random.PCG64(seq))
 

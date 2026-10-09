@@ -1,6 +1,6 @@
 """Discrete-time stochastic ABM with network-constrained movement and tank quarantine.
 
-Daily order (model-specification section 13):
+Daily order (data/methods/model.md#13-daily-update-order):
   1 management update  2 movement  3 transmission snapshot  4 transmission draws
   5 recovery draws     6 synchronous commit  7 record  8 stopping check
 
@@ -27,7 +27,7 @@ STATUS_FAILED = "failed"
 
 
 class InvariantError(RuntimeError):
-    """A required invariant (validation-plan V001-V012) was violated during a run."""
+    """A required invariant (data/methods/validation.md#invariants, V001-V012) was violated during a run."""
 
 
 @dataclass
@@ -41,7 +41,7 @@ class DailyRecord:
     attempted_transfers: int
     accepted_transfers: int
     blocked_transfers: int
-    # Partition of blocked_transfers by cause (pilot-protocol section 4, quarantine-specific Q1)
+    # Partition of blocked_transfers by cause (data/methods/experiments.md#pilot-protocol, quarantine-specific Q1)
     blocked_quarantine_out: int
     blocked_quarantine_in: int
     blocked_capacity: int
@@ -81,7 +81,7 @@ def _git_commit() -> str | None:
 
 class Simulation:
     """One run. Construct, then call ``run()``; initialisation happens inside ``run()`` so that a failure
-    at any point yields a ``failed`` RunRecord instead of an exception (model-specification section 14).
+    at any point yields a ``failed`` RunRecord instead of an exception (data/methods/model.md#14-stopping-conditions).
 
     ``layout`` builds an explicit small scenario (config ``design="scenario"``) and ``draws`` replaces the
     seed-derived event-keyed draws, e.g. with a ``TableDraws`` hand-trace table. Both are validation-only.
@@ -527,7 +527,7 @@ class Simulation:
 def compute_metrics(
     agents: list[Agent], daily: list[DailyRecord], status: str, intervention_cost: int = 0
 ) -> dict[str, Any]:
-    """Metrics of model-specification section 15.3. Censored runs get time_to_extinction = None."""
+    """Metrics of data/methods/model.md#153-metrics. Censored runs get time_to_extinction = None."""
     ever = sum(1 for ag in agents if ag.ever_infected)
     peak = max(d.I for d in daily)
     time_to_peak = next(d.day for d in daily if d.I == peak)
