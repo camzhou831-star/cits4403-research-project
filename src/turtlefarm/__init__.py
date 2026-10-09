@@ -1,6 +1,6 @@
 """Stylised explanatory agent-based model of disease spread in a modular captive-turtle housing system.
 
-Implementation follows docs/model-specification.md. The package currently provides S/I/R agents,
+Implementation follows data/methods/model.md. The package currently provides S/I/R agents,
 within-tank transmission, recovery, a fixed modular transfer network, network-constrained movement,
 tank quarantine, stopping rules and the batch experiment runner (turtlefarm.runner).
 """

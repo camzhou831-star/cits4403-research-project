@@ -1,8 +1,10 @@
-"""Simulation configuration and validation (model-specification section 18; validation-plan section 4).
+"""Simulation configuration and validation (data/methods/decisions.md#parameter-freeze-record-2026-10-06;
+data/methods/validation.md#configuration-fairness-and-future-information).
 
-D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (docs/decision-log.md). beta, gamma,
-quarantine_duration and p_in/p_out were frozen on 2026-10-06 after the pilot (model-specification section 18,
-layer 2); the current formal design is experiments/config/formal-nested.json, and the defaults below serve unit tests.
+D001-D003 and D006 were frozen on 2026-09-11 after Checkpoint 1 (data/methods/decisions.md). beta, gamma,
+quarantine_duration and p_in/p_out were frozen on 2026-10-06 after the pilot
+(data/methods/decisions.md#parameter-freeze-record-2026-10-06); the current formal design is
+data/config/formal-nested.json, and the defaults below serve unit tests.
 ``PROVISIONAL_FIELDS`` is therefore empty; it is still recorded in run metadata.
 """
 
@@ -14,14 +16,14 @@ from typing import Any, ClassVar
 STRATEGIES = ("none", "random", "betweenness")
 DESIGNS = ("main", "scenario")
 
-# Fixed by the research design (model-specification section 6.1); only design="scenario" may differ.
+# Fixed by the research design (data/methods/model.md#61-population-and-initial-infection); only design="scenario" may differ.
 MAIN_N_AGENTS = 200
 MAIN_N_TANKS = 20
 MAIN_N_REGIONS = 4
 MAIN_INITIAL_PER_TANK = 10
 MAIN_INITIAL_INFECTED = 1
 
-# Frozen decisions D002 / D003 / D006 (docs/decision-log.md, 2026-09-11).
+# Frozen decisions D002 / D003 / D006 (data/methods/decisions.md, 2026-09-11).
 DEFAULT_CAPACITY = 12
 DEFAULT_K = 2
 DEFAULT_MAX_DAYS = 365
@@ -45,10 +47,10 @@ class SimulationConfig:
     initial_infected: int = MAIN_INITIAL_INFECTED
 
     # Disease (formal values frozen after the pilot on 2026-10-06; defaults below serve unit tests).
-    beta: float = 0.1  # unit-test default; formal value 0.2 (experiments/config/formal-nested.json)
+    beta: float = 0.1  # unit-test default; formal value 0.2 (data/config/formal-nested.json)
     gamma: float = 0.1  # frozen 2026-10-06
 
-    # Transfer network (spec section 3). D005 values used in experiments/config/formal-nested.json.
+    # Transfer network (spec section 3). D005 values used in data/config/formal-nested.json.
     p_in: float = 0.6  # D005 frozen 2026-10-06
     p_out: float = 0.05  # D005 frozen 2026-10-06
     network_max_attempts: int = 100
@@ -60,13 +62,13 @@ class SimulationConfig:
     # Intervention (M2). Non-none strategies require a positive duration and at least one selected tank.
     strategy: str = "none"
     response_delay: int = 0  # D001 frozen: measured from introduction at t = 0
-    quarantine_duration: int = 0  # D004: formal value 14 frozen 2026-10-06 (experiments/config/formal-nested.json)
+    quarantine_duration: int = 0  # D004: formal value 14 frozen 2026-10-06 (data/config/formal-nested.json)
     k: int = DEFAULT_K  # D003 frozen
 
     # Horizon
     max_days: int = DEFAULT_MAX_DAYS  # D006 frozen
 
-    # Seeds (model-specification section 16)
+    # Seeds (data/methods/model.md#16-random-number-and-seed-management)
     network_seed: int = 0
     epidemic_seed: int = 0
     policy_seed: int | None = None
@@ -74,9 +76,9 @@ class SimulationConfig:
     # Free-text provenance, copied into run metadata
     label: str = ""
 
-    # Fields whose numeric value is still a candidate (model-specification section 18, layer 2).
+    # Fields whose numeric value is still a candidate (data/methods/decisions.md#parameter-freeze-record-2026-10-06).
     # Derived from the decision log, not settable by callers; copied into run metadata.
-    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ()  # all frozen after the pilot, decision-log 2026-10-06
+    PROVISIONAL_FIELDS: ClassVar[tuple[str, ...]] = ()  # all frozen after the pilot; data/methods/decisions.md#parameter-freeze-record-2026-10-06
 
     @property
     def provisional_fields(self) -> tuple[str, ...]:
@@ -131,7 +133,7 @@ class SimulationConfig:
         if not (0.0 < self.p_out < self.p_in <= 1.0):
             errs.append(f"require 0 < p_out < p_in <= 1 (spec 3.1), got p_in={self.p_in}, p_out={self.p_out}")
 
-        # Structural facts fixed by the research design (spec section 6.1; validation-plan V001).
+        # Structural facts fixed by the research design (spec section 6.1; data/methods/validation.md#invariants, V001).
         if self.design == "main":
             fixed = {
                 "n_agents": MAIN_N_AGENTS,

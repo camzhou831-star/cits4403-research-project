@@ -1,4 +1,4 @@
-"""Turtle agents and tanks (model-specification section 2)."""
+"""Turtle agents and tanks (data/methods/model.md#2-entities)."""
 
 from __future__ import annotations
 

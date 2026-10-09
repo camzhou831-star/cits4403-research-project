@@ -1,12 +1,12 @@
-"""Pilot selection rules and formal paired analysis (docs/pilot-protocol.md; experiment-plan sections 6, 12).
+"""Pilot selection rules and formal paired analysis (data/methods/experiments.md#pilot-protocol and #outcomes-and-analysis).
 
-Every function here reads the per-run summary table written by ``scripts/run_experiment.py`` (one row per
+Every function here reads the per-run summary table written by ``utils/run_experiment.py`` (one row per
 run, ``turtlefarm.runner.flatten``) and, where a criterion needs a daily trajectory, the raw JSONL. Nothing
 re-runs the model.
 
-The pilot functions only encode the criteria written in ``pilot-protocol.md`` before any pilot data was
+The pilot functions only encode the criteria in ``data/methods/experiments.md#pilot-protocol`` written before any pilot data was
 seen. Where the protocol leaves a choice open, the function reports the ambiguity instead of resolving it
-silently (pilot-protocol section 1, rule 5).
+silently (data/methods/experiments.md#pilot-protocol, rule 5).
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import pandas as pd
 
 from turtlefarm.model import STATUS_CENSORED, STATUS_COMPLETED, STATUS_FAILED
 
-MINOR_OUTBREAK_MAX_ATTACK_RATE = 0.06  # pilot-protocol section 3: infection never really left the first tank
+MINOR_OUTBREAK_MAX_ATTACK_RATE = 0.06  # data/methods/experiments.md#pilot-protocol: infection never really left the first tank
 CANDIDATE_KEYS = ("beta", "gamma")
 BLOCK_KEYS = ("network_seed", "epidemic_seed", "transfer_rate")
 PRIMARY_METRICS = ("final_attack_rate", "affected_tanks")
@@ -32,7 +32,7 @@ SECONDARY_METRICS = ("peak_infected", "time_to_extinction")
 
 
 # --------------------------------------------------------------------------------------------------
-# Stage 1: disease regime and transfer-rate levels (pilot-protocol section 3)
+# Stage 1: disease regime and transfer-rate levels (data/methods/experiments.md#pilot-protocol)
 # --------------------------------------------------------------------------------------------------
 
 
@@ -155,7 +155,7 @@ def first_day_affected_at_least(raw: dict[str, Any], tanks: int = 2) -> int | No
 
 
 def delay_levels(raw_records: Iterable[dict[str, Any]], beta: float, gamma: float, middle_rate: float) -> dict[str, Any]:
-    """Response-delay levels D1-D3 from Stage 1 no-intervention runs (pilot-protocol section 4)."""
+    """Response-delay levels D1-D3 from Stage 1 no-intervention runs (data/methods/experiments.md#pilot-protocol)."""
     second_tank_days, peak_days = [], []
     for raw in raw_records:
         cfg = raw["config"]
@@ -183,7 +183,7 @@ def delay_levels(raw_records: Iterable[dict[str, Any]], beta: float, gamma: floa
 
 
 def stage2_design(selection: Stage1Selection, delays: tuple[int, int, int], stage1_design: dict[str, Any]) -> dict[str, Any]:
-    """The Stage 2 design JSON (pilot-protocol section 4). Transfer rates are the three non-zero levels:
+    """The Stage 2 design JSON (data/methods/experiments.md#pilot-protocol). Transfer rates are the three non-zero levels:
     at rate 0 a quarantine can never block a transfer, so it would only dilute criterion Q1."""
     return {
         "name": "pilot-stage2-intervention",
@@ -198,7 +198,7 @@ def stage2_design(selection: Stage1Selection, delays: tuple[int, int, int], stag
 
 
 # --------------------------------------------------------------------------------------------------
-# Stage 2: quarantine duration D (pilot-protocol section 4; strategies pooled, never compared)
+# Stage 2: quarantine duration D (data/methods/experiments.md#pilot-protocol; strategies pooled, never compared)
 # --------------------------------------------------------------------------------------------------
 
 
@@ -208,7 +208,7 @@ def evaluate_stage2(summary: pd.DataFrame) -> pd.DataFrame:
     The legacy whole-run blocked counter mixes capacity and quarantine blocking, including days outside
     quarantine. Both historical proxy denominators are kept for audit, but neither verifies Q1.
 
-    Q1 is evaluated only from the blocked-by-cause counters (pilot-protocol section 4, pre-registered
+    Q1 is evaluated only from the blocked-by-cause counters (data/methods/experiments.md#pilot-protocol, pre-registered
     2026-10-06): share of started runs with ``blocked_quarantine_out + blocked_quarantine_in >= 1``. Raw
     records written before those counters existed, or with any incomplete cause column, leave Q1 and
     overall acceptance nullable (unverified). The counters identify the first blocking rule reached;
@@ -279,7 +279,7 @@ def select_duration(table: pd.DataFrame) -> int | None:
 
 
 # --------------------------------------------------------------------------------------------------
-# Formal analysis (experiment-plan sections 6 and 12)
+# Formal analysis (data/methods/experiments.md#outcomes-and-analysis)
 # --------------------------------------------------------------------------------------------------
 
 
@@ -337,7 +337,7 @@ def _complete_arm_cells(arms: pd.DataFrame, keys: list[str], expected_policy_see
 def paired_differences(
     summary: pd.DataFrame, metrics: Iterable[str] = PRIMARY_METRICS, expected_policy_seeds: int | None = None
 ) -> pd.DataFrame:
-    """Targeted-minus-random difference per paired block (experiment-plan section 6).
+    """Targeted-minus-random difference per paired block (data/methods/experiments.md#outcomes-and-analysis).
 
     The block key is (network_seed, epidemic_seed, transfer_rate, response_delay, quarantine_duration).
     The random arm of a block is the mean over its policy seeds, so each block contributes one difference.
@@ -357,7 +357,7 @@ def paired_differences(
     random_mean = ok[ok["strategy"] == "random"].groupby(keys)[metrics].mean()
     joined = targeted[metrics].join(random_mean, lsuffix="_targeted", rsuffix="_random", how="inner")
     # Before the response day every arm of a block shares the same draws, so a quarantine that never
-    # started (extinction first) is a property of the block, not of the strategy (pilot report section 5).
+    # started (extinction first) is a property of the block, not of the strategy (data/methods/experiments.md#5-implications-for-the-formal-experiment).
     joined["quarantine_started"] = targeted["intervention_start_day"].notna().reindex(joined.index)
     for m in metrics:
         joined[f"diff_{m}"] = joined[f"{m}_targeted"] - joined[f"{m}_random"]
@@ -383,7 +383,7 @@ def cluster_bootstrap_ratio(
     seed: int = 0,
 ) -> tuple[float, float, float]:
     """sum(numerator) / sum(denominator) (or / row count) with a percentile 95% CI from resampling whole
-    network instances (experiment-plan section 12). Covers both a mean and a ratio of means. The same
+    network instances (data/methods/experiments.md#outcomes-and-analysis). Covers both a mean and a ratio of means. The same
     ``seed`` draws the same resamples for every statistic."""
     df = df.dropna(subset=[numerator] + ([denominator] if denominator else []))
     by = df.groupby(cluster)
@@ -448,7 +448,7 @@ def paired_effect_table(diffs: pd.DataFrame, metrics: Iterable[str] = PRIMARY_ME
 
 
 # --------------------------------------------------------------------------------------------------
-# Representative runs (experiment-plan section 13: chosen by an objective rule, not by appearance)
+# Representative runs (data/methods/experiments.md#outcomes-and-analysis: chosen by an objective rule, not by appearance)
 # --------------------------------------------------------------------------------------------------
 
 REPRESENTATIVE_TRANSFER_RATE = 0.025  # the middle formal level
@@ -463,7 +463,7 @@ def outbreak_class(raw: dict[str, Any]) -> str:
     otherwise ``cross_region``.
 
     Limitation: the daily records are end-of-day snapshots, so an infectious agent that enters a tank and
-    recovers on the same day is not visible. ``scripts/analyse_results.py`` counts runs where the model's
+    recovers on the same day is not visible. ``utils/analyse_results.py`` counts runs where the model's
     ``affected_tanks`` exceeds the tanks seen here, and those runs should be checked by hand."""
     regions = raw["network"]["regions"]
     initial = {regions[t] for t in raw["initial_infected_tanks"]}

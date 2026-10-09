@@ -1,9 +1,0 @@
-[project]
-name = "turtlefarm"
-version = "0.1.0"
-description = "CITS4403 research project: bridge transfers and quarantine in a captive turtle farm (stylised explanatory ABM)"
-requires-python = ">=3.12"
-
-[tool.pytest.ini_options]
-pythonpath = ["src", "."]
-testpaths = ["tests"]

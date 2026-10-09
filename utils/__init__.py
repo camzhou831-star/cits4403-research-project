@@ -1,1 +1,1 @@
-"""Helper functions used by the scripts: figure layout and report number formatting."""
+"""Command-line entry points and shared helpers for reproduction and visualisation."""
